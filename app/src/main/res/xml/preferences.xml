@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:title="Notifications"
+        android:key="notification_category">
+        <SwitchPreferenceCompat
+            android:key="water_reminders"
+            android:title="Water Reminders"
+            android:summary="Get reminders to drink water"
+            android:defaultValue="true" />
+        <SwitchPreferenceCompat
+            android:key="exercise_reminders"
+            android:title="Exercise Reminders"
+            android:summary="Get reminders to exercise"
+            android:defaultValue="true" />
+        <SwitchPreferenceCompat
+            android:key="habit_reminders"
+            android:title="Habit Reminders"
+            android:summary="Get reminders to complete habits"
+            android:defaultValue="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Health Goals"
+        android:key="health_goals_category">
+        <EditTextPreference
+            android:key="daily_calorie_goal"
+            android:title="Daily Calorie Goal"
+            android:summary="Set your target calories per day"
+            android:defaultValue="2000" />
+        <EditTextPreference
+            android:key="daily_water_goal"
+            android:title="Daily Water Goal (ml)"
+            android:summary="Set your target water intake"
+            android:defaultValue="2500" />
+        <EditTextPreference
+            android:key="daily_steps_goal"
+            android:title="Daily Steps Goal"
+            android:summary="Set your step target"
+            android:defaultValue="10000" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Data"
+        android:key="data_category">
+        <Preference
+            android:key="export_data"
+            android:title="Export Data"
+            android:summary="Export your health data" />
+        <Preference
+            android:key="delete_data"
+            android:title="Delete All Data"
+            android:summary="Permanently delete all your data" />
+    </PreferenceCategory>
+</PreferenceScreen>

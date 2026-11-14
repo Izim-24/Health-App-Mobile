@@ -1,0 +1,17 @@
+# This file must *NOT* be checked into Version Control Systems,
+# as it contains information specific to your local configuration.
+#
+# Location of the SDK. This is only used by Gradle builds.
+# For example:
+# sdk.dir=C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Android\\Sdk
+# sdk.dir=C:/Android/sdk
+
+# When set to true, the AndroidBuild framework will create build files for all modules
+# When set to false, only the current module will be used.
+#
+# To override location of the SDK:
+# 1. Create a file at the root of this project named "local.properties"
+# 2. Paste this property: sdk.dir=<location of Android SDK>
+
+# Configure API keys here
+# AI_VISION_API_KEY=your_api_key_here

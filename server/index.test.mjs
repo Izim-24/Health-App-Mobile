@@ -1,0 +1,146 @@
+import assert from 'node:assert/strict';
+import { after, before, test } from 'node:test';
+import { createServer, sanitizeFood, MOCK_FOOD, resolveProvider, toGeminiSchema } from './index.mjs';
+
+const IMAGE = 'A'.repeat(400); // valid base64 shape; content is irrelevant with a fake upstream
+let server;
+let base;
+let forwarded;
+let upstreamText;
+
+before(async () => {
+  server = createServer({ apiKey: 'test-key', mock: false, fetchImpl: async (_url, options) => {
+    forwarded = options;
+    return new Response(JSON.stringify({ output: [{ content: [{ type: 'output_text', text: upstreamText }] }] }), { status: 200 });
+  } });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  base = `http://127.0.0.1:${server.address().port}`;
+});
+after(() => server.close());
+
+const post = (path, body) => fetch(`${base}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+
+test('health and chat forward messages without exposing key to client', async () => {
+  upstreamText = 'Xin chào.';
+  const health = await (await fetch(`${base}/health`)).json();
+  assert.deepEqual(health, { status: 'ok', configured: true, provider: 'openai', model: 'gpt-4.1-mini', mock: false });
+  const response = await post('/api/chat', { messages: [{ role: 'user', content: 'Xin chào' }] });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { answer: 'Xin chào.' });
+  assert.equal(forwarded.headers.authorization, 'Bearer test-key');
+  assert.equal(JSON.parse(forwarded.body).store, false);
+});
+
+test('rejects malformed health messages before upstream', async () => {
+  const response = await post('/api/chat', { messages: [{ role: 'user', content: '' }] });
+  assert.equal(response.status, 400);
+});
+
+test('food image: sends image with strict JSON schema and returns sanitized items', async () => {
+  upstreamText = JSON.stringify({ is_food: true, notes: 'Khó ước lượng dầu.', foods: [
+    { name: ' Phở bò ', estimated_grams: 550.4, calories: 452.6, protein_g: 28, carbs_g: 55, fat_g: 12, confidence: 0.85 }
+  ] });
+  const response = await post('/api/food-image', { image: IMAGE, mimeType: 'image/jpeg' });
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.deepEqual(body.foods, [{ name: 'Phở bò', estimated_grams: 550, calories: 453, protein_g: 28, carbs_g: 55, fat_g: 12, confidence: 0.85 }]);
+  assert.equal(body.is_food, true);
+  assert.equal(body.mock, false);
+
+  const sent = JSON.parse(forwarded.body);
+  assert.equal(sent.store, false);
+  assert.equal(sent.text.format.type, 'json_schema');
+  assert.equal(sent.text.format.strict, true);
+  const image = sent.input[0].content.find((c) => c.type === 'input_image');
+  assert.equal(image.image_url, `data:image/jpeg;base64,${IMAGE}`);
+});
+
+test('food image: rejects bad mime type, non-base64 and oversized images before upstream', async () => {
+  forwarded = null;
+  assert.equal((await post('/api/food-image', { image: IMAGE, mimeType: 'image/gif' })).status, 400);
+  assert.equal((await post('/api/food-image', { image: '<script>' + IMAGE, mimeType: 'image/png' })).status, 400);
+  assert.equal((await post('/api/food-image', { image: 'A'.repeat(3_000_000), mimeType: 'image/png' })).status, 413);
+  assert.equal(forwarded, null);
+});
+
+test('food image: malformed model output becomes a 502, not bad data', async () => {
+  upstreamText = 'Sorry, I cannot help.';
+  const response = await post('/api/food-image', { image: IMAGE, mimeType: 'image/jpeg' });
+  assert.equal(response.status, 502);
+});
+
+test('sanitizeFood drops unusable items and clamps ranges', () => {
+  const out = sanitizeFood({ is_food: true, notes: 'x', foods: [
+    { name: '', estimated_grams: 100, calories: 100 },
+    { name: 'Bánh mì', estimated_grams: -5, calories: 250 },
+    { name: 'Nước ngọt', estimated_grams: 330, calories: 140, protein_g: -1, carbs_g: 35, fat_g: 0, confidence: 7 }
+  ] });
+  assert.equal(out.foods.length, 2);
+  assert.equal(out.foods[0].estimated_grams, 1); // clamped, not dropped
+  assert.equal(out.foods[1].protein_g, 0);
+  assert.equal(out.foods[1].confidence, 1);
+  assert.equal(sanitizeFood({ is_food: true, foods: [], notes: '' }).is_food, false);
+  assert.equal(sanitizeFood('nope'), null);
+});
+
+test('mock mode without a key returns clearly flagged sample data', async () => {
+  const mockServer = createServer({ apiKey: '', mock: true, fetchImpl: async () => { throw new Error('must not call upstream'); } });
+  await new Promise((resolve) => mockServer.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${mockServer.address().port}/api/food-image`;
+  const body = await (await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: IMAGE, mimeType: 'image/jpeg' }) })).json();
+  mockServer.close();
+  assert.equal(body.mock, true);
+  assert.equal(body.foods.length, MOCK_FOOD.foods.length);
+});
+
+test('resolveProvider prefers Gemini, trims keys, falls back to OpenAI', () => {
+  assert.deepEqual(resolveProvider({ GEMINI_API_KEY: 'g-key\r', OPENAI_API_KEY: 'sk-x' }), { name: 'gemini', apiKey: 'g-key', model: 'gemini-3.5-flash' });
+  assert.equal(resolveProvider({ GEMINI_API_KEY: 'g', GEMINI_MODEL: 'gemini-3.5-flash-lite' }).model, 'gemini-3.5-flash-lite');
+  assert.equal(resolveProvider({ OPENAI_API_KEY: 'sk-x' }).name, 'openai');
+  assert.equal(resolveProvider({ GEMINI_API_KEY: '  ' }), null);
+});
+
+test('toGeminiSchema uppercases types and drops additionalProperties', () => {
+  const g = toGeminiSchema({ type: 'object', additionalProperties: false, required: ['a'], properties: { a: { type: 'array', items: { type: 'number' } } } });
+  assert.deepEqual(g, { type: 'OBJECT', required: ['a'], properties: { a: { type: 'ARRAY', items: { type: 'NUMBER' } } } });
+});
+
+test('Gemini: food image sends inlineData + JSON schema, ignores thought parts', async () => {
+  let sent;
+  const gemini = createServer({ provider: { name: 'gemini', apiKey: 'g-key', model: 'gemini-test' }, mock: false, fetchImpl: async (url, options) => {
+    sent = { url, options };
+    const answer = { is_food: true, notes: 'n', foods: [{ name: 'Cơm tấm', estimated_grams: 350, calories: 620, protein_g: 30, carbs_g: 80, fat_g: 20, confidence: 0.7 }] };
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'thinking…', thought: true }, { text: JSON.stringify(answer) }] } }] }), { status: 200 });
+  } });
+  await new Promise((resolve) => gemini.listen(0, '127.0.0.1', resolve));
+  const res = await fetch(`http://127.0.0.1:${gemini.address().port}/api/food-image`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: IMAGE, mimeType: 'image/png' }) });
+  gemini.close();
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).foods[0].name, 'Cơm tấm');
+  assert.match(sent.url, /models\/gemini-test:generateContent$/);
+  assert.equal(sent.options.headers['x-goog-api-key'], 'g-key');
+  const body = JSON.parse(sent.options.body);
+  assert.deepEqual(body.contents[0].parts[1], { inlineData: { mimeType: 'image/png', data: IMAGE } });
+  assert.equal(body.generationConfig.responseMimeType, 'application/json');
+  assert.equal(body.generationConfig.responseSchema.type, 'OBJECT');
+});
+
+test('Gemini: chat maps assistant→model and free-tier 429 gets a clear message', async () => {
+  let sent;
+  let status = 200;
+  const gemini = createServer({ provider: { name: 'gemini', apiKey: 'g', model: 'm' }, mock: false, fetchImpl: async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return new Response(JSON.stringify(status === 200 ? { candidates: [{ content: { parts: [{ text: 'Chào bạn.' }] } }] } : { error: {} }), { status });
+  } });
+  await new Promise((resolve) => gemini.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${gemini.address().port}/api/chat`;
+  const messages = [{ role: 'user', content: 'Hi' }, { role: 'assistant', content: 'Hello' }, { role: 'user', content: 'Xin chào' }];
+  const ok = await (await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages }) })).json();
+  status = 429;
+  const limited = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages }) });
+  gemini.close();
+  assert.equal(ok.answer, 'Chào bạn.');
+  assert.deepEqual(sent.contents.map((c) => c.role), ['user', 'model', 'user']);
+  assert.equal(limited.status, 502);
+  assert.match((await limited.json()).error, /miễn phí/);
+});

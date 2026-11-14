@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Debug builds only: lets HcSampleDataReceiver write/remove test data in Health Connect. -->
+    <uses-permission android:name="android.permission.health.WRITE_STEPS" />
+    <uses-permission android:name="android.permission.health.WRITE_SLEEP" />
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_WEIGHT" />
+    <uses-permission android:name="android.permission.health.WRITE_BLOOD_PRESSURE" />
+
+    <application android:usesCleartextTraffic="true">
+        <!-- Trigger with adb: am broadcast -n com.healthapp/.debug.HcSampleDataReceiver (extra mode=clear removes the samples) -->
+        <receiver android:name="com.healthapp.debug.HcSampleDataReceiver" android:exported="true" />
+    </application>
+</manifest>

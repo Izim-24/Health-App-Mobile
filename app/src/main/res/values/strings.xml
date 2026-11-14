@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AI Health &amp; Habit Tracker</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_nutrition">Nutrition</string>
+    <string name="nav_habits">Habits</string>
+    <string name="nav_reports">Reports</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_welcome">Welcome back!</string>
+    <string name="dashboard_nutrition">Today\'s Nutrition</string>
+    <string name="dashboard_habits">Today\'s Habits</string>
+    <string name="dashboard_activity">Activity</string>
+    <string name="dashboard_water">Water Intake</string>
+
+    <!-- Nutrition -->
+    <string name="nutrition_add_meal">Add Meal</string>
+    <string name="nutrition_ai_scanner">AI Food Scanner</string>
+    <string name="nutrition_search">Search Foods</string>
+    <string name="nutrition_manual">Manual Entry</string>
+    <string name="nutrition_breakfast">Breakfast</string>
+    <string name="nutrition_lunch">Lunch</string>
+    <string name="nutrition_dinner">Dinner</string>
+    <string name="nutrition_snack">Snack</string>
+
+    <!-- AI Food Scanner -->
+    <string name="scanner_take_photo">Take Photo</string>
+    <string name="scanner_gallery">Choose from Gallery</string>
+    <string name="scanner_analyzing">Analyzing food…</string>
+    <string name="scanner_confidence">Confidence: %1$d%%</string>
+    <string name="scanner_confirm">Confirm &amp; Save</string>
+    <string name="scanner_edit">Edit Details</string>
+    <string name="scanner_note">AI-based estimation may be inaccurate. Please verify values.</string>
+
+    <!-- Habits -->
+    <string name="habits_create">Create Habit</string>
+    <string name="habits_name">Habit Name</string>
+    <string name="habits_frequency">Frequency</string>
+    <string name="habits_daily">Daily</string>
+    <string name="habits_weekly">Weekly</string>
+    <string name="habits_streak">%1$d day streak</string>
+
+    <!-- Water -->
+    <string name="water_goal">Daily Goal</string>
+    <string name="water_quick_add">Quick Add</string>
+    <string name="water_remaining">%1$d ml remaining</string>
+
+    <!-- Sleep -->
+    <string name="sleep_bedtime">Bedtime</string>
+    <string name="sleep_wakeup">Wake up time</string>
+    <string name="sleep_duration">Duration</string>
+    <string name="sleep_quality">Sleep Quality</string>
+
+    <!-- Activity -->
+    <string name="activity_steps">Steps</string>
+    <string name="activity_distance">Distance</string>
+    <string name="activity_duration">Duration</string>
+    <string name="activity_calories">Calories Burned</string>
+
+    <!-- Profile -->
+    <string name="profile_edit">Edit Profile</string>
+    <string name="profile_settings">Settings</string>
+    <string name="profile_logout">Logout</string>
+
+    <!-- Auth -->
+    <string name="auth_login">Login</string>
+    <string name="auth_register">Register</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_confirm_password">Confirm Password</string>
+    <string name="auth_forgot_password">Forgot Password?</string>
+    <string name="auth_no_account">Don\'t have an account?</string>
+    <string name="auth_have_account">Already have an account?</string>
+
+    <!-- Reports -->
+    <string name="reports_today">Today</string>
+    <string name="reports_week">This Week</string>
+    <string name="reports_month">This Month</string>
+    <string name="reports_custom">Custom Range</string>
+
+    <!-- AI Assistant -->
+    <string name="assistant_title">AI Health Assistant</string>
+    <string name="assistant_ask">Ask me about your health…</string>
+    <string name="assistant_analyze">Analyze My Day</string>
+
+    <!-- General -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="loading">Loading…</string>
+    <string name="error">Error</string>
+    <string name="retry">Retry</string>
+    <string name="success">Success</string>
+</resources>

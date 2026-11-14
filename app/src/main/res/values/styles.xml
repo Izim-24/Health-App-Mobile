@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App themes -->
+    <style name="Theme.HealthApp" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">@color/primary_green</item>
+        <item name="android:colorSecondary">@color/secondary_green</item>
+        <item name="android:colorBackground">@color/light_gray</item>
+        <item name="android:statusBarColor">#F6F7FB</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowBackground">#F6F7FB</item>
+    </style>
+</resources>

@@ -1,0 +1,7 @@
+.env
+node_modules/
+eval/photos/
+eval/results*.json
+eval/cases.json
+eval/nutrition5k/
+eval/cases-holdout.json

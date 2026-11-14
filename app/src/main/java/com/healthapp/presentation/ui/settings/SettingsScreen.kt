@@ -1,0 +1,109 @@
+package com.healthapp.presentation.ui.settings
+
+import android.content.Intent
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.healthapp.presentation.ui.theme.HealthPalette
+import com.healthapp.presentation.ui.components.*
+import com.healthapp.presentation.viewmodel.SettingsViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = hiltViewModel()) {
+    val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    var confirmDelete by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.exportFile) {
+        val file = state.exportFile ?: return@LaunchedEffect
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, file.name)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(send, "Lưu hoặc chia sẻ bản xuất"))
+        viewModel.exportConsumed()
+    }
+
+    Scaffold(
+        containerColor = HealthPalette.Background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            BackTopBar("Cài đặt & dữ liệu") { navController.popBackStack() }
+        }
+    ) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            SettingRow(Icons.Default.Notifications, HealthPalette.Amber, "Nhắc nhở", "Uống nước, vận động, bữa ăn, giấc ngủ") { navController.navigate("reminders") }
+            SettingRow(Icons.Default.Sync, HealthPalette.Sky, "Health Connect", "Nhập bước chân, giấc ngủ, nhịp tim… từ đồng hồ và ứng dụng khác") { navController.navigate("health_connect") }
+            SettingRow(Icons.Default.Medication, HealthPalette.Indigo, "Lịch uống thuốc", "Giờ uống, số ngày dùng, lịch sử liều") { navController.navigate("medications") }
+            SettingRow(Icons.Default.FileDownload, HealthPalette.Emerald, "Xuất dữ liệu (JSON)", "Tạo bản sao toàn bộ nhật ký để lưu hoặc gửi cho bác sĩ") { if (!state.busy) viewModel.export() }
+            SettingRow(Icons.Default.DeleteForever, HealthPalette.Coral, "Xóa toàn bộ dữ liệu", "Xóa hồ sơ, nhật ký và nhắc nhở trên thiết bị này", danger = true) { confirmDelete = true }
+
+            AppCard(Modifier.fillMaxWidth(), color = HealthPalette.Emerald.soft) {
+                Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Default.Shield, null, tint = HealthPalette.Emerald.strong)
+                    Text(
+                        "Dữ liệu sức khỏe chỉ lưu trên thiết bị (kể cả dữ liệu nhập từ Health Connect). Sao lưu tự động của Android đang tắt. Bản xuất chứa thông tin nhạy cảm — chỉ chia sẻ với người bạn tin tưởng.",
+                        style = MaterialTheme.typography.bodySmall, color = HealthPalette.Ink
+                    )
+                }
+            }
+            if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            state.message?.let { Text(it, color = HealthPalette.Primary) }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Xóa toàn bộ dữ liệu?") },
+            text = { Text("Hồ sơ, bữa ăn, thói quen, chỉ số, thuốc, check-in cảm xúc và nhắc nhở sẽ bị xóa vĩnh viễn khỏi thiết bị. Không thể hoàn tác. Hãy xuất dữ liệu trước nếu cần.") },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; viewModel.deleteAll() }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Xóa vĩnh viễn") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Hủy") } }
+        )
+    }
+}
+
+@Composable
+private fun SettingRow(icon: ImageVector, accent: com.healthapp.presentation.ui.theme.Accent, title: String, subtitle: String, danger: Boolean = false, onClick: () -> Unit) {
+    AppCard(Modifier.fillMaxWidth(), onClick = onClick) {
+        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            IconBadge(icon, accent)
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = if (danger) accent.strong else HealthPalette.Ink)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+            }
+            Text("›", style = MaterialTheme.typography.titleLarge, color = HealthPalette.Subtle)
+        }
+    }
+}
