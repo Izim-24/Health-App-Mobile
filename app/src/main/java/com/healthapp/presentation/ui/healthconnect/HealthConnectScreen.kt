@@ -27,7 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import com.healthapp.data.healthconnect.HcAvailability
+import com.healthapp.domain.model.HcAvailability
 import com.healthapp.presentation.ui.theme.HealthPalette
 import com.healthapp.presentation.ui.components.*
 import com.healthapp.presentation.viewmodel.HealthConnectViewModel

@@ -2,7 +2,7 @@ package com.healthapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.repository.MedicationRepository
+import com.healthapp.domain.repository.MedicationRepository
 import com.healthapp.domain.model.DayOfWeek
 import com.healthapp.domain.model.DoseLog
 import com.healthapp.domain.model.DoseStatus

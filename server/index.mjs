@@ -132,7 +132,11 @@ export function sanitizeFood(parsed) {
 export function resolveProvider(env = process.env) {
   const gemini = (env.GEMINI_API_KEY || '').trim();
   const openai = (env.OPENAI_API_KEY || '').trim();
-  if (gemini) return { name: 'gemini', apiKey: gemini, model: (env.GEMINI_MODEL || 'gemini-3.5-flash').trim() };
+  if (gemini) return {
+    name: 'gemini', apiKey: gemini, model: (env.GEMINI_MODEL || 'gemini-3.5-flash').trim(),
+    // Separate free-tier quota: used once if the main model is rate-limited or overloaded.
+    fallbackModel: (env.GEMINI_FALLBACK_MODEL ?? 'gemini-3.5-flash-lite').trim() || null
+  };
   if (openai) return { name: 'openai', apiKey: openai, model: (env.OPENAI_MODEL || 'gpt-4.1-mini').trim() };
   return null;
 }
@@ -219,6 +223,21 @@ export async function estimateFood({ provider, fetchImpl = fetch, image, mimeTyp
   return food ? { food } : { error: 'AI trả về dữ liệu không đúng định dạng.' };
 }
 
+const RETRYABLE = new Set([429, 500, 503]);
+
+/**
+ * Runs `call(provider)`; if the provider answers 429/500/503 and has a fallbackModel, retries once with it.
+ * Returns the result plus the model that produced it.
+ */
+export async function withFallback(provider, call) {
+  const first = await call(provider);
+  if (!first.status || !RETRYABLE.has(first.status) || !provider.fallbackModel || provider.fallbackModel === provider.model) {
+    return { ...first, model: provider.model };
+  }
+  const second = await call({ ...provider, model: provider.fallbackModel });
+  return { ...second, model: provider.fallbackModel, fellBack: true };
+}
+
 const upstreamError = (status) => (
   status === 401 || status === 403 ? 'Khóa API backend không hợp lệ hoặc không có quyền.'
     : status === 429 ? 'Dịch vụ AI đang giới hạn lượt dùng (gói miễn phí) — thử lại sau ít phút.'
@@ -261,9 +280,9 @@ export function createServer({
         const body = await readBody(req, 16_384);
         if (!validMessages(body?.messages)) return send(res, 400, { error: 'Nội dung hội thoại không hợp lệ.' });
         if (!provider) return send(res, 200, { answer: '[GIẢ LẬP] Đây là câu trả lời mẫu, không phải từ AI.' });
-        const result = await chatWithProvider({ provider, messages: body.messages, fetchImpl });
+        const result = await withFallback(provider, (p) => chatWithProvider({ provider: p, messages: body.messages, fetchImpl }));
         if (result.error) return send(res, 502, { error: result.status ? upstreamError(result.status) : result.error });
-        return send(res, 200, { answer: result.answer });
+        return send(res, 200, { answer: result.answer, model: result.model });
       }
 
       // /api/food-image
@@ -274,9 +293,9 @@ export function createServer({
       if (image.length < 100 || image.length > MAX_IMAGE_BASE64 || !/^[A-Za-z0-9+/]+=*$/.test(image)) return send(res, 400, { error: 'Ảnh không hợp lệ hoặc quá lớn.' });
       if (!provider) return send(res, 200, { ...MOCK_FOOD, mock: true });
 
-      const result = await estimateFood({ provider, fetchImpl, image, mimeType });
+      const result = await withFallback(provider, (p) => estimateFood({ provider: p, fetchImpl, image, mimeType }));
       if (result.error) return send(res, 502, { error: result.status ? upstreamError(result.status) : result.error });
-      return send(res, 200, { ...result.food, mock: false });
+      return send(res, 200, { ...result.food, mock: false, model: result.model });
     } catch (error) {
       return send(res, error.status || 502, { error: error.status ? error.message : 'Không kết nối được dịch vụ AI.' });
     }

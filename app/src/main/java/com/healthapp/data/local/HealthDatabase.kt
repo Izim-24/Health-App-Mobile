@@ -24,12 +24,12 @@ import com.healthapp.data.local.entity.*
         WeightLogEntity::class,
         VitalLogEntity::class,
         ReminderEntity::class,
-        AIAnalysisEntity::class,
         MedicationEntity::class,
-        MedicationLogEntity::class
+        MedicationLogEntity::class,
+        MoodEntity::class
     ],
-    version = 4,
-    exportSchema = false
+    version = 5,
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class HealthDatabase : RoomDatabase() {
@@ -46,10 +46,11 @@ abstract class HealthDatabase : RoomDatabase() {
     abstract fun weightLogDao(): WeightLogDao
     abstract fun vitalLogDao(): VitalLogDao
     abstract fun reminderDao(): ReminderDao
-    abstract fun aiAnalysisDao(): AIAnalysisDao
     abstract fun dataManagementDao(): DataManagementDao
     abstract fun medicationDao(): MedicationDao
     abstract fun healthConnectDao(): HealthConnectDao
+    abstract fun moodDao(): MoodDao
+    abstract fun demoDataDao(): DemoDataDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -107,5 +108,25 @@ abstract class HealthDatabase : RoomDatabase() {
                 database.execSQL("CREATE INDEX IF NOT EXISTS index_medication_logs_date ON medication_logs(date)")
             }
         }
+        /** v5: mood check-ins move from SharedPreferences into Room; drop the never-used ai_analyses table. */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS mood_entries (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        accountId TEXT NOT NULL,
+                        date TEXT NOT NULL,
+                        mood TEXT NOT NULL,
+                        stress INTEGER NOT NULL,
+                        note TEXT NOT NULL,
+                        updatedAt TEXT NOT NULL
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_mood_entries_accountId_date ON mood_entries(accountId, date)")
+                database.execSQL("DROP TABLE IF EXISTS ai_analyses")
+            }
+        }
+
+        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
     }
 }

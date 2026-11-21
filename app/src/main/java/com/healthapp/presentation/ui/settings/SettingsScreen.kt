@@ -10,6 +10,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.LayersClear
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Shield
@@ -64,6 +66,10 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = 
             SettingRow(Icons.Default.Sync, HealthPalette.Sky, "Health Connect", "Nhập bước chân, giấc ngủ, nhịp tim… từ đồng hồ và ứng dụng khác") { navController.navigate("health_connect") }
             SettingRow(Icons.Default.Medication, HealthPalette.Indigo, "Lịch uống thuốc", "Giờ uống, số ngày dùng, lịch sử liều") { navController.navigate("medications") }
             SettingRow(Icons.Default.FileDownload, HealthPalette.Emerald, "Xuất dữ liệu (JSON)", "Tạo bản sao toàn bộ nhật ký để lưu hoặc gửi cho bác sĩ") { if (!state.busy) viewModel.export() }
+            if (com.healthapp.BuildConfig.DEBUG) {
+                SettingRow(Icons.Default.Science, HealthPalette.Violet, "Nạp dữ liệu mẫu (demo)", "14 ngày bữa ăn, giấc ngủ, bước chân, chỉ số, thói quen, thuốc — gắn nhãn mẫu") { if (!state.busy) viewModel.seedDemoData() }
+                if (state.hasDemoData) SettingRow(Icons.Default.LayersClear, HealthPalette.Amber, "Xóa dữ liệu mẫu", "Chỉ xóa dữ liệu mẫu, giữ nguyên dữ liệu bạn nhập") { if (!state.busy) viewModel.clearDemoData() }
+            }
             SettingRow(Icons.Default.DeleteForever, HealthPalette.Coral, "Xóa toàn bộ dữ liệu", "Xóa hồ sơ, nhật ký và nhắc nhở trên thiết bị này", danger = true) { confirmDelete = true }
 
             AppCard(Modifier.fillMaxWidth(), color = HealthPalette.Emerald.soft) {

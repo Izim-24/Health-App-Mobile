@@ -2,7 +2,7 @@ package com.healthapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.repository.AccountManager
+import com.healthapp.domain.repository.AccountSession
 import com.healthapp.domain.model.SleepRecord
 import com.healthapp.domain.model.ActivityRecord
 import com.healthapp.domain.model.ActivityType
@@ -37,7 +37,7 @@ data class HealthTrackingUiState(
 
 @HiltViewModel
 class HealthTrackingViewModel @Inject constructor(
-    private val accountManager: AccountManager,
+    private val accountManager: AccountSession,
     private val vitalRepository: VitalRepository,
     private val weightRepository: WeightRepository,
     private val sleepRepository: SleepRepository,

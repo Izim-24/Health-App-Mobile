@@ -7,6 +7,7 @@ import com.healthapp.data.reminder.MedicationScheduler
 import com.healthapp.domain.model.DoseLog
 import com.healthapp.domain.model.DoseStatus
 import com.healthapp.domain.model.Medication
+import com.healthapp.domain.repository.MedicationRepository
 import com.healthapp.domain.usecase.MedicationSchedule
 import com.healthapp.domain.usecase.ReminderSchedule
 import kotlinx.coroutines.flow.Flow
@@ -18,21 +19,21 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class MedicationRepository @Inject constructor(
+class MedicationRepositoryImpl @Inject constructor(
     private val dao: MedicationDao,
     private val accountManager: AccountManager,
     private val scheduler: MedicationScheduler
-) {
-    suspend fun observeMedications(): Flow<List<Medication>> =
+) : MedicationRepository {
+    override suspend fun observeMedications(): Flow<List<Medication>> =
         dao.observeMedications(accountManager.getCurrentAccountId()).map { list -> list.mapNotNull { it.toDomain() } }
 
-    suspend fun observeLogs(from: LocalDate, to: LocalDate): Flow<List<DoseLog>> =
+    override suspend fun observeLogs(from: LocalDate, to: LocalDate): Flow<List<DoseLog>> =
         dao.observeLogs(accountManager.getCurrentAccountId(), from.toString(), to.toString())
             .map { list -> list.mapNotNull { it.toDomain() } }
 
-    suspend fun getMedication(id: String): Medication? = dao.getMedication(id)?.toDomain()
+    override suspend fun getMedication(id: String): Medication? = dao.getMedication(id)?.toDomain()
 
-    suspend fun save(medication: Medication): Result<Unit> = runCatching {
+    override suspend fun save(medication: Medication): Result<Unit> = runCatching {
         val existing = dao.getMedication(medication.id)
         val previous = existing?.toDomain()
         val accountId = existing?.accountId ?: accountManager.getCurrentAccountId()
@@ -41,15 +42,15 @@ class MedicationRepository @Inject constructor(
         scheduler.schedule(medication)
     }
 
-    suspend fun setActive(medication: Medication, active: Boolean): Result<Unit> = save(medication.copy(isActive = active))
+    override suspend fun setActive(medication: Medication, active: Boolean): Result<Unit> = save(medication.copy(isActive = active))
 
-    suspend fun delete(medication: Medication): Result<Unit> = runCatching {
+    override suspend fun delete(medication: Medication): Result<Unit> = runCatching {
         scheduler.cancel(medication)
         dao.deleteMedication(medication.id)
     }
 
     /** Records TAKEN/SKIPPED for a dose slot; null clears the log (undo). */
-    suspend fun logDose(medicationId: String, date: LocalDate, time: LocalTime, status: DoseStatus?): Result<Unit> = runCatching {
+    override suspend fun logDose(medicationId: String, date: LocalDate, time: LocalTime, status: DoseStatus?): Result<Unit> = runCatching {
         val t = MedicationSchedule.formatTime(time)
         if (status == null) {
             dao.deleteLog(medicationId, date.toString(), t)

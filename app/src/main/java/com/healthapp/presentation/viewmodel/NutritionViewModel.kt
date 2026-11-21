@@ -2,7 +2,7 @@ package com.healthapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.repository.AccountManager
+import com.healthapp.domain.repository.AccountSession
 import com.healthapp.domain.model.Food
 import com.healthapp.domain.model.Meal
 import com.healthapp.domain.model.MealItem
@@ -35,7 +35,7 @@ data class NutritionUiState(
 @HiltViewModel
 class NutritionViewModel @Inject constructor(
     private val repository: NutritionRepository,
-    private val accountManager: AccountManager
+    private val accountManager: AccountSession
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(NutritionUiState())
     val uiState: StateFlow<NutritionUiState> = _uiState.asStateFlow()

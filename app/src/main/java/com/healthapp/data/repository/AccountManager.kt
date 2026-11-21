@@ -23,7 +23,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class AccountManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val accountDao: AccountDao
-) {
+) : com.healthapp.domain.repository.AccountSession {
     companion object {
         private val CURRENT_ACCOUNT_ID = stringPreferencesKey("current_account_id")
         private val DEFAULT_ACCOUNT_ID = "local_default_account"
@@ -34,7 +34,7 @@ class AccountManager @Inject constructor(
             preferences[CURRENT_ACCOUNT_ID] ?: ""
         }
 
-    suspend fun getCurrentAccountId(): String {
+    override suspend fun getCurrentAccountId(): String {
         val stored = context.dataStore.data.first()[CURRENT_ACCOUNT_ID]
         if (stored != null && stored.isNotEmpty()) {
             return stored

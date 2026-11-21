@@ -19,6 +19,7 @@ interface DataManagementDao {
     @Query("SELECT * FROM weight_logs WHERE accountId = :accountId") suspend fun weightLogs(accountId: String): List<WeightLogEntity>
     @Query("SELECT * FROM vital_logs WHERE accountId = :accountId") suspend fun vitalLogs(accountId: String): List<VitalLogEntity>
     @Query("SELECT * FROM reminders WHERE accountId = :accountId") suspend fun reminders(accountId: String): List<ReminderEntity>
+    @Query("SELECT * FROM mood_entries WHERE accountId = :accountId ORDER BY date") suspend fun moods(accountId: String): List<MoodEntity>
     @Query("SELECT * FROM medications WHERE accountId = :accountId") suspend fun medications(accountId: String): List<MedicationEntity>
     @Query("SELECT * FROM medication_logs WHERE medicationId IN (SELECT id FROM medications WHERE accountId = :accountId)") suspend fun medicationLogs(accountId: String): List<MedicationLogEntity>
 
@@ -32,7 +33,7 @@ interface DataManagementDao {
     @Query("DELETE FROM weight_logs WHERE accountId = :accountId") suspend fun deleteWeight(accountId: String)
     @Query("DELETE FROM vital_logs WHERE accountId = :accountId") suspend fun deleteVitals(accountId: String)
     @Query("DELETE FROM reminders WHERE accountId = :accountId") suspend fun deleteReminders(accountId: String)
-    @Query("DELETE FROM ai_analyses WHERE accountId = :accountId") suspend fun deleteAnalyses(accountId: String)
+    @Query("DELETE FROM mood_entries WHERE accountId = :accountId") suspend fun deleteMoods(accountId: String)
     @Query("DELETE FROM user_profiles WHERE accountId = :accountId") suspend fun deleteProfile(accountId: String)
     @Query("DELETE FROM medication_logs WHERE medicationId IN (SELECT id FROM medications WHERE accountId = :accountId)") suspend fun deleteMedicationLogs(accountId: String)
     @Query("DELETE FROM medications WHERE accountId = :accountId") suspend fun deleteMedications(accountId: String)
@@ -43,7 +44,7 @@ interface DataManagementDao {
         deleteMealItems(accountId); deleteMeals(accountId)
         deleteWater(accountId); deleteSleep(accountId); deleteActivity(accountId)
         deleteWeight(accountId); deleteVitals(accountId); deleteReminders(accountId)
-        deleteAnalyses(accountId); deleteProfile(accountId)
+        deleteMoods(accountId); deleteProfile(accountId)
         deleteMedicationLogs(accountId); deleteMedications(accountId)
     }
 }

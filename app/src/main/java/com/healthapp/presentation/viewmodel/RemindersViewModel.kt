@@ -2,7 +2,7 @@ package com.healthapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.repository.AccountManager
+import com.healthapp.domain.repository.AccountSession
 import com.healthapp.domain.model.DayOfWeek
 import com.healthapp.domain.model.Reminder
 import com.healthapp.domain.model.ReminderType
@@ -26,7 +26,7 @@ data class RemindersUiState(
 @HiltViewModel
 class RemindersViewModel @Inject constructor(
     private val repository: ReminderRepository,
-    private val accountManager: AccountManager
+    private val accountManager: AccountSession
 ) : ViewModel() {
 
     private val mutable = MutableStateFlow(RemindersUiState())

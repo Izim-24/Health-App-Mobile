@@ -3,24 +3,6 @@ package com.healthapp.domain.repository
 import com.healthapp.domain.model.*
 import kotlinx.coroutines.flow.Flow
 
-interface AuthRepository {
-    suspend fun registerUser(email: String, password: String, fullName: String): Result<User>
-    suspend fun loginUser(email: String, password: String): Result<User>
-    suspend fun logoutUser(): Result<Unit>
-    suspend fun resetPassword(email: String): Result<Unit>
-    suspend fun getCurrentUser(): User?
-    fun observeCurrentUser(): Flow<User?>
-    suspend fun changePassword(oldPassword: String, newPassword: String): Result<Unit>
-    suspend fun isUserLoggedIn(): Boolean
-}
-
-interface UserRepository {
-    suspend fun getUserProfile(userId: String): Result<User>
-    fun observeUserProfile(userId: String): Flow<User?>
-    suspend fun updateUserProfile(user: User): Result<Unit>
-    suspend fun deleteUserAccount(userId: String): Result<Unit>
-}
-
 interface HabitRepository {
     suspend fun createHabit(habit: Habit): Result<Habit>
     suspend fun updateHabit(habit: Habit): Result<Unit>
@@ -53,6 +35,9 @@ interface WaterRepository {
     suspend fun getTotalWaterForDate(userId: String, date: String): Result<Int>
     fun observeWaterLogsForDate(userId: String, date: String): Flow<List<WaterIntake>>
     suspend fun deleteWaterLog(logId: String): Result<Unit>
+    /** Daily goal in ml; 0 = not set. */
+    suspend fun getDailyGoal(userId: String): Int
+    suspend fun setDailyGoal(userId: String, ml: Int)
 }
 
 interface SleepRepository {
@@ -99,15 +84,7 @@ interface ReminderRepository {
 }
 
 interface AIRepository {
-    suspend fun analyzeFoodImage(imageUri: String, context: android.content.Context): Result<AIFoodAnalysis>
-    suspend fun generateHealthAnalysis(userId: String, type: AIAnalysisType): Result<AIHealthAnalysis>
+    suspend fun analyzeFoodImage(imageUri: String): Result<AIFoodAnalysis>
     suspend fun chatWithAssistant(userId: String, query: String): Result<String>
-    suspend fun getSavedAnalyses(userId: String): Result<List<AIHealthAnalysis>>
 }
 
-interface DailyRepository {
-    suspend fun getDailySummary(userId: String, date: String): Result<DailySummary>
-    fun observeDailySummary(userId: String, date: String): Flow<DailySummary?>
-    suspend fun getWeeklySummary(userId: String, startDate: String, endDate: String): Result<List<DailySummary>>
-    suspend fun getMonthlySummary(userId: String, month: Int, year: Int): Result<List<DailySummary>>
-}

@@ -55,7 +55,7 @@ object DatabaseModule {
             context,
             HealthDatabase::class.java,
             "health_database"
-        ).addMigrations(HealthDatabase.MIGRATION_1_2, HealthDatabase.MIGRATION_2_3, HealthDatabase.MIGRATION_3_4).build()
+        ).addMigrations(*HealthDatabase.ALL_MIGRATIONS).build()
     }
 
     @Singleton
@@ -110,9 +110,6 @@ object DatabaseModule {
     @Provides
     fun provideReminderDao(db: HealthDatabase): ReminderDao = db.reminderDao()
 
-    @Singleton
-    @Provides
-    fun provideAIAnalysisDao(db: HealthDatabase): AIAnalysisDao = db.aiAnalysisDao()
 
     @Singleton
     @Provides
@@ -125,6 +122,14 @@ object DatabaseModule {
     @Singleton
     @Provides
     fun provideHealthConnectDao(db: HealthDatabase): HealthConnectDao = db.healthConnectDao()
+
+    @Singleton
+    @Provides
+    fun provideMoodDao(db: HealthDatabase): MoodDao = db.moodDao()
+
+    @Singleton
+    @Provides
+    fun provideDemoDataDao(db: HealthDatabase): DemoDataDao = db.demoDataDao()
 }
 
 @Module
@@ -156,10 +161,7 @@ object RepositoryModule {
 
     @Singleton
     @Provides
-    fun provideAIRepository(
-        aiAnalysisDao: AIAnalysisDao,
-        aiBackendApi: AiBackendApi
-    ): AIRepository = AIRepositoryImpl(aiAnalysisDao, aiBackendApi)
+    fun provideAIRepository(impl: AIRepositoryImpl): AIRepository = impl
 
     @Singleton
     @Provides
@@ -179,11 +181,18 @@ object RepositoryModule {
 
     @Singleton
     @Provides
-    fun provideWaterRepository(
-        waterLogDao: WaterLogDao
-    ): WaterRepository = WaterRepositoryImpl(waterLogDao)
+    fun provideWaterRepository(impl: WaterRepositoryImpl): WaterRepository = impl
 
     @Singleton
     @Provides
     fun provideReminderRepository(impl: ReminderRepositoryImpl): ReminderRepository = impl
+
+    @Provides fun provideAccountSession(impl: AccountManager): AccountSession = impl
+    @Provides fun provideProfileRepository(impl: ProfileRepositoryImpl): ProfileRepository = impl
+    @Provides fun provideReportRepository(impl: ReportRepositoryImpl): ReportRepository = impl
+    @Provides fun provideMedicationRepository(impl: MedicationRepositoryImpl): MedicationRepository = impl
+    @Provides fun provideMoodRepository(impl: MoodRepositoryImpl): MoodRepository = impl
+    @Provides fun provideDemoDataRepository(impl: DemoDataRepositoryImpl): DemoDataRepository = impl
+    @Provides fun provideDataManagementRepository(impl: DataManagementRepositoryImpl): DataManagementRepository = impl
+    @Provides fun provideHealthSyncRepository(impl: com.healthapp.data.healthconnect.HealthConnectManager): HealthSyncRepository = impl
 }

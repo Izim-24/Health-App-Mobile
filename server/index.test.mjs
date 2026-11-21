@@ -26,7 +26,7 @@ test('health and chat forward messages without exposing key to client', async ()
   assert.deepEqual(health, { status: 'ok', configured: true, provider: 'openai', model: 'gpt-4.1-mini', mock: false });
   const response = await post('/api/chat', { messages: [{ role: 'user', content: 'Xin chào' }] });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { answer: 'Xin chào.' });
+  assert.deepEqual(await response.json(), { answer: 'Xin chào.', model: 'gpt-4.1-mini' });
   assert.equal(forwarded.headers.authorization, 'Bearer test-key');
   assert.equal(JSON.parse(forwarded.body).store, false);
 });
@@ -94,10 +94,11 @@ test('mock mode without a key returns clearly flagged sample data', async () => 
 });
 
 test('resolveProvider prefers Gemini, trims keys, falls back to OpenAI', () => {
-  assert.deepEqual(resolveProvider({ GEMINI_API_KEY: 'g-key\r', OPENAI_API_KEY: 'sk-x' }), { name: 'gemini', apiKey: 'g-key', model: 'gemini-3.5-flash' });
+  assert.deepEqual(resolveProvider({ GEMINI_API_KEY: 'g-key\r', OPENAI_API_KEY: 'sk-x' }), { name: 'gemini', apiKey: 'g-key', model: 'gemini-3.5-flash', fallbackModel: 'gemini-3.5-flash-lite' });
   assert.equal(resolveProvider({ GEMINI_API_KEY: 'g', GEMINI_MODEL: 'gemini-3.5-flash-lite' }).model, 'gemini-3.5-flash-lite');
   assert.equal(resolveProvider({ OPENAI_API_KEY: 'sk-x' }).name, 'openai');
   assert.equal(resolveProvider({ GEMINI_API_KEY: '  ' }), null);
+  assert.equal(resolveProvider({ GEMINI_API_KEY: 'g', GEMINI_FALLBACK_MODEL: '' }).fallbackModel, null); // can be turned off
 });
 
 test('toGeminiSchema uppercases types and drops additionalProperties', () => {
@@ -143,4 +144,34 @@ test('Gemini: chat maps assistant→model and free-tier 429 gets a clear message
   assert.deepEqual(sent.contents.map((c) => c.role), ['user', 'model', 'user']);
   assert.equal(limited.status, 502);
   assert.match((await limited.json()).error, /miễn phí/);
+});
+
+test('Gemini: falls back to the lite model once when the main model is rate-limited', async () => {
+  const calls = [];
+  const gemini = createServer({ provider: { name: 'gemini', apiKey: 'g', model: 'main', fallbackModel: 'lite' }, mock: false, fetchImpl: async (url) => {
+    calls.push(url.match(/models\/([^:]+):/)[1]);
+    if (url.includes('/main:')) return new Response('{}', { status: 429 });
+    const answer = { is_food: true, notes: '', foods: [{ name: 'Phở', estimated_grams: 500, calories: 450, protein_g: 28, carbs_g: 55, fat_g: 12, confidence: 0.8 }] };
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(answer) }] } }] }), { status: 200 });
+  } });
+  await new Promise((resolve) => gemini.listen(0, '127.0.0.1', resolve));
+  const res = await fetch(`http://127.0.0.1:${gemini.address().port}/api/food-image`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: IMAGE, mimeType: 'image/jpeg' }) });
+  gemini.close();
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.deepEqual(calls, ['main', 'lite']);
+  assert.equal(body.model, 'lite');
+  assert.equal(body.foods[0].name, 'Phở');
+});
+
+test('fallback is not used for non-retryable errors', async () => {
+  const calls = [];
+  const gemini = createServer({ provider: { name: 'gemini', apiKey: 'g', model: 'main', fallbackModel: 'lite' }, mock: false, fetchImpl: async (url) => {
+    calls.push(url); return new Response('{}', { status: 403 });
+  } });
+  await new Promise((resolve) => gemini.listen(0, '127.0.0.1', resolve));
+  const res = await fetch(`http://127.0.0.1:${gemini.address().port}/api/food-image`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: IMAGE, mimeType: 'image/jpeg' }) });
+  gemini.close();
+  assert.equal(res.status, 502);
+  assert.equal(calls.length, 1);
 });

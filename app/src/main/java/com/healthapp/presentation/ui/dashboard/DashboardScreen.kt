@@ -93,7 +93,7 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
             }
             Spacer(Modifier.height(22.dp))
 
-            SectionHeader("Chỉ số hôm nay", "Chi tiết") { navController.navigate("health") }
+            SectionHeader("Chỉ số hôm nay", action = "Chi tiết") { navController.navigate("health") }
             val toHealth = { navController.navigate("health") }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatTile(Icons.AutoMirrored.Rounded.DirectionsWalk, "Số bước", uiState.totalSteps?.let { "%,d".format(it).replace(',', '.') } ?: "—",
@@ -129,17 +129,17 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
             }
             Spacer(Modifier.height(22.dp))
 
-            SectionHeader("Dinh dưỡng", "Nhật ký") { navController.navigate("nutrition") }
+            SectionHeader("Dinh dưỡng", action = "Nhật ký") { navController.navigate("nutrition") }
             uiState.nutrition?.let { NutritionSummaryCard(it, compact = true) }
                 ?: AppCard(Modifier.fillMaxWidth()) { Text("Chưa có dữ liệu dinh dưỡng hôm nay.", Modifier.padding(18.dp), color = HealthPalette.Muted) }
             Spacer(Modifier.height(22.dp))
 
-            SectionHeader("Thói quen", "Quản lý") { navController.navigate("habits") }
+            SectionHeader("Thói quen", action = "Quản lý") { navController.navigate("habits") }
             HabitsCard(uiState.habitCompletedToday, uiState.totalHabitsActive, uiState.habits.filterNot { it.isCompletedToday }.take(3).map { it.id to it.name },
                 onCheck = { id -> viewModel.setHabitCompleted(id, true) }, onOpen = { navController.navigate("habits") })
             Spacer(Modifier.height(22.dp))
 
-            SectionHeader("Nhắc nhở hôm nay", "Sửa") { navController.navigate("reminders") }
+            SectionHeader("Nhắc nhở hôm nay", action = "Sửa") { navController.navigate("reminders") }
             AppCard(Modifier.fillMaxWidth()) {
                 if (uiState.reminders.isEmpty()) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {

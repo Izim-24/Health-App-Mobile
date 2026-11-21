@@ -50,7 +50,7 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
     Box(Modifier.fillMaxSize().background(HealthPalette.Background)) {
         Column(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                ScreenHeader("Thói quen", "Tiến bộ mỗi ngày", "Từng bước nhỏ, đều đặn mỗi ngày.", HealthPalette.Violet)
+                ScreenHeader("Thói quen", "Tiến bộ mỗi ngày", subtitle = "Từng bước nhỏ, đều đặn mỗi ngày.", accent = HealthPalette.Violet)
                 if (uiState.habits.isNotEmpty()) {
                     val done = uiState.habits.count { it.isCompletedToday }
                     val total = uiState.habits.count { it.isEnabled }.coerceAtLeast(1)

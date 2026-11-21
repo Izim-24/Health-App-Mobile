@@ -1,450 +1,124 @@
-# AI Health & Habit Tracker - Project Completion Summary
+# Báo cáo kỹ thuật — AI Health & Habit Tracker
 
-> **Note (2026-11-14):** This summary was written at scaffolding time and overstates what is implemented (e.g. authentication, Health Connect, AI food scanner). See `README.md` for the current, accurate feature list.
+Ứng dụng Android theo dõi sức khỏe, thói quen và dinh dưỡng, hoạt động **offline-first** (dữ liệu lưu trên máy),
+có ước tính dinh dưỡng từ ảnh món ăn bằng AI qua một backend nhỏ giữ khóa API.
 
-## Project Status: In development
+## 1. Chức năng
 
-A fully-functional Android application has been created with comprehensive architecture, database design, and UI implementation.
+| Nhóm | Chức năng | Điểm kỹ thuật |
+|---|---|---|
+| Tổng quan | Điểm sức khỏe 0–100 có giải thích từng phần | Công thức thuần Kotlin, theo khuyến nghị công khai, có unit test |
+| Sức khỏe | Nhịp tim, huyết áp, đường huyết, cân nặng, giấc ngủ, bước chân; biểu đồ ngày/tuần/tháng | Biểu đồ vẽ bằng Compose `Canvas` |
+| Health Connect | Nhập tự động (chỉ đọc), đồng bộ lại không trùng, ngắt kết nối có xóa dữ liệu | Quyền runtime, id tất định `hc_…`, fallback khi danh sách ưu tiên trống |
+| Dinh dưỡng | Nhật ký bữa ăn, tra cứu Open Food Facts, **quét ảnh món ăn bằng AI** | Ảnh ≤1024 px, xóa EXIF/GPS, người dùng duyệt trước khi lưu |
+| Thói quen, nước, tinh thần | Đánh dấu hằng ngày, mục tiêu nước, check-in cảm xúc, bài thở 4–4 | Room + ViewModel |
+| Nhắc nhở & thuốc | Lịch nhắc theo giờ/ngày; lịch thuốc với nút "Đã uống/Bỏ qua" ngay trên thông báo; tỷ lệ tuân thủ 7 ngày | WorkManager, BroadcastReceiver, `goAsync()` |
+| Dữ liệu | Xuất JSON qua bảng chia sẻ, xóa toàn bộ, dữ liệu mẫu cho demo | FileProvider, id `demo_…` để xóa riêng |
 
----
+## 2. Kiến trúc
 
-## 📦 Deliverables
-
-### 1. **Project Structure** ✅
-- Complete Android Studio project with proper directory structure
-- Clean Architecture with MVVM pattern
-- Organized into logical modules (data, domain, presentation, di, core)
-
-### 2. **Core Infrastructure** ✅
-- `build.gradle.kts` - App module with all dependencies
-- `settings.gradle.kts` - Root project configuration
-- `gradle.properties` - Build properties and configuration
-- `AndroidManifest.xml` - Complete permission declarations
-- `proguard-rules.pro` - Obfuscation rules for release builds
-
-### 3. **Database Layer (Room)** ✅
-- **13 Entities** with complete schema:
-  - Account, UserProfile
-  - Habit, HabitLog
-  - Food, Meal, MealItem
-  - WaterLog, SleepLog, ActivityLog, WeightLog
-  - Reminder, AIAnalysis
-
-- **13 DAOs** with comprehensive CRUD operations:
-  - Query methods with Flow support for reactive updates
-  - Range queries for analytics
-  - Aggregation functions (SUM, COUNT)
-  - Efficient database operations
-
-- **Type Converters** for complex types (LocalDateTime, Lists, JSON)
-
-- **Database Class** (HealthDatabase) with proper configuration
-
-### 4. **Domain Layer** ✅
-- **Domain Models** with business logic:
-  - User, Habit, Food, Meal, NutritionSummary, DailySummary
-  - SleepRecord, ActivityRecord, WeightRecord
-  - AIFoodAnalysis, AIHealthAnalysis, Reminder
-  - Enums: Gender, ActivityLevel, MealType, etc.
-
-- **Repository Interfaces** (7 repositories):
-  - AuthRepository, UserRepository, HabitRepository
-  - NutritionRepository, WaterRepository, SleepRepository
-  - ActivityRepository, WeightRepository, ReminderRepository
-  - AIRepository, DailyRepository
-
-### 5. **Data Layer (Repositories)** ✅
-- **6 Repository Implementations**:
-  - NutritionRepositoryImpl - Complete meal tracking with food database seeding
-  - ActivityRepositoryImpl - Exercise and activity logging
-  - HabitRepositoryImpl - Habit management with streak calculation
-  - AIRepositoryImpl - Food image analysis (mock) and AI assistant
-  - WeightRepositoryImpl - Weight history tracking
-  - SleepRepositoryImpl - Sleep pattern tracking
-  - WaterRepositoryImpl - Water intake monitoring
-
-- Error handling with Result types
-- Entity-to-Domain model conversion
-- Database transaction support
-
-### 6. **Dependency Injection (Hilt)** ✅
-- Complete Hilt setup:
-  - DatabaseModule - All DAO providers
-  - RepositoryModule - Repository providers
-  - Application class with @HiltAndroidApp
-
-### 7. **Presentation Layer (Jetpack Compose)** ✅
-
-#### ViewModels (4 implemented):
-- **DashboardViewModel** - Main dashboard data aggregation
-- **WaterTrackingViewModel** - Water intake management
-- **HabitListViewModel** - Habit operations
-- **AIFoodScannerViewModel** - Food image analysis
-
-#### Screens (6 implemented):
-- **DashboardScreen** - Main dashboard with nutrition, habits, activity summary
-- **WaterTrackingScreen** - Water intake with progress tracking
-- **HabitListScreen** - Habit creation and daily checklist
-- **NutritionScreen** - Meal logging interface
-- **ProfileScreen** - User profile and settings
-- **ReportsScreen** - Analytics and statistics
-
-#### UI Components:
-- Navigation setup with NavController
-- Material 3 design components
-- Progress indicators and cards
-- Forms and dialogs
-- Error handling and loading states
-
-#### Theme:
-- **Color Scheme** - Green primary with Material 3 support
-- **Typography** - Complete Material 3 text styles
-- Both light and dark theme support
-
-### 8. **Resource Files** ✅
-- **strings.xml** - All UI text localization
-- **colors.xml** - Complete color palette
-- **styles.xml** - App theme configuration
-- **preferences.xml** - Settings structure
-- **backup_rules.xml** - Data backup configuration
-- **data_extraction_rules.xml** - Security rules
-
-### 9. **Configuration Files** ✅
-- **gradle.properties** - Build configuration
-- **local.properties.example** - SDK and API key template
-- **.gitignore** - Git exclusions
-- **gradle wrapper** - Gradle 8.6 configuration
-
-### 10. **Documentation** ✅
-- **README.md** - Comprehensive project documentation
-  - Feature overview
-  - Architecture explanation
-  - Installation instructions
-  - Database schema
-  - Build commands
-  - Development workflow
-  - Security practices
-  - API integration guide
-
-- **CLAUDE.md** - Developer guidance
-  - Build and test commands
-  - High-level architecture
-  - Database schema overview
-  - Navigation structure
-  - Development phases
-
----
-
-## 🎯 Features Implemented
-
-### ✅ Authentication
-- User registration model
-- Login/logout structure
-- Profile management setup
-- Password reset templates
-
-### ✅ Dashboard
-- Real-time nutrition summary
-- Habit completion tracking
-- Activity overview
-- Water intake progress
-- Responsive layout
-
-### ✅ Nutrition Tracking
-- Meal logging with AI scanner integration
-- Food database (10 default foods seeded)
-- Macronutrient tracking (Protein, Carbs, Fat)
-- Daily nutrition summaries
-- Food search capabilities
-
-### ✅ Habit Tracking
-- Create daily/weekly habits
-- Habit completion marking
-- Streak calculation logic
-- Habit statistics
-- Weekly habit calendar
-
-### ✅ Water Tracking
-- Daily water logging
-- Quick add buttons (100ml, 250ml, 500ml)
-- Progress indicators
-- Daily goal management
-- Water history
-
-### ✅ Sleep Tracking
-- Bedtime and wake time recording
-- Sleep duration calculation
-- Sleep quality ratings
-- Sleep history with analytics
-- Average sleep duration over time
-
-### ✅ Activity Tracking
-- Exercise type logging
-- Duration and intensity tracking
-- Calorie burn estimation
-- Step counting integration
-- Activity history
-
-### ✅ Weight Tracking
-- Daily weight recording
-- Weight trend analysis
-- Historical data with charts support
-
-### ✅ AI Food Scanner
-- Image-based food recognition (mock implementation)
-- Multi-food item detection
-- Portion size estimation
-- Nutritional analysis
-- Confidence levels
-- User confirmation before saving
-
-### ✅ AI Health Assistant
-- Query-based health insights
-- Mock responses for:
-  - Protein intake analysis
-  - Calorie tracking
-  - Sleep patterns
-  - Water intake
-  - Habit progress
-
-### ✅ Reports & Analytics
-- Daily summaries
-- Weekly statistics
-- Monthly reports
-- Habit completion rates
-- Activity metrics
-- Nutrition statistics
-
-### ✅ Reminders & Notifications
-- Customizable notification settings
-- Reminder types (water, exercise, sleep, habits, meals)
-- Time-based scheduling structure
-
----
-
-## 🏗️ Architecture Highlights
-
-### Clean Architecture Layers
-```
-Presentation Layer
-    ↓
-Domain Layer (Pure Kotlin, no Android dependencies)
-    ↓
-Data Layer (Database, Network, Local Storage)
+```mermaid
+flowchart LR
+  subgraph presentation["presentation (Compose + ViewModel)"]
+    UI[Screens] --> VM[ViewModels]
+  end
+  subgraph domain["domain (Kotlin thuần)"]
+    IF[Repository interfaces]
+    UC["Use cases: HealthScore, FoodScan,\nHealthCalculations, MedicationSchedule"]
+  end
+  subgraph data["data"]
+    IMPL[Repository Impl] --> ROOM[(Room v5)]
+    IMPL --> API[Retrofit → backend]
+    W[WorkManager workers]
+    HC[Health Connect client]
+  end
+  VM --> IF
+  VM --> UC
+  IMPL -. implements .-> IF
+  DI[Hilt di/] -. binds .-> IMPL
+  API --> BE["server/ (Node)\nGemini / OpenAI"]
 ```
 
-### Key Design Patterns
-- **MVVM** - ViewModels manage UI state
-- **Repository Pattern** - Abstraction between data sources
-- **Dependency Injection** - Hilt for dependency management
-- **State Management** - StateFlow for reactive updates
-- **Error Handling** - Result<T> types for safe operations
+- **presentation không import `data`** (kiểm tra được bằng `grep`); ViewModel chỉ phụ thuộc interface domain.
+- **domain không có lớp Android** → test JVM nhanh, không cần thiết bị.
+- Khóa API **chỉ ở server** (`server/.env`), không nằm trong APK.
 
-### Data Flow
-User Input → ViewModel → Repository → DAO → Room Database
-    ↑ ← ← ← ← ← ← ← ← ← ← Flow/StateFlow
+## 3. Cơ sở dữ liệu (Room, phiên bản 5)
 
----
-
-## 📊 Database Statistics
-
-| Entity | Fields | Key Features |
-|--------|--------|--------------|
-| Account | 4 | Email, password hash, timestamps |
-| UserProfile | 11 | Health metrics, BMI calculation, goals |
-| Habit | 8 | Frequency, reminders, enabled state |
-| HabitLog | 4 | Completion tracking with dates |
-| Food | 9 | Complete nutrition data, serving size |
-| Meal | 12 | Totals, timestamps, image support |
-| MealItem | 11 | Food portions with nutrition |
-| WaterLog | 4 | Amount tracking by date |
-| SleepLog | 7 | Bedtime, duration, quality |
-| ActivityLog | 8 | Exercise type, intensity, calories |
-| WeightLog | 4 | Weight history tracking |
-| Reminder | 6 | Type, time, enabled status |
-| AIAnalysis | 5 | Analysis results storage |
-
----
-
-## 🛠️ Development Setup
-
-### Prerequisites Installed
-- Kotlin 2.0.20
-- Jetpack Compose (latest)
-- Room 2.6.1
-- Hilt 2.51
-- Firebase (latest)
-- CameraX 1.3.4
-- Health Connect API
-- WorkManager 2.9.1
-
-### Key Dependencies
-- Retrofit 2.9.0 - API calls
-- OkHttp 4.12.0 - HTTP client
-- Coil 2.6.0 - Image loading
-- Vico 1.13.1 - Charts
-- Accompanist 0.34.0 - Permissions & UI
-
----
-
-## 📱 UI/UX Implementation
-
-### Navigation Structure
-```
-MainActivity (Entry point)
-    ↓
-AppNavigation
-    ├── Dashboard
-    ├── Nutrition (with Food Scanner)
-    ├── Habits
-    ├── Water
-    ├── Reports
-    └── Profile
+```mermaid
+erDiagram
+  accounts ||--o| user_profiles : has
+  accounts ||--o{ meals : logs
+  meals ||--|{ meal_items : contains
+  foods ||--o{ meal_items : "used in"
+  accounts ||--o{ habits : owns
+  habits ||--o{ habit_logs : "completed on"
+  accounts ||--o{ medications : takes
+  medications ||--o{ medication_logs : "dose taken/skipped"
+  accounts ||--o{ vital_logs : measures
+  accounts ||--o{ mood_entries : "check-in"
+  accounts ||--o{ reminders : sets
 ```
 
-### Design System
-- Material 3 components
-- Green color scheme (#2E7D32 primary)
-- Rounded cards (12dp)
-- Consistent spacing (8dp, 16dp, 24dp)
-- Clear typography hierarchy
-- Responsive layouts
+Ngoài ra: `water_logs`, `sleep_logs`, `activity_logs`, `weight_logs`. Lịch sử migration 1→5 đều có
+`Migration` tường minh; schema xuất ra `app/schemas/` và được kiểm thử bằng `MigrationTestHelper`.
+Migration 4→5 chuyển check-in cảm xúc từ SharedPreferences sang Room (dữ liệu cũ được nhập tự động) và bỏ bảng không dùng.
 
----
+## 4. Luồng quét ảnh món ăn
 
-## 🔐 Security Features
-
-✅ No hardcoded API keys
-✅ Secure API credential management template
-✅ Runtime permission handling
-✅ ProGuard obfuscation rules
-✅ Data backup/export capability
-✅ User data deletion support
-✅ Health data privacy by design
-
----
-
-## 📚 Code Quality
-
-### Best Practices Implemented
-- Coroutine-based async operations
-- Non-blocking database queries
-- Flow for reactive data updates
-- Proper error handling with Result types
-- ViewModel lifecycle management
-- Dependency injection throughout
-- Modular, testable code structure
-
-### Testing Ready
-- DAOs are testable with mock database
-- ViewModels have clear dependencies
-- Repositories follow interface contracts
-- Room supports in-memory testing
-
----
-
-## 🚀 Next Steps for Production
-
-1. **API Integration**
-   - Replace mock AI food scanner with real Vision API
-   - Implement AI Health Assistant with LLM backend
-   - Add Firebase Authentication implementation
-
-2. **Testing**
-   - Add unit tests for repositories
-   - Add ViewModel tests
-   - Add UI tests for critical flows
-
-3. **Features**
-   - Implement Export/Import functionality
-   - Add Health Connect integration
-   - Implement push notifications with WorkManager
-   - Add offline-first sync
-
-4. **Polish**
-   - Finalize splash screen
-   - Add app launcher icons
-   - Implement smooth transitions
-   - Add haptic feedback
-
-5. **Release**
-   - Generate signing keystore
-   - Configure release build
-   - Set up Firebase for crash reporting
-   - Prepare Play Store listings
-
----
-
-## 📖 How to Build & Run
-
-### First Time Setup
-```bash
-cd Health-app
-cp local.properties.example local.properties
-# Edit local.properties with your Android SDK path
+```mermaid
+sequenceDiagram
+  actor U as Người dùng
+  participant A as App (ViewModel)
+  participant E as ImageEncoder
+  participant S as Backend (server/)
+  participant M as Gemini / OpenAI
+  U->>A: Chụp/chọn ảnh
+  A->>E: thu nhỏ ≤1024px, xoay EXIF, JPEG (bỏ GPS)
+  A->>S: POST /api/food-image (base64)
+  S->>M: ảnh + JSON schema bắt buộc
+  M-->>S: món, gram, kcal, P/C/F, độ tin cậy
+  S->>S: kiểm tra & giới hạn giá trị; 429 → thử model dự phòng
+  S-->>A: kết quả (+ model đã dùng)
+  A->>U: duyệt: sửa gram (tự tính lại), bỏ món, cảnh báo calo≠macro
+  U->>A: Lưu vào nhật ký
 ```
 
-### Build Debug APK
-```bash
-./gradlew assembleDebug
-```
+## 5. Đánh giá độ chính xác AI
 
-### Run on Device/Emulator
-```bash
-./gradlew installDebug
-```
+Bộ ảnh **Nutrition5k** (Google Research, CC BY 4.0): món ăn được **cân trong phòng thí nghiệm**, chụp từ trên xuống.
+Script: `server/eval-food.mjs`, chọn ảnh: `server/eval/prepare-nutrition5k.mjs` (bộ phát triển và bộ holdout riêng).
 
-### Or use Android Studio
-- Open project in Android Studio Hedgehog+
-- Sync Gradle
-- Click "Run" or press Shift+F10
+| Model | Ảnh | Sai số calo trung vị | Sai số trung bình | Trong ±20% | Thời gian |
+|---|---|---|---|---|---|
+| gemini-3.5-flash (gói miễn phí) | 15 | **16,5%** | 21,1% | 10/15 | ~8 s |
 
----
+- Nhận diện món tốt; sai nhiều nhất ở **thực phẩm giàu năng lượng** (hạt, xúc xích) và khẩu phần lớn.
+- Hạn chế: mẫu nhỏ; món Âu/Mỹ chứ không phải món Việt; kết quả AI dao động giữa các lần chạy.
+  → Ứng dụng luôn cho người dùng **sửa trước khi lưu** và hiển thị độ tin cậy.
 
-## 📝 File Statistics
+## 6. Kiểm thử
 
-- **Kotlin Source Files**: 30+
-- **XML Resource Files**: 6
-- **Configuration Files**: 7
-- **Documentation Files**: 3
-- **Total Lines of Code**: 4,500+
-- **Database Entities**: 13
-- **DAOs**: 13
-- **ViewModels**: 4
-- **UI Screens**: 6+
+| Loại | Số test | Nội dung |
+|---|---|---|
+| JVM unit | 48 | Điểm sức khỏe, BMI châu Á, TDEE, lịch nhắc/thuốc, tuân thủ, quét ảnh, Health Connect mapping, **ViewModel** (Profile, Mental, Reports) với fake repository |
+| Instrumented (emulator) | 6 | Migration 4→5 + chuỗi 1→5, hồi quy bữa ăn (Room), nhập dữ liệu cảm xúc cũ, **Compose UI** |
+| Backend | 13 | Endpoint, xác thực đầu vào, JSON schema, Gemini/OpenAI, model dự phòng, chế độ giả lập |
+| Lint | 0 lỗi | `./gradlew :app:lintDebug` |
 
----
+CI (GitHub Actions) chạy unit test, Lint, build APK và test backend mỗi lần push.
 
-## ✨ Key Achievements
+## 7. Bảo mật & quyền riêng tư
 
-✅ **Complete Project** - All major features implemented
-✅ **Production-Ready** - Enterprise-grade architecture
-✅ **Well-Documented** - Comprehensive README and CLAUDE.md
-✅ **Scalable** - Clean architecture supports future features
-✅ **Secure** - Security best practices throughout
-✅ **Testable** - Code structure supports automated testing
-✅ **Modern Stack** - Latest Android development practices
-✅ **AI-Ready** - Framework for AI integration built in
+- Dữ liệu sức khỏe chỉ lưu trên máy; **tắt sao lưu tự động**; xuất dữ liệu có cảnh báo.
+- Khóa AI chỉ ở server; repo công khai đã được quét, không có khóa/thông tin cá nhân.
+- Ảnh gửi đi đã xóa EXIF/GPS; gói miễn phí của Gemini có thể dùng dữ liệu để cải thiện model → không dùng cho ảnh nhạy cảm.
+- R8 keep rules cho lớp Gson (tránh lỗi bản release đổi tên trường JSON).
 
----
+## 8. Hạn chế & hướng phát triển
 
-## 🎓 Learning Value
-
-This project demonstrates:
-- Modern Android architecture patterns
-- Jetpack Compose best practices
-- Room database design
-- Dependency injection with Hilt
-- State management with StateFlow
-- Error handling patterns
-- Security considerations
-- API integration structure
-- Testing architecture
-
----
-
-**Project Version**: 1.0.0 (Alpha)
-**Last Updated**: November 3, 2026
-**Status**: Ready for Development & Testing
-
-The application is fully structured and ready to be opened in Android Studio for further development, testing, and eventual deployment to the Play Store.
+- Không có đăng nhập (ứng dụng một người dùng, offline) — có chủ đích; đồng bộ nhiều thiết bị cần backend có xác thực.
+- Cơ sở dữ liệu trên máy chưa mã hóa (SQLCipher); backend chỉ chạy cục bộ (cần HTTPS khi triển khai thật).
+- Nhắc nhở dùng WorkManager (không chính xác tuyệt đối khi Doze); thuốc quan trọng nên dùng `AlarmManager.setExactAndAllowWhileIdle`.
+- Văn bản giao diện còn viết trực tiếp trong code (chưa đưa vào `strings.xml` để đa ngôn ngữ).
+- AI: dùng bảng thành phần dinh dưỡng Việt Nam để tính calo từ món + gram (thay vì để AI tự đoán calo); đánh giá trên món Việt.

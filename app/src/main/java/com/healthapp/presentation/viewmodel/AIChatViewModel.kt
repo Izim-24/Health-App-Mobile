@@ -2,7 +2,7 @@ package com.healthapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.repository.AccountManager
+import com.healthapp.domain.repository.AccountSession
 import com.healthapp.domain.repository.AIRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +16,7 @@ data class AIChatUiState(val messages: List<ChatBubble> = emptyList(), val sendi
 
 @HiltViewModel
 class AIChatViewModel @Inject constructor(
-    private val accountManager: AccountManager,
+    private val accountManager: AccountSession,
     private val repository: AIRepository
 ) : ViewModel() {
     private val mutable = MutableStateFlow(AIChatUiState())

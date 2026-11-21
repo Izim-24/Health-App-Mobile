@@ -263,14 +263,4 @@ data class RecognizedFood(
     val recognizedImageRegion: String? = null
 )
 
-data class AIHealthAnalysis(
-    val analysisType: AIAnalysisType,
-    val summary: String,
-    val insights: List<String>,
-    val suggestions: List<String>,
-    val generatedAt: LocalDateTime
-)
 
-enum class AIAnalysisType {
-    NUTRITION, HABIT, SLEEP, ACTIVITY, WELLNESS, CUSTOM
-}

@@ -1,9 +1,7 @@
 package com.healthapp.data.healthconnect
 
 import android.content.Context
-import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
@@ -18,6 +16,10 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.healthapp.data.local.dao.HealthConnectDao
 import com.healthapp.data.repository.AccountManager
+import com.healthapp.domain.model.HcAvailability
+import com.healthapp.domain.model.HcState
+import com.healthapp.domain.model.HcSyncSummary
+import com.healthapp.domain.repository.HealthSyncRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,24 +35,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.reflect.KClass
 
-enum class HcAvailability { AVAILABLE, NEEDS_UPDATE, NOT_SUPPORTED }
-
-data class HcSyncSummary(val days: Int, val sleep: Int, val heartRate: Int, val weight: Int, val bloodPressure: Int, val glucose: Int) {
-    val total get() = days + sleep + heartRate + weight + bloodPressure + glucose
-}
-
-data class HcState(
-    val availability: HcAvailability = HcAvailability.NOT_SUPPORTED,
-    val enabled: Boolean = false,
-    val granted: Set<String> = emptySet(),
-    val syncing: Boolean = false,
-    val lastSync: LocalDateTime? = null,
-    val lastSummary: HcSyncSummary? = null,
-    val error: String? = null
-) {
-    val connected get() = enabled && granted.isNotEmpty()
-}
-
 /**
  * Read-only import from Health Connect into the local Room database.
  * Data never leaves the device; nothing is written back to Health Connect.
@@ -60,7 +44,7 @@ class HealthConnectManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dao: HealthConnectDao,
     private val accountManager: AccountManager
-) {
+) : HealthSyncRepository {
     companion object {
         val READ_TYPES: List<KClass<out Record>> = listOf(
             StepsRecord::class, ActiveCaloriesBurnedRecord::class, SleepSessionRecord::class,
@@ -77,7 +61,8 @@ class HealthConnectManager @Inject constructor(
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private val mutex = Mutex()
     private val mutable = MutableStateFlow(HcState())
-    val state: StateFlow<HcState> = mutable.asStateFlow()
+    override val state: StateFlow<HcState> = mutable.asStateFlow()
+    override val permissions: Set<String> get() = PERMISSIONS
 
     private val client: HealthConnectClient? get() =
         if (availability() == HcAvailability.AVAILABLE) HealthConnectClient.getOrCreate(context) else null
@@ -88,11 +73,9 @@ class HealthConnectManager @Inject constructor(
         else -> HcAvailability.NOT_SUPPORTED
     }
 
-    fun permissionContract(): ActivityResultContract<Set<String>, Set<String>> =
-        PermissionController.createRequestPermissionResultContract()
 
     /** Re-reads availability, granted permissions and stored sync info. */
-    suspend fun refresh() {
+    override suspend fun refresh() {
         val granted = runCatching { client?.permissionController?.getGrantedPermissions()?.intersect(PERMISSIONS) }.getOrNull().orEmpty()
         mutable.update {
             it.copy(
@@ -105,7 +88,7 @@ class HealthConnectManager @Inject constructor(
     }
 
     /** Called with the permissions the user granted in the system dialog. */
-    suspend fun onPermissionsResult(granted: Set<String>) {
+    override suspend fun onPermissionsResult(granted: Set<String>) {
         if (granted.intersect(PERMISSIONS).isNotEmpty()) {
             prefs.edit().putBoolean(KEY_ENABLED, true).apply()
             refresh()
@@ -117,7 +100,7 @@ class HealthConnectManager @Inject constructor(
     }
 
     /** Foreground auto-sync: runs only when connected and the last sync is older than 15 minutes. */
-    suspend fun syncIfDue() {
+    override suspend fun syncIfDue() {
         refresh()
         val s = state.value
         if (!s.connected) return
@@ -126,7 +109,7 @@ class HealthConnectManager @Inject constructor(
         sync(force = false)
     }
 
-    suspend fun sync(force: Boolean): Result<HcSyncSummary> = mutex.withLock {
+    override suspend fun sync(force: Boolean): Result<HcSyncSummary> = mutex.withLock {
         val hc = client ?: return Result.failure(IllegalStateException("Health Connect không khả dụng trên thiết bị này."))
         mutable.update { it.copy(syncing = true, error = null) }
         val result = runCatching {
@@ -203,7 +186,7 @@ class HealthConnectManager @Inject constructor(
     }
 
     /** Stops syncing, revokes access and (optionally) removes everything that was imported. */
-    suspend fun disconnect(removeImported: Boolean) {
+    override suspend fun disconnect(removeImported: Boolean) {
         prefs.edit().remove(KEY_ENABLED).remove(KEY_LAST_SYNC).apply()
         runCatching { client?.permissionController?.revokeAllPermissions() }
         if (removeImported) dao.deleteImported(accountManager.getCurrentAccountId())
@@ -211,5 +194,5 @@ class HealthConnectManager @Inject constructor(
         refresh()
     }
 
-    fun clearError() = mutable.update { it.copy(error = null) }
+    override fun clearError() = mutable.update { it.copy(error = null) }
 }

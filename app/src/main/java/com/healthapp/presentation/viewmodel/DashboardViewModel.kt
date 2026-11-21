@@ -2,10 +2,10 @@ package com.healthapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.repository.AccountManager
-import com.healthapp.data.local.dao.UserProfileDao
-import com.healthapp.data.local.dao.ReminderDao
-import com.healthapp.data.local.entity.ReminderEntity
+import com.healthapp.domain.repository.AccountSession
+import com.healthapp.domain.model.Reminder
+import com.healthapp.domain.repository.ProfileRepository
+import com.healthapp.domain.repository.ReminderRepository
 import com.healthapp.domain.model.NutritionSummary
 import com.healthapp.domain.model.DailySummary
 import com.healthapp.domain.model.Habit
@@ -55,7 +55,7 @@ data class DashboardUiState(
     val bloodPressureDiastolic: Int? = null,
     val glucoseValue: Double? = null,
     val glucoseUnit: String? = null,
-    val reminders: List<ReminderEntity> = emptyList(),
+    val reminders: List<Reminder> = emptyList(),
     val scoreDetails: com.healthapp.domain.usecase.HealthScoreResult? = null,
     val loadedOnce: Boolean = false
 )
@@ -69,11 +69,11 @@ class DashboardViewModel @Inject constructor(
     private val sleepRepository: SleepRepository,
     private val weightRepository: WeightRepository,
     private val vitalRepository: VitalRepository,
-    private val userProfileDao: UserProfileDao,
-    private val reminderDao: ReminderDao,
-    private val accountManager: AccountManager,
-    healthConnect: com.healthapp.data.healthconnect.HealthConnectManager,
-    private val medicationRepository: com.healthapp.data.repository.MedicationRepository
+    private val profileRepository: ProfileRepository,
+    private val reminderRepository: ReminderRepository,
+    private val accountManager: AccountSession,
+    healthConnect: com.healthapp.domain.repository.HealthSyncRepository,
+    private val medicationRepository: com.healthapp.domain.repository.MedicationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -112,17 +112,19 @@ class DashboardViewModel @Inject constructor(
                 val totalHabitsResult = habitRepository.getTotalActiveHabits(accountId)
                 val activeHabits = habitRepository.observeHabits(accountId).first().filter { it.isEnabled }
                 val completedHabitIds = habitRepository.getCompletedHabitIdsForDate(accountId, today).getOrDefault(emptySet())
-                val todayReminders = reminderDao.getEnabledReminders(accountId).filter { reminder ->
-                    reminder.daysOfWeek.isNullOrBlank() || reminder.daysOfWeek.contains(LocalDate.now().dayOfWeek.name)
+                val todayReminders = reminderRepository.getEnabledReminders(accountId).getOrDefault(emptyList()).filter { reminder ->
+                    reminder.daysOfWeek.isNullOrEmpty() || reminder.daysOfWeek.any { it.name == LocalDate.now().dayOfWeek.name }
                 }
-                val profile = userProfileDao.getProfileByAccountId(accountId)
-                val weight = weightRepository.getWeightForDate(accountId, today).getOrNull()?.weight ?: profile?.weight?.takeIf { it > 0 }
+                val profile = profileRepository.getProfile(accountId)
+                // Latest logged weight (people weigh every few days, not daily), else the profile value.
+                val weight = weightRepository.observeWeightRecords(accountId).first().maxByOrNull { it.recordedAt }?.weight
+                    ?: profile?.weightKg?.takeIf { it > 0 }
                 val sleep = sleepRepository.getSleepForDate(accountId, today).getOrNull()?.durationMinutes
                 val latestVitals = vitalRepository.observeAll(accountId).first().groupBy { it.type }
                 val latestHeartRate = latestVitals[VitalType.HEART_RATE]?.maxByOrNull { it.recordedAt }
                 val latestBloodPressure = latestVitals[VitalType.BLOOD_PRESSURE]?.maxByOrNull { it.recordedAt }
                 val latestGlucose = latestVitals[VitalType.GLUCOSE]?.maxByOrNull { it.recordedAt }
-                val height = profile?.height?.takeIf { it > 0 }
+                val height = profile?.heightCm?.takeIf { it > 0 }
                 val bmi = if (weight != null && height != null) weight / ((height / 100.0) * (height / 100.0)) else null
 
                 val scoreDetails = runCatching { computeScore(accountId, bmi, latestBloodPressure) }.getOrNull()

@@ -2,8 +2,9 @@ package com.healthapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.healthconnect.HealthConnectManager
-import com.healthapp.data.healthconnect.HcState
+import androidx.health.connect.client.PermissionController
+import com.healthapp.domain.repository.HealthSyncRepository
+import com.healthapp.domain.model.HcState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -11,11 +12,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HealthConnectViewModel @Inject constructor(
-    private val manager: HealthConnectManager
+    private val manager: HealthSyncRepository
 ) : ViewModel() {
     val state: StateFlow<HcState> = manager.state
-    val permissions = HealthConnectManager.PERMISSIONS
-    val permissionContract = manager.permissionContract()
+    val permissions = manager.permissions
+    // Android permission UI contract: platform code, so it lives in presentation.
+    val permissionContract = PermissionController.createRequestPermissionResultContract()
 
     init { refresh() }
 

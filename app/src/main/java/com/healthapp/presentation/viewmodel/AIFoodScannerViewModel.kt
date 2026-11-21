@@ -1,9 +1,8 @@
 package com.healthapp.presentation.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.repository.AccountManager
+import com.healthapp.domain.repository.AccountSession
 import com.healthapp.domain.model.Food
 import com.healthapp.domain.model.Meal
 import com.healthapp.domain.model.MealItem
@@ -14,7 +13,6 @@ import com.healthapp.domain.usecase.FoodScan
 import com.healthapp.domain.usecase.ScanTotals
 import com.healthapp.domain.usecase.ScannedFood
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,8 +43,7 @@ data class AIFoodScannerUiState(
 class AIFoodScannerViewModel @Inject constructor(
     private val aiRepository: AIRepository,
     private val nutritionRepository: NutritionRepository,
-    private val accountManager: AccountManager,
-    @ApplicationContext private val context: Context
+    private val accountManager: AccountSession
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AIFoodScannerUiState(mealType = mealTypeFor(LocalTime.now())))
@@ -55,7 +52,7 @@ class AIFoodScannerViewModel @Inject constructor(
     fun analyzeImage(imageUri: String) {
         _uiState.update { it.copy(imageUri = imageUri, isAnalyzing = true, items = emptyList(), notes = null, isMock = false, error = null, saved = false) }
         viewModelScope.launch {
-            aiRepository.analyzeFoodImage(imageUri, context)
+            aiRepository.analyzeFoodImage(imageUri)
                 .onSuccess { analysis ->
                     val items = FoodScan.fromRecognized(analysis.recognizedFoods)
                     _uiState.update {

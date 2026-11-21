@@ -41,7 +41,7 @@ fun NutritionScreen(navController: NavController, viewModel: NutritionViewModel 
     var showCustomDialog by remember { mutableStateOf(false) }
     var preselectedFood by remember { mutableStateOf<Food?>(null) }
     Column(Modifier.fillMaxSize().background(HealthPalette.Background).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-        ScreenHeader("Dinh dưỡng", "Nhật ký ăn uống", "Ghi món ăn và khẩu phần để theo dõi năng lượng.", HealthPalette.Orange)
+        ScreenHeader("Dinh dưỡng", "Nhật ký ăn uống", subtitle = "Ghi món ăn và khẩu phần để theo dõi năng lượng.", accent = HealthPalette.Orange)
 
         GradientCard(HealthPalette.Orange.gradient, Modifier.fillMaxWidth(), onClick = { navController.navigate("food_scanner") }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -86,7 +86,7 @@ fun NutritionScreen(navController: NavController, viewModel: NutritionViewModel 
         }
         state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
 
-        SectionHeader("Thư viện thực phẩm", "Tự nhập", modifier = Modifier.padding(top = 18.dp)) { showCustomDialog = true }
+        SectionHeader("Thư viện thực phẩm", modifier = Modifier.padding(top = 18.dp), action = "Tự nhập") { showCustomDialog = true }
         Text("Tra cứu trực tuyến calo và thành phần; kiểm tra nhãn sản phẩm khi cần.", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, modifier = Modifier.padding(bottom = 10.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             state.foods.take(6).forEach { food ->

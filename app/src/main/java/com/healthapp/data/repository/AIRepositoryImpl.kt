@@ -1,31 +1,25 @@
 package com.healthapp.data.repository
 
 import android.content.Context
-import com.healthapp.data.local.dao.AIAnalysisDao
 import com.healthapp.data.remote.AiBackendApi
 import com.healthapp.data.remote.ChatMessageDto
 import com.healthapp.data.remote.ChatRequestDto
 import com.healthapp.domain.model.AIFoodAnalysis
-import com.healthapp.domain.model.AIAnalysisType
-import com.healthapp.domain.model.AIHealthAnalysis
 import com.healthapp.domain.repository.AIRepository
 import javax.inject.Inject
 
 /** AI requests must go through a server that owns the provider key. */
 class AIRepositoryImpl @Inject constructor(
-    @Suppress("UNUSED_PARAMETER") private val aiAnalysisDao: AIAnalysisDao,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context,
     private val aiBackendApi: AiBackendApi
 ) : AIRepository {
     private val conversations = mutableMapOf<String, List<ChatMessageDto>>()
-    private fun unavailable(): UnsupportedOperationException = UnsupportedOperationException(
-        "Chưa kết nối trợ lý AI. Cần cấu hình máy chủ bảo vệ khóa API trước khi phân tích."
-    )
 
     /**
      * Compresses the photo, sends it to the backend (which owns the API key) and maps the
      * structured estimate. The photo is sent off-device; the UI tells the user before they pick one.
      */
-    override suspend fun analyzeFoodImage(imageUri: String, context: Context): Result<AIFoodAnalysis> = runCatching {
+    override suspend fun analyzeFoodImage(imageUri: String): Result<AIFoodAnalysis> = runCatching {
         val encoded = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             com.healthapp.data.remote.ImageEncoder.encode(context, android.net.Uri.parse(imageUri))
         }
@@ -78,8 +72,6 @@ class AIRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun generateHealthAnalysis(userId: String, type: AIAnalysisType): Result<AIHealthAnalysis> =
-        Result.failure(unavailable())
 
     override suspend fun chatWithAssistant(userId: String, query: String): Result<String> = runCatching {
         require(query.isNotBlank() && query.length <= 2000) { "Câu hỏi cần từ 1 đến 2000 ký tự." }
@@ -91,6 +83,4 @@ class AIRepositoryImpl @Inject constructor(
         response.answer
     }
 
-    override suspend fun getSavedAnalyses(userId: String): Result<List<AIHealthAnalysis>> =
-        Result.success(emptyList())
 }

@@ -13,8 +13,8 @@ import com.healthapp.data.local.entity.SleepLogEntity
 import com.healthapp.data.local.entity.ActivityLogEntity
 import com.healthapp.data.local.entity.WeightLogEntity
 import com.healthapp.data.local.entity.ReminderEntity
-import com.healthapp.data.local.entity.AIAnalysisEntity
 import com.healthapp.data.local.entity.VitalLogEntity
+import com.healthapp.data.local.entity.MoodEntity
 import kotlinx.coroutines.flow.Flow
 
 // Account DAO
@@ -382,24 +382,15 @@ interface ReminderDao {
     suspend fun deleteReminder(reminderId: String)
 }
 
-// AI Analysis DAO
+
 @Dao
-interface AIAnalysisDao {
-    @Query("SELECT * FROM ai_analyses WHERE accountId = :accountId ORDER BY createdAt DESC")
-    fun observeAnalysesByAccountId(accountId: String): Flow<List<AIAnalysisEntity>>
-
-    @Query("SELECT * FROM ai_analyses WHERE accountId = :accountId AND analysisType = :type ORDER BY createdAt DESC")
-    fun observeAnalysesByType(accountId: String, type: String): Flow<List<AIAnalysisEntity>>
-
-    @Query("SELECT * FROM ai_analyses WHERE id = :analysisId")
-    suspend fun getAnalysisById(analysisId: String): AIAnalysisEntity?
+interface MoodDao {
+    @Query("SELECT * FROM mood_entries WHERE accountId = :accountId ORDER BY date DESC")
+    fun observeEntries(accountId: String): Flow<List<MoodEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAnalysis(analysis: AIAnalysisEntity)
+    suspend fun upsert(entry: MoodEntity)
 
-    @Query("DELETE FROM ai_analyses WHERE id = :analysisId")
-    suspend fun deleteAnalysis(analysisId: String)
-
-    @Query("DELETE FROM ai_analyses WHERE accountId = :accountId")
-    suspend fun deleteAllAnalyses(accountId: String)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(entries: List<MoodEntity>)
 }

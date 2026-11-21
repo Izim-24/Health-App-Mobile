@@ -2,7 +2,7 @@ package com.healthapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.repository.AccountManager
+import com.healthapp.domain.repository.AccountSession
 import com.healthapp.domain.model.Habit
 import com.healthapp.domain.model.HabitFrequency
 import com.healthapp.domain.repository.HabitRepository
@@ -28,7 +28,7 @@ data class HabitListUiState(
 @HiltViewModel
 class HabitListViewModel @Inject constructor(
     private val habitRepository: HabitRepository,
-    private val accountManager: AccountManager
+    private val accountManager: AccountSession
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HabitListUiState())

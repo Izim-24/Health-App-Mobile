@@ -1,6 +1,5 @@
 package com.healthapp.presentation.ui.mental
 
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,7 +13,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import com.healthapp.presentation.ui.theme.ArtworkKind
 import com.healthapp.presentation.ui.theme.Accent
 import com.healthapp.presentation.ui.components.*
@@ -23,7 +21,8 @@ import androidx.compose.ui.draw.clip
 import com.healthapp.presentation.ui.theme.HealthPalette
 import com.healthapp.presentation.ui.theme.WellnessArtwork
 import kotlinx.coroutines.delay
-import org.json.JSONObject
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.healthapp.presentation.viewmodel.MentalHealthViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -37,18 +36,16 @@ private val moodOptions = listOf(
     MoodOption("Căng thẳng", "😟", HealthPalette.Coral)
 )
 
-private data class MoodEntry(val date: String, val mood: String, val stress: Int, val note: String)
-
 @Composable
-fun MentalHealthScreen() {
-    val context = LocalContext.current
-    val today = LocalDate.now().toString()
-    var entries by remember { mutableStateOf(readEntries(context)) }
-    val existing = entries.firstOrNull { it.date == today }
-    var selectedMood by remember(today) { mutableStateOf(existing?.mood.orEmpty()) }
-    var stress by remember(today) { mutableFloatStateOf(existing?.stress?.toFloat() ?: 3f) }
-    var note by remember(today) { mutableStateOf(existing?.note.orEmpty()) }
-    var saved by remember { mutableStateOf(false) }
+fun MentalHealthScreen(viewModel: MentalHealthViewModel = hiltViewModel()) {
+    val state by viewModel.state.collectAsState()
+    val entries = state.entries
+    val existing = state.today
+    // Form fields start from today's saved check-in once it has loaded from the database.
+    var selectedMood by remember(existing) { mutableStateOf(existing?.mood.orEmpty()) }
+    var stress by remember(existing) { mutableFloatStateOf(existing?.stress?.toFloat() ?: 3f) }
+    var note by remember(existing) { mutableStateOf(existing?.note.orEmpty()) }
+    val saved = state.savedToday
     var breathing by remember { mutableStateOf(false) }
     var secondsLeft by remember { mutableIntStateOf(60) }
 
@@ -61,7 +58,7 @@ fun MentalHealthScreen() {
     }
 
     Column(Modifier.fillMaxSize().background(HealthPalette.Background).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-        ScreenHeader("Tinh thần", "Lắng nghe bản thân", "Một khoảng dừng nhỏ cho ngày hôm nay.", HealthPalette.Pink)
+        ScreenHeader("Tinh thần", "Lắng nghe bản thân", subtitle = "Một khoảng dừng nhỏ cho ngày hôm nay.", accent = HealthPalette.Pink)
 
         GradientCard(HealthPalette.Pink.gradient, Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -80,7 +77,7 @@ fun MentalHealthScreen() {
                 row.forEach { option ->
                     val selected = selectedMood == option.label
                     Card(
-                        onClick = { selectedMood = option.label; saved = false },
+                        onClick = { selectedMood = option.label; viewModel.markDirty() },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = if (selected) option.accent.soft else HealthPalette.Surface),
@@ -106,14 +103,14 @@ fun MentalHealthScreen() {
                     Pill("${stress.toInt()}/10", stressAccent)
                 }
                 Slider(
-                    value = stress, onValueChange = { stress = it; saved = false }, valueRange = 0f..10f, steps = 9,
+                    value = stress, onValueChange = { stress = it; viewModel.markDirty() }, valueRange = 0f..10f, steps = 9,
                     colors = SliderDefaults.colors(thumbColor = stressAccent.strong, activeTrackColor = stressAccent.strong, inactiveTrackColor = stressAccent.soft, activeTickColor = Color.White.copy(alpha = .6f), inactiveTickColor = stressAccent.strong.copy(alpha = .3f))
                 )
                 Text("0 = thư thái · 10 = rất căng thẳng", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = note,
-                    onValueChange = { note = it; saved = false },
+                    onValueChange = { note = it; viewModel.markDirty() },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Ghi chú riêng tư (tùy chọn)") },
                     placeholder = { Text("Điều gì đã ảnh hưởng đến bạn hôm nay?") },
@@ -126,10 +123,7 @@ fun MentalHealthScreen() {
                 PrimaryButton(
                     if (saved) "Đã lưu hôm nay ✓" else "Lưu check-in",
                     onClick = {
-                        val updated = listOf(MoodEntry(today, selectedMood, stress.toInt(), note.trim())) + entries.filterNot { it.date == today }
-                        writeEntries(context, updated)
-                        entries = updated
-                        saved = true
+                        viewModel.save(selectedMood, stress.toInt(), note)
                     },
                     enabled = selectedMood.isNotBlank(),
                     color = HealthPalette.Pink.strong
@@ -192,22 +186,4 @@ fun MentalHealthScreen() {
     }
 }
 
-private fun formatDate(date: String): String = runCatching {
-    LocalDate.parse(date).format(DateTimeFormatter.ofPattern("d MMM", Locale("vi")))
-}.getOrDefault(date)
-
-private fun readEntries(context: Context): List<MoodEntry> = runCatching {
-    val json = JSONObject(context.getSharedPreferences("mental_health_private", Context.MODE_PRIVATE).getString("entries", "{}") ?: "{}")
-    json.keys().asSequence().map { key ->
-        val value = json.getJSONObject(key)
-        MoodEntry(key, value.optString("mood"), value.optInt("stress"), value.optString("note"))
-    }.toList()
-}.getOrDefault(emptyList())
-
-private fun writeEntries(context: Context, entries: List<MoodEntry>) {
-    val json = JSONObject()
-    entries.forEach { entry ->
-        json.put(entry.date, JSONObject().put("mood", entry.mood).put("stress", entry.stress).put("note", entry.note))
-    }
-    context.getSharedPreferences("mental_health_private", Context.MODE_PRIVATE).edit().putString("entries", json.toString()).apply()
-}
+private fun formatDate(date: LocalDate): String = date.format(DateTimeFormatter.ofPattern("d MMM", Locale("vi")))

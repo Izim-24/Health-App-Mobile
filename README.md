@@ -1,6 +1,11 @@
 # Health App
 
-Ứng dụng Android viết bằng Kotlin, Jetpack Compose, Room và Hilt. Dữ liệu sức khỏe hiện được nhập thủ công và lưu cục bộ trên thiết bị.
+[![CI](https://github.com/Izim-24/Health-App-Mobile/actions/workflows/ci.yml/badge.svg)](https://github.com/Izim-24/Health-App-Mobile/actions/workflows/ci.yml)
+
+Ứng dụng Android (Kotlin, Jetpack Compose, Room, Hilt, Clean Architecture + MVVM) theo dõi sức khỏe, thói quen và dinh dưỡng, có ước tính dinh dưỡng từ ảnh món ăn bằng AI. Dữ liệu lưu cục bộ trên thiết bị.
+
+- 📄 **Báo cáo kỹ thuật** (kiến trúc, sơ đồ, đánh giá AI, kiểm thử): [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)
+- 🎬 **Kịch bản demo**: [DEMO.md](DEMO.md)
 
 ## Đã hoạt động
 
@@ -21,8 +26,9 @@
 
 ## Chưa hoàn thiện
 
-- Độ chính xác của nhận diện ảnh món ăn chưa được đánh giá với ảnh thật (cần khóa API hợp lệ).
-- Đăng ký/đăng nhập và đồng bộ nhiều thiết bị: hiện chỉ có tài khoản cục bộ mặc định.
+- Độ chính xác nhận diện ảnh mới được đánh giá trên 15 ảnh món Âu/Mỹ (Nutrition5k): sai số calo trung vị 16,5%. Chưa đánh giá trên món Việt.
+- Không có đăng nhập (có chủ đích: ứng dụng một người dùng, offline). Đồng bộ nhiều thiết bị cần backend có xác thực.
+- Văn bản giao diện viết trực tiếp trong code, chưa đưa vào `strings.xml`.
 - Đồng bộ Health Connect chạy nền khi không mở ứng dụng, xuất PDF, nhập lại bản xuất JSON, sức khỏe gia đình và quản trị chưa có luồng đầy đủ.
 - Dữ liệu cục bộ chưa mã hóa ở cấp ứng dụng. Sao lưu và chuyển dữ liệu ứng dụng đang tắt để tránh tự động sao chép thông tin sức khỏe.
 
@@ -36,11 +42,16 @@ Yêu cầu JDK 17 và Android SDK 35. Từ thư mục dự án:
 
 APK debug: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Kiểm thử đơn vị (công thức sức khỏe, lịch nhắc nhở):
+Kiểm thử (67 test):
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest
+.\gradlew.bat :app:testDebugUnitTest          # 48 test JVM: domain, mapping, ViewModel
+.\gradlew.bat :app:lintDebug                  # Android Lint: 0 lỗi
+.\gradlew.bat :app:connectedDebugAndroidTest  # 6 test trên emulator: migration Room, hồi quy, Compose UI
+cd server; npm test                          # 13 test backend
 ```
+
+Dữ liệu mẫu cho demo: **Hồ sơ → Cài đặt & dữ liệu → Nạp dữ liệu mẫu (demo)** (chỉ bản debug; dữ liệu gắn nhãn "Dữ liệu mẫu" và xóa riêng được).
 
 Không đặt khóa API trong `gradle.properties`, `local.properties`, mã nguồn hoặc APK. Backend phải giữ khóa và kiểm soát quyền truy cập trước khi bật chức năng AI.
 

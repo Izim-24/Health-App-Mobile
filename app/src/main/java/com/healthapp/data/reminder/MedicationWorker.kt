@@ -13,7 +13,7 @@ import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.healthapp.R
-import com.healthapp.data.repository.MedicationRepository
+import com.healthapp.domain.repository.MedicationRepository
 import com.healthapp.domain.model.DoseStatus
 import com.healthapp.domain.model.Medication
 import com.healthapp.presentation.ui.MainActivity

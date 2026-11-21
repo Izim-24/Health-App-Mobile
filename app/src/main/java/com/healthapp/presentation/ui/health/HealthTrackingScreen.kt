@@ -61,7 +61,7 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
     val latest = state.vitals.groupBy { it.type }.mapValues { (_, values) -> values.maxByOrNull { it.recordedAt } }
 
     Column(Modifier.fillMaxSize().background(HealthPalette.Background).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-        ScreenHeader("Sức khỏe", "Theo dõi chỉ số", "Nhập số đo từ máy đo, đồng hồ hoặc đồng bộ tự động.", HealthPalette.Coral)
+        ScreenHeader("Sức khỏe", "Theo dõi chỉ số", subtitle = "Nhập số đo từ máy đo, đồng hồ hoặc đồng bộ tự động.", accent = HealthPalette.Coral)
 
         GradientCard(HealthPalette.Sky.gradient, Modifier.fillMaxWidth(), onClick = { navController.navigate("health_connect") }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -78,19 +78,19 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
         SectionHeader("Chỉ số gần nhất", modifier = Modifier.padding(top = 14.dp))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val hr = latest[VitalType.HEART_RATE]
-            HealthValueCard(Icons.Rounded.Favorite, HealthPalette.Coral, "Nhịp tim", hr?.let { "${it.value.toInt()} bpm" }, hr?.recordedAt, hr?.source == "HEALTH_CONNECT") { entry = HealthEntryKind.HEART_RATE }
+            HealthValueCard(Icons.Rounded.Favorite, HealthPalette.Coral, "Nhịp tim", hr?.let { "${it.value.toInt()} bpm" }, hr?.recordedAt, origin(hr?.id, hr?.source)) { entry = HealthEntryKind.HEART_RATE }
             val bp = latest[VitalType.BLOOD_PRESSURE]
-            HealthValueCard(Icons.Rounded.MonitorHeart, HealthPalette.Pink, "Huyết áp", bp?.let { "${it.value.toInt()}/${it.secondaryValue?.toInt() ?: "—"} mmHg" }, bp?.recordedAt, bp?.source == "HEALTH_CONNECT") { entry = HealthEntryKind.BLOOD_PRESSURE }
+            HealthValueCard(Icons.Rounded.MonitorHeart, HealthPalette.Pink, "Huyết áp", bp?.let { "${it.value.toInt()}/${it.secondaryValue?.toInt() ?: "—"} mmHg" }, bp?.recordedAt, origin(bp?.id, bp?.source)) { entry = HealthEntryKind.BLOOD_PRESSURE }
             val glucose = latest[VitalType.GLUCOSE]
-            HealthValueCard(Icons.Rounded.Bloodtype, HealthPalette.Indigo, "Đường huyết", glucose?.let { "${"%.1f".format(it.value)} ${it.unit}" }, glucose?.recordedAt, glucose?.source == "HEALTH_CONNECT") { entry = HealthEntryKind.GLUCOSE }
+            HealthValueCard(Icons.Rounded.Bloodtype, HealthPalette.Indigo, "Đường huyết", glucose?.let { "${"%.1f".format(it.value)} ${it.unit}" }, glucose?.recordedAt, origin(glucose?.id, glucose?.source)) { entry = HealthEntryKind.GLUCOSE }
             val weight = state.weights.firstOrNull()
-            HealthValueCard(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, "Cân nặng", weight?.let { "${"%.1f".format(it.weight)} kg" }, weight?.recordedAt, weight?.id?.startsWith("hc_") == true) { entry = HealthEntryKind.WEIGHT }
+            HealthValueCard(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, "Cân nặng", weight?.let { "${"%.1f".format(it.weight)} kg" }, weight?.recordedAt, origin(weight?.id)) { entry = HealthEntryKind.WEIGHT }
             val sleep = state.sleeps.firstOrNull()
-            HealthValueCard(Icons.Rounded.Bedtime, HealthPalette.Violet, "Giấc ngủ", sleep?.let { "${it.durationMinutes / 60} giờ ${it.durationMinutes % 60} phút" }, sleep?.wakeupTime, sleep?.id?.startsWith("hc_") == true) { entry = HealthEntryKind.SLEEP }
+            HealthValueCard(Icons.Rounded.Bedtime, HealthPalette.Violet, "Giấc ngủ", sleep?.let { "${it.durationMinutes / 60} giờ ${it.durationMinutes % 60} phút" }, sleep?.wakeupTime, origin(sleep?.id)) { entry = HealthEntryKind.SLEEP }
             val stepActivities = state.activities.filter { it.date == LocalDate.now().toString() }
             val stepsToday = stepActivities.takeIf { it.isNotEmpty() }?.sumOf { it.steps }
             val lastStep = stepActivities.maxByOrNull { it.recordedAt }
-            HealthValueCard(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Orange, "Số bước hôm nay", stepsToday?.let { "$it bước" }, lastStep?.recordedAt, lastStep?.id?.startsWith("hc_") == true) { entry = HealthEntryKind.ACTIVITY }
+            HealthValueCard(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Orange, "Số bước hôm nay", stepsToday?.let { "$it bước" }, lastStep?.recordedAt, origin(lastStep?.id)) { entry = HealthEntryKind.ACTIVITY }
         }
 
         SectionHeader("Xu hướng", modifier = Modifier.padding(top = 18.dp))
@@ -127,10 +127,10 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             history.forEach { record -> VitalHistoryRow(record, onDelete = { viewModel.deleteVital(record.id) }) }
-            state.weights.take(10).forEach { HealthHistoryLabel(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, "Cân nặng", "${"%.1f".format(it.weight)} kg", it.recordedAt, it.id.startsWith("hc_")) }
-            state.sleeps.take(10).forEach { HealthHistoryLabel(Icons.Rounded.Bedtime, HealthPalette.Violet, "Giấc ngủ", "${it.durationMinutes / 60} giờ ${it.durationMinutes % 60} phút", it.wakeupTime, it.id.startsWith("hc_")) }
+            state.weights.take(10).forEach { HealthHistoryLabel(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, "Cân nặng", "${"%.1f".format(it.weight)} kg", it.recordedAt, origin(it.id)) }
+            state.sleeps.take(10).forEach { HealthHistoryLabel(Icons.Rounded.Bedtime, HealthPalette.Violet, "Giấc ngủ", "${it.durationMinutes / 60} giờ ${it.durationMinutes % 60} phút", it.wakeupTime, origin(it.id)) }
             state.activities.take(10).forEach {
-                HealthHistoryLabel(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Orange, "Bước chân", "${it.steps} bước" + if (it.durationMinutes > 0) " · ${it.durationMinutes} phút" else "", it.recordedAt, it.id.startsWith("hc_"))
+                HealthHistoryLabel(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Orange, "Bước chân", "${it.steps} bước" + if (it.durationMinutes > 0) " · ${it.durationMinutes} phút" else "", it.recordedAt, origin(it.id))
             }
         }
         Spacer(Modifier.height(28.dp))
@@ -154,8 +154,15 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
     }
 }
 
-private fun sourceLabel(fromHealthConnect: Boolean, time: LocalDateTime) =
-    "${if (fromHealthConnect) "Health Connect" else "Nhập tay"} · ${time.format(DateTimeFormatter.ofPattern("HH:mm dd/MM"))}"
+/** Where an entry came from, from its id prefix / source field: imported, sample (demo) or typed by the user. */
+private fun origin(id: String?, source: String? = null): String = when {
+    source == "HEALTH_CONNECT" || id?.startsWith("hc_") == true -> "Health Connect"
+    source == "DEMO" || id?.startsWith("demo_") == true -> "Dữ liệu mẫu"
+    else -> "Nhập tay"
+}
+
+private fun sourceLabel(origin: String, time: LocalDateTime) =
+    "$origin · ${time.format(DateTimeFormatter.ofPattern("HH:mm dd/MM"))}"
 
 /** Segmented control: Ngày / Tuần / Tháng. */
 @Composable
@@ -175,14 +182,14 @@ private fun PeriodSelector(days: Int, onSelect: (Int) -> Unit) {
 }
 
 @Composable
-private fun HealthHistoryLabel(icon: ImageVector, accent: Accent, title: String, value: String, time: LocalDateTime, fromHealthConnect: Boolean) {
+private fun HealthHistoryLabel(icon: ImageVector, accent: Accent, title: String, value: String, time: LocalDateTime, origin: String) {
     AppCard(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             IconBadge(icon, accent, size = 38.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
-                Text(sourceLabel(fromHealthConnect, time), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                Text(sourceLabel(origin, time), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             }
             Text(value, style = MaterialTheme.typography.titleSmall, color = accent.strong)
         }
@@ -242,7 +249,7 @@ private fun TrendChart(metric: TrendMetric, points: List<TrendPoint>) {
 }
 
 @Composable
-private fun HealthValueCard(icon: ImageVector, accent: Accent, title: String, value: String?, recordedAt: LocalDateTime?, fromHealthConnect: Boolean, onAdd: () -> Unit) {
+private fun HealthValueCard(icon: ImageVector, accent: Accent, title: String, value: String?, recordedAt: LocalDateTime?, origin: String, onAdd: () -> Unit) {
     AppCard(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             IconBadge(icon, accent, size = 46.dp)
@@ -250,7 +257,7 @@ private fun HealthValueCard(icon: ImageVector, accent: Accent, title: String, va
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted)
                 Text(value ?: "Chưa có", style = MaterialTheme.typography.titleMedium, color = if (value == null) HealthPalette.Subtle else HealthPalette.Ink)
-                recordedAt?.let { Text(sourceLabel(fromHealthConnect, it), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted) }
+                recordedAt?.let { Text(sourceLabel(origin, it), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted) }
             }
             SoftButton("Ghi", onAdd, accent, icon = Icons.Rounded.Add)
         }
@@ -275,7 +282,7 @@ private fun VitalHistoryRow(measurement: VitalMeasurement, onDelete: () -> Unit)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
-                Text(sourceLabel(measurement.source == "HEALTH_CONNECT", measurement.recordedAt), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                Text(sourceLabel(origin(measurement.id, measurement.source), measurement.recordedAt), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             }
             Text(value, style = MaterialTheme.typography.titleSmall, color = accent.strong)
             IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, "Xóa $label", tint = HealthPalette.Subtle) }

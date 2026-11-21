@@ -59,14 +59,13 @@ class ReminderWorker(appContext: Context, params: WorkerParameters) : CoroutineW
         const val CHANNEL_ID = "health_reminders"
 
         fun ensureChannel(context: Context) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val manager = context.getSystemService(NotificationManager::class.java)
-                manager.createNotificationChannel(
-                    NotificationChannel(CHANNEL_ID, "Nhắc nhở sức khỏe", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                        description = "Nhắc uống nước, vận động, ngủ, bữa ăn và thói quen"
-                    }
-                )
-            }
+            // minSdk is 26, so notification channels always exist.
+            val manager = context.getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "Nhắc nhở sức khỏe", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = "Nhắc uống nước, vận động, ngủ, bữa ăn và thói quen"
+                }
+            )
         }
 
         fun bodyFor(type: ReminderType): String = when (type) {

@@ -2,11 +2,8 @@ package com.healthapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.local.dao.ActivityLogDao
-import com.healthapp.data.local.dao.HabitLogDao
-import com.healthapp.data.local.dao.MealDao
-import com.healthapp.data.local.dao.WaterLogDao
-import com.healthapp.data.repository.AccountManager
+import com.healthapp.domain.repository.AccountSession
+import com.healthapp.domain.repository.ReportRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,11 +37,8 @@ data class ReportsUiState(
 
 @HiltViewModel
 class ReportsViewModel @Inject constructor(
-    private val accountManager: AccountManager,
-    private val mealDao: MealDao,
-    private val activityLogDao: ActivityLogDao,
-    private val waterLogDao: WaterLogDao,
-    private val habitLogDao: HabitLogDao
+    private val accountManager: AccountSession,
+    private val reports: ReportRepository
 ) : ViewModel() {
     private val mutable = MutableStateFlow(ReportsUiState())
     val state = mutable.asStateFlow()
@@ -62,26 +56,15 @@ class ReportsViewModel @Inject constructor(
                     ReportPeriod.WEEK -> end.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                     ReportPeriod.MONTH -> end.withDayOfMonth(1)
                 }
-                val dates = generateSequence(start) { it.plusDays(1).takeIf { day -> !day.isAfter(end) } }.toList()
-                val mealsByDay = dates.map { mealDao.getMealsByDate(accountId, it.toString()) }.filter { it.isNotEmpty() }
-                val activitiesByDay = dates.map { activityLogDao.getActivityLogsByDate(accountId, it.toString()) }.filter { it.isNotEmpty() }
-                val waterByDay = dates.map { waterLogDao.getWaterLogsByDate(accountId, it.toString()) }.filter { it.isNotEmpty() }
-                val activeHabits = habitLogDao.getTotalActiveHabits(accountId)
-                val completed = dates.sumOf { habitLogDao.getCompletedHabitsCount(accountId, it.toString()) }
+                val r = reports.periodReport(accountId, start, end)
                 ReportsUiState(
                     loading = false, period = period, range = if (start == end) end.toString() else "$start – $end",
-                    nutritionDays = mealsByDay.size,
-                    avgCalories = mealsByDay.flatMap { it }.sumOf { it.totalCalories } / mealsByDay.size.coerceAtLeast(1),
-                    avgProtein = (mealsByDay.flatMap { it }.sumOf { it.totalProtein } / mealsByDay.size.coerceAtLeast(1)).toInt(),
-                    avgCarbs = (mealsByDay.flatMap { it }.sumOf { it.totalCarbs } / mealsByDay.size.coerceAtLeast(1)).toInt(),
-                    avgFat = (mealsByDay.flatMap { it }.sumOf { it.totalFat } / mealsByDay.size.coerceAtLeast(1)).toInt(),
-                    activityDays = activitiesByDay.size,
-                    avgSteps = activitiesByDay.flatMap { it }.sumOf { it.steps } / activitiesByDay.size.coerceAtLeast(1),
-                    totalExerciseMinutes = activitiesByDay.flatMap { it }.sumOf { it.durationMinutes },
-                    totalCaloriesBurned = activitiesByDay.flatMap { it }.sumOf { it.caloriesBurned },
-                    waterDays = waterByDay.size,
-                    avgWaterMl = waterByDay.flatMap { it }.sumOf { it.amountMl } / waterByDay.size.coerceAtLeast(1),
-                    completedHabits = completed, activeHabits = activeHabits
+                    nutritionDays = r.nutritionDays, avgCalories = r.avgCalories, avgProtein = r.avgProtein,
+                    avgCarbs = r.avgCarbs, avgFat = r.avgFat,
+                    activityDays = r.activityDays, avgSteps = r.avgSteps,
+                    totalExerciseMinutes = r.totalExerciseMinutes, totalCaloriesBurned = r.totalCaloriesBurned,
+                    waterDays = r.waterDays, avgWaterMl = r.avgWaterMl,
+                    completedHabits = r.completedHabits, activeHabits = r.activeHabits
                 )
             }.onSuccess { if (mutable.value.period == period) mutable.value = it }
                 .onFailure { mutable.value = mutable.value.copy(loading = false, error = it.message ?: "Không tải được báo cáo") }

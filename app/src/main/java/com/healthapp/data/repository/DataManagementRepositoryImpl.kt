@@ -2,7 +2,6 @@ package com.healthapp.data.repository
 
 import android.content.Context
 import com.google.gson.GsonBuilder
-import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializer
 import com.healthapp.data.local.dao.DataManagementDao
@@ -16,22 +15,21 @@ import javax.inject.Singleton
 
 /** Exports all of the current account's data to a JSON file, and erases it on request. */
 @Singleton
-class DataManagementRepository @Inject constructor(
+class DataManagementRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dao: DataManagementDao,
     private val accountManager: AccountManager,
     private val scheduler: ReminderScheduler,
     private val healthConnect: com.healthapp.data.healthconnect.HealthConnectManager
-) {
+) : com.healthapp.domain.repository.DataManagementRepository {
     private val gson = GsonBuilder()
         .setPrettyPrinting()
         .registerTypeAdapter(LocalDateTime::class.java, JsonSerializer<LocalDateTime> { src, _, _ -> JsonPrimitive(src.toString()) })
         .create()
 
     /** Writes the export into the app cache (shared via FileProvider) and returns the file. */
-    suspend fun exportToFile(): Result<File> = runCatching {
+    override suspend fun exportToFile(): Result<File> = runCatching {
         val accountId = accountManager.getCurrentAccountId()
-        val mentalRaw = context.getSharedPreferences(MENTAL_PREFS, Context.MODE_PRIVATE).getString("entries", "{}") ?: "{}"
         val payload = linkedMapOf(
             "exportedAt" to LocalDateTime.now(),
             "format" to "healthapp-export-v1",
@@ -49,7 +47,7 @@ class DataManagementRepository @Inject constructor(
             "reminders" to dao.reminders(accountId),
             "medications" to dao.medications(accountId),
             "medicationLogs" to dao.medicationLogs(accountId),
-            "moodCheckIns" to runCatching { gson.fromJson(mentalRaw, JsonElement::class.java) }.getOrNull()
+            "moodCheckIns" to dao.moods(accountId)
         )
         val dir = File(context.cacheDir, "exports").apply { mkdirs() }
         dir.listFiles()?.forEach { it.delete() } // keep only the latest export on disk
@@ -57,7 +55,7 @@ class DataManagementRepository @Inject constructor(
         File(dir, "health-export-$stamp.json").apply { writeText(gson.toJson(payload)) }
     }
 
-    suspend fun deleteAllData(): Result<Unit> = runCatching {
+    override suspend fun deleteAllData(): Result<Unit> = runCatching {
         val accountId = accountManager.getCurrentAccountId()
         scheduler.cancelAll()
         healthConnect.disconnect(removeImported = true) // otherwise the next sync would re-import

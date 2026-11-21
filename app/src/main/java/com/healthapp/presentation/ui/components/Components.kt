@@ -77,7 +77,7 @@ fun Pill(text: String, accent: Accent, modifier: Modifier = Modifier) {
 
 /** Screen title block: coloured eyebrow pill, bold title, muted subtitle. */
 @Composable
-fun ScreenHeader(eyebrow: String, title: String, subtitle: String? = null, accent: Accent = HealthPalette.Emerald, modifier: Modifier = Modifier) {
+fun ScreenHeader(eyebrow: String, title: String, modifier: Modifier = Modifier, subtitle: String? = null, accent: Accent = HealthPalette.Emerald) {
     Column(modifier.padding(top = 20.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Pill(eyebrow, accent)
         Text(title, style = MaterialTheme.typography.headlineMedium, color = HealthPalette.Ink)
@@ -86,7 +86,7 @@ fun ScreenHeader(eyebrow: String, title: String, subtitle: String? = null, accen
 }
 
 @Composable
-fun SectionHeader(title: String, action: String? = null, modifier: Modifier = Modifier, onAction: (() -> Unit)? = null) {
+fun SectionHeader(title: String, modifier: Modifier = Modifier, action: String? = null, onAction: (() -> Unit)? = null) {
     Row(modifier.fillMaxWidth().padding(top = 8.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink, modifier = Modifier.weight(1f))
         if (action != null && onAction != null) {

@@ -187,15 +187,6 @@ data class ReminderEntity(
     val createdAt: LocalDateTime
 )
 
-@Entity(tableName = "ai_analyses")
-data class AIAnalysisEntity(
-    @PrimaryKey
-    val id: String,
-    val accountId: String,
-    val analysisType: String, // "NUTRITION", "HABIT", "SLEEP", "ACTIVITY", "WELLNESS"
-    val result: String, // JSON string with analysis results
-    val createdAt: LocalDateTime
-)
 
 @Entity(tableName = "medications", indices = [Index(value = ["accountId"])])
 data class MedicationEntity(
@@ -223,4 +214,16 @@ data class MedicationLogEntity(
     val time: String, // HH:mm dose slot
     val status: String, // "TAKEN", "SKIPPED"
     val recordedAt: LocalDateTime
+)
+
+/** One mood check-in per account per day (id = "accountId|yyyy-MM-dd"). */
+@Entity(tableName = "mood_entries", indices = [Index(value = ["accountId", "date"])])
+data class MoodEntity(
+    @PrimaryKey val id: String,
+    val accountId: String,
+    val date: String, // YYYY-MM-DD
+    val mood: String,
+    val stress: Int, // 0..10
+    val note: String,
+    val updatedAt: LocalDateTime
 )

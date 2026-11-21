@@ -11,8 +11,20 @@ import java.util.UUID
 import javax.inject.Inject
 
 class WaterRepositoryImpl @Inject constructor(
-    private val waterLogDao: WaterLogDao
+    private val waterLogDao: WaterLogDao,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : WaterRepository {
+    // A single number per account: SharedPreferences is enough (and is what earlier versions used).
+    private val goalPrefs get() = context.getSharedPreferences(GOAL_PREFS, android.content.Context.MODE_PRIVATE)
+
+    override suspend fun getDailyGoal(userId: String): Int = goalPrefs.getInt("goal_$userId", 0)
+
+    override suspend fun setDailyGoal(userId: String, ml: Int) {
+        require(ml in 100..10000) { "Mục tiêu cần từ 100 đến 10000 ml." }
+        goalPrefs.edit().putInt("goal_$userId", ml).apply()
+    }
+
+    companion object { const val GOAL_PREFS = "water_goals" }
 
     override suspend fun addWaterIntake(userId: String, amountMl: Int): Result<WaterIntake> = try {
         val now = LocalDateTime.now()

@@ -1,13 +1,11 @@
 package com.healthapp.presentation.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.repository.AccountManager
+import com.healthapp.domain.repository.AccountSession
 import com.healthapp.domain.model.WaterIntake
 import com.healthapp.domain.repository.WaterRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,14 +31,12 @@ data class WaterTrackingUiState(
 @HiltViewModel
 class WaterTrackingViewModel @Inject constructor(
     private val waterRepository: WaterRepository,
-    private val accountManager: AccountManager,
-    @ApplicationContext private val context: Context
+    private val accountManager: AccountSession
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WaterTrackingUiState())
     val uiState: StateFlow<WaterTrackingUiState> = _uiState.asStateFlow()
     private var observationJob: Job? = null
-    private val goalPrefs = context.getSharedPreferences("water_goals", Context.MODE_PRIVATE)
 
     init {
         loadWaterData()
@@ -60,7 +56,7 @@ class WaterTrackingViewModel @Inject constructor(
         observationJob = viewModelScope.launch {
             try {
                 val accountId = accountManager.getCurrentAccountId()
-                val goal = goalPrefs.getInt("goal_$accountId", 0)
+                val goal = waterRepository.getDailyGoal(accountId)
                 _uiState.update { it.copy(waterGoal = goal) }
                 waterRepository.observeWaterLogsForDate(accountId, today).collect { logs ->
                     val total = logs.sumOf { it.amountMl }
@@ -128,7 +124,7 @@ class WaterTrackingViewModel @Inject constructor(
         }
         viewModelScope.launch {
             val accountId = accountManager.getCurrentAccountId()
-            goalPrefs.edit().putInt("goal_$accountId", ml).apply()
+            waterRepository.setDailyGoal(accountId, ml)
             _uiState.update { it.copy(waterGoal = ml, progressPercentage = (it.totalWaterToday.toFloat() / ml).coerceIn(0f, 1f)) }
         }
     }

@@ -4,125 +4,91 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI Health & Habit Tracker - A comprehensive Android application for health monitoring, habit tracking, and AI-powered nutrition analysis.
+AI Health & Habit Tracker — an offline-first Android app (Vietnamese UI) for health tracking, habits,
+nutrition with AI food-photo estimates, medication reminders and Health Connect import. A small Node
+backend in `server/` holds the AI key and calls Gemini (free tier) or OpenAI.
 
-## Build Commands
+## Build & Test Commands
 
 ```bash
-# Debug build
-./gradlew assembleDebug
-
-# Release build (requires signing config)
-./gradlew assembleRelease
-
-# Run unit tests
-./gradlew test
-
-# Run lint checks
-./gradlew lint
-
-# Run connected Android tests
-./gradlew connectedAndroidTest
-
-# Clean build
-./gradlew clean
-
-# Build specific module
-./gradlew :app:assembleDebug
+./gradlew :app:assembleDebug            # debug APK
+./gradlew :app:testDebugUnitTest        # JVM tests: domain, mappers, ViewModels
+./gradlew :app:lintDebug                # Android Lint (0 errors expected)
+./gradlew :app:connectedDebugAndroidTest  # on emulator: Room migration, DAO regression, Compose UI
+cd server && npm test                   # backend tests (no real key needed)
+cd server && npm start                  # backend with GEMINI_API_KEY / OPENAI_API_KEY from server/.env
+cd server && npm run mock               # backend with clearly labelled sample responses (no key)
 ```
 
-## Architecture
+`gradle.properties` sets `android.injected.androidTest.leaveApksInstalledAfterRun=true` so instrumented
+tests don't uninstall the app (which would wipe emulator data). Keep it.
 
-This project follows **Clean Architecture** with **MVVM** pattern:
+## Architecture (Clean Architecture + MVVM)
 
 ```
-app/
-├── data/           # Data layer (repositories, data sources, Room database)
-├── domain/         # Business logic (use cases, entities, repository interfaces)
-├── presentation/   # UI layer (ViewModels, Compose screens, navigation)
-├── di/             # Dependency injection (Hilt modules)
-└── core/           # Shared utilities, constants, extensions
+app/src/main/java/com/healthapp/
+├── domain/        Pure Kotlin: models, repository interfaces, use cases (HealthScore, FoodScan,
+│                  HealthCalculations, MedicationSchedule, ReminderSchedule). No Android imports.
+├── data/          Room entities/DAOs, repository implementations, Retrofit APIs, WorkManager workers,
+│                  Health Connect import (HealthConnectManager implements HealthSyncRepository)
+├── presentation/  Compose screens + ViewModels. Depends on domain only — never import com.healthapp.data.
+└── di/            Hilt modules binding domain interfaces to data implementations
 ```
 
-### Dependency Flow
-Presentation → Domain → Data (dependencies flow inward, imports flow outward)
+Rules:
+- ViewModels take domain interfaces (`AccountSession`, `ProfileRepository`, `MedicationRepository`, …),
+  never DAOs or `*Impl` classes. Add a new interface in `domain/repository/` and bind it in `di/Module.kt`.
+- Business rules live in `domain/usecase` as pure functions with JVM unit tests.
+- Android-only APIs (permission contracts, Context) stay in presentation or data, not domain.
 
-### Key Layers
-- **domain/**: Pure Kotlin with business logic, no Android dependencies
-- **data/**: Room entities, DAOs, repository implementations
-- **presentation/**: Jetpack Compose UI, ViewModels, UI state
-- **di/**: Hilt dependency injection modules
+## Tech Stack (actually used)
 
-## Tech Stack
+Kotlin · Jetpack Compose + Material 3 · Hilt · Room (schemas exported to `app/schemas/`) · DataStore
+(account id) · Compose Navigation · WorkManager (reminders, medication doses) · Retrofit/OkHttp/Gson ·
+Coil · Health Connect client · system camera via `ActivityResultContracts.TakePicture` (not CameraX) ·
+charts drawn with Compose `Canvas` (no chart library).
 
-- **Language**: Kotlin
-- **UI**: Jetpack Compose with Material 3
-- **Architecture**: MVVM + Clean Architecture
-- **Database**: Room (SQLite)
-- **Preferences**: DataStore
-- **DI**: Hilt
-- **Navigation**: Compose Navigation
-- **Charts**: MPAndroidChart or Vico
-- **Background**: WorkManager
-- **Camera**: CameraX
-- **Health**: Health Connect
+## Database (Room, version 5)
 
-## Database Schema
+accounts, user_profiles, habits, habit_logs, foods, meals, meal_items, water_logs, sleep_logs,
+activity_logs, weight_logs, vital_logs, reminders, medications, medication_logs, mood_entries.
+- Every schema change needs a `Migration` in `HealthDatabase` + `ALL_MIGRATIONS`, an exported schema
+  JSON, and a `MigrationTestHelper` test in `app/src/androidTest`.
+- Meal lists observe only the `meals` table: insert child rows (meal_items) BEFORE the parent.
+- Id prefixes mark origin: `hc_` = imported from Health Connect, `demo_` = sample data.
 
-Main tables (Room entities):
-- `Account` - User authentication
-- `UserProfile` - Personal health information
-- `Habit` / `HabitLog` - Habit tracking
-- `Food` / `Meal` / `MealItem` - Nutrition data
-- `WaterLog` - Water intake
-- `SleepLog` - Sleep tracking
-- `ActivityLog` - Activity/exercise tracking
-- `WeightLog` - Weight history
-- `Reminder` - Notifications
-- `AIAnalysis` - AI analysis results
+## Navigation
 
-## Navigation Structure
+Bottom tabs: Trang chủ (dashboard) · Sức khỏe (vitals, Health Connect) · Ăn uống (nutrition) ·
+Thói quen (habits) · Tinh thần (mood). Pushed screens: profile, reports, water, reminders, medications,
+food_scanner, ai_chat, settings, health_connect.
 
-Bottom nav with 5 tabs:
-1. Home (Dashboard)
-2. Nutrition
-3. Habits
-4. Reports
-5. Profile
-
-Key destinations: Login, Registration, Dashboard, AI Food Scanner, Food Analysis Result, Meal Details, Habit List, Water/Sleep/Activity Tracking, Health Profile, AI Assistant, Settings.
+There is no login: the app is single-user and offline (one local account). Authentication was descoped
+on purpose; do not add Firebase.
 
 ## API Keys & Secrets
 
-All API keys must be stored in `gradle.properties` or `local.properties`:
-```properties
-AI_VISION_API_KEY=your_key_here
-FIREBASE_API_KEY=your_key_here
-```
-
-Never hardcode credentials. Use Firebase Remote Config or a secure backend for AI API calls.
-
-## Development Phases
-
-1. Project setup, architecture, database
-2. Authentication, profile, dashboard, habits, water tracking
-3. Sleep, activity, nutrition tracking, meal history
-4. AI food recognition, AI Health Assistant
-5. Reports, charts, notifications, Health Connect
-6. Testing, bug fixes, release build
+AI keys live ONLY in `server/.env` (gitignored): `GEMINI_API_KEY` (+ optional `GEMINI_MODEL`,
+`GEMINI_FALLBACK_MODEL`) or `OPENAI_API_KEY`. Never put keys in `gradle.properties`, `local.properties`
+or `BuildConfig` — anything in the APK can be extracted. The app talks to the backend at
+`http://10.0.2.2:8787` in debug builds (emulator → host).
 
 ## Testing Strategy
 
-- Unit tests for domain layer (use cases, repositories)
-- ViewModel tests for presentation logic
-- Instrumented tests for Room database operations
-- UI tests with Compose Testing
+- JVM: domain use cases, Health Connect mapping, ViewModels with in-memory fakes of domain interfaces.
+- Instrumented: Room migrations (`MigrationTestHelper`), DAO/repository regressions, Compose UI.
+- Backend: `node --test` with a fake upstream (no real key).
+- AI accuracy: `server/eval-food.mjs` on lab-weighed Nutrition5k photos; keep a separate holdout set.
+
+## Design
+
+Use the components in `presentation/ui/components` (`AppCard`, `GradientCard`, `IconBadge`,
+`ScreenHeader`, `StatTile`, `PrimaryButton`, `SoftButton`, `BackTopBar`) and `HealthPalette` accents
+(Emerald=brand/overall, Coral=heart, Pink=mind/BP, Orange=activity/food, Sky=water, Violet=sleep/habits,
+Indigo=meds/reports, Amber=reminders). Don't use green alone.
 
 ## Notes
 
-- Use `kotlinx.coroutines` for async operations
-- All database operations must be non-blocking
-- Follow Material 3 design guidelines
-- Primary color: Green (emerald), Background: White/Light Gray — plus a bright accent per health area (see `HealthPalette`: Coral=heart, Pink=mind/BP, Orange=activity/food, Sky=water, Violet=sleep/habits, Indigo=meds/reports, Amber=reminders). Don't use green alone.
-- Build screens from `presentation/ui/components` (`AppCard`, `GradientCard`, `IconBadge`, `ScreenHeader`, `StatTile`, `PrimaryButton`, `SoftButton`, `BackTopBar`) rather than raw Cards/colors
-- Mock AI responses during development, label clearly
+- Coroutines everywhere; no blocking database work on the main thread.
+- AI output is an estimate: always let the user review/edit before saving, and label mock data clearly.
+- Health data is sensitive: backups are disabled, exports warn the user, no analytics.

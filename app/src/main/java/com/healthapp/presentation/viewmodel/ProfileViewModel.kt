@@ -2,9 +2,9 @@ package com.healthapp.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.healthapp.data.local.dao.UserProfileDao
-import com.healthapp.data.local.entity.UserProfileEntity
-import com.healthapp.data.repository.AccountManager
+import com.healthapp.domain.model.HealthProfile
+import com.healthapp.domain.repository.ProfileRepository
+import com.healthapp.domain.repository.AccountSession
 import com.healthapp.domain.model.ActivityLevel
 import com.healthapp.domain.model.Gender
 import com.healthapp.domain.usecase.HealthCalculations
@@ -36,26 +36,24 @@ data class ProfileUiState(
 )
 
 @HiltViewModel
-class ProfileViewModel @Inject constructor(private val accountManager: AccountManager, private val profileDao: UserProfileDao) : ViewModel() {
+class ProfileViewModel @Inject constructor(private val accountManager: AccountSession, private val profiles: ProfileRepository) : ViewModel() {
     private val mutable = MutableStateFlow(ProfileUiState())
     val state = mutable.asStateFlow()
-    private var existing: UserProfileEntity? = null
 
     init { viewModelScope.launch { load() } }
 
     private suspend fun load() {
-        runCatching { profileDao.getProfileByAccountId(accountManager.getCurrentAccountId()) }
+        runCatching { profiles.getProfile(accountManager.getCurrentAccountId()) }
             .onSuccess { profile ->
-                existing = profile
                 mutable.value = ProfileUiState(
                     loading = false,
                     name = profile?.fullName.orEmpty(),
                     birthDate = profile?.dateOfBirth.orEmpty(),
-                    heightCm = profile?.height?.takeIf { it > 0 }?.toString().orEmpty(),
-                    weightKg = profile?.weight?.takeIf { it > 0 }?.toString().orEmpty(),
+                    heightCm = profile?.heightCm?.takeIf { it > 0 }?.toString().orEmpty(),
+                    weightKg = profile?.weightKg?.takeIf { it > 0 }?.toString().orEmpty(),
                     calorieGoal = profile?.targetCalories?.takeIf { it > 0 }?.toString().orEmpty(),
-                    gender = profile?.gender?.let { g -> runCatching { Gender.valueOf(g) }.getOrNull() },
-                    activityLevel = profile?.activityLevel?.let { a -> runCatching { ActivityLevel.valueOf(a) }.getOrNull() },
+                    gender = profile?.gender,
+                    activityLevel = profile?.activityLevel,
                     proteinGoal = profile?.targetProtein ?: 0.0,
                     carbsGoal = profile?.targetCarbs ?: 0.0,
                     fatGoal = profile?.targetFat ?: 0.0
@@ -111,26 +109,14 @@ class ProfileViewModel @Inject constructor(private val accountManager: AccountMa
         }
         viewModelScope.launch {
             runCatching {
-                val accountId = accountManager.getCurrentAccountId()
-                val now = LocalDateTime.now()
-                val profile = UserProfileEntity(
-                    id = existing?.id ?: UUID.randomUUID().toString(),
-                    accountId = accountId,
-                    fullName = input.name.trim(),
-                    dateOfBirth = input.birthDate.trim(),
-                    gender = input.gender?.name.orEmpty(),
-                    height = height,
-                    weight = weight,
-                    activityLevel = input.activityLevel?.name.orEmpty(),
-                    targetCalories = calories,
-                    targetProtein = input.proteinGoal,
-                    targetCarbs = input.carbsGoal,
-                    targetFat = input.fatGoal,
-                    createdAt = existing?.createdAt ?: now,
-                    updatedAt = now
+                profiles.saveProfile(
+                    accountManager.getCurrentAccountId(),
+                    HealthProfile(
+                        fullName = input.name.trim(), dateOfBirth = input.birthDate.trim(), gender = input.gender,
+                        heightCm = height, weightKg = weight, activityLevel = input.activityLevel,
+                        targetCalories = calories, targetProtein = input.proteinGoal, targetCarbs = input.carbsGoal, targetFat = input.fatGoal
+                    )
                 )
-                profileDao.insertProfile(profile)
-                existing = profile
             }.onSuccess { mutable.update { it.copy(saved = true, error = null) } }
                 .onFailure { e -> mutable.update { it.copy(error = e.message ?: "Không thể lưu hồ sơ") } }
         }
