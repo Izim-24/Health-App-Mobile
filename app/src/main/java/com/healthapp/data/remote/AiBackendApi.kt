@@ -5,10 +5,11 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 
 data class ChatMessageDto(val role: String, val content: String)
-data class ChatRequestDto(val messages: List<ChatMessageDto>)
+/** [lang] ("vi"/"en") is the app language; the backend answers in it. */
+data class ChatRequestDto(val messages: List<ChatMessageDto>, val lang: String = "vi")
 data class ChatResponseDto(val answer: String)
 
-data class FoodImageRequestDto(val image: String, val mimeType: String)
+data class FoodImageRequestDto(val image: String, val mimeType: String, val lang: String = "vi")
 
 data class FoodItemDto(
     val name: String?,

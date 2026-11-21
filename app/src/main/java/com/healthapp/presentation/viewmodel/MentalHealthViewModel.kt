@@ -1,5 +1,6 @@
 package com.healthapp.presentation.viewmodel
 
+import com.healthapp.presentation.ui.text.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.model.MoodEntry
@@ -18,7 +19,7 @@ data class MentalHealthUiState(
     val loading: Boolean = true,
     val entries: List<MoodEntry> = emptyList(),
     val savedToday: Boolean = false,
-    val error: String? = null
+    val error: UiText? = null
 ) {
     val today: MoodEntry? get() = entries.firstOrNull { it.date == LocalDate.now() }
 }
@@ -33,7 +34,7 @@ class MentalHealthViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             repository.observeEntries()
-                .catch { e -> mutable.update { it.copy(loading = false, error = e.message) } }
+                .catch { e -> mutable.update { it.copy(loading = false, error = e.message?.let(UiText::Raw)) } }
                 .collect { list -> mutable.update { it.copy(loading = false, entries = list) } }
         }
     }
@@ -42,7 +43,7 @@ class MentalHealthViewModel @Inject constructor(
         viewModelScope.launch {
             repository.save(MoodEntry(LocalDate.now(), mood, stress, note.trim(), LocalDateTime.now()))
                 .onSuccess { mutable.update { it.copy(savedToday = true, error = null) } }
-                .onFailure { e -> mutable.update { it.copy(error = e.message) } }
+                .onFailure { e -> mutable.update { it.copy(error = e.message?.let(UiText::Raw)) } }
         }
     }
 

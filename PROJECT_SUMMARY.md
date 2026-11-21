@@ -15,6 +15,8 @@ có ước tính dinh dưỡng từ ảnh món ăn bằng AI qua một backend n
 | Thói quen, nước, tinh thần | Đánh dấu hằng ngày, mục tiêu nước, check-in cảm xúc, bài thở 4–4 | Room + ViewModel |
 | Nhắc nhở & thuốc | Lịch nhắc theo giờ/ngày; lịch thuốc với nút "Đã uống/Bỏ qua" ngay trên thông báo; tỷ lệ tuân thủ 7 ngày | Thuốc: **báo thức chính xác** (`setExactAndAllowWhileIdle`, đúng phút cả khi Doze) + đặt lại sau khởi động/cập nhật/đổi giờ; không có quyền → WorkManager |
 | Giao diện | Chế độ sáng/tối/theo máy | Bảng màu `HealthPalette` có bản tối, thanh hệ thống đổi theo |
+| Ngôn ngữ | Tiếng Việt / English / theo máy, đổi ngay trong app | 608 chuỗi × 2 ngôn ngữ; per-app language (`LocaleManager`, `locales_config`); domain trả dữ liệu có cấu trúc, UI định dạng; ViewModel dùng `UiText`; backend nhận `lang` và trả mã lỗi `code` |
+| Trợ năng | TalkBack, cỡ chữ lớn | Nhãn mô tả có tên mục, `Role` radio/checkbox, live region cho lỗi, vùng chạm ≥ 48 dp; chọn ảnh bằng Photo Picker hệ thống (không cần quyền bộ nhớ) |
 | Dữ liệu | Xuất JSON qua bảng chia sẻ, xóa toàn bộ, dữ liệu mẫu cho demo | FileProvider, id `demo_…` để xóa riêng |
 
 ## 2. Kiến trúc
@@ -120,9 +122,9 @@ và `server/data/vn-foods.json` (món Việt, giá trị xấp xỉ). Lưu ý: s
 
 | Loại | Số test | Nội dung |
 |---|---|---|
-| JVM unit | 58 | Điểm sức khỏe + **lịch sử tuần & nhận xét**, BMI châu Á, TDEE, lịch nhắc/thuốc, tuân thủ, quét ảnh (nguồn calo), Health Connect mapping, **ViewModel** (Profile, Mental, Reports) với fake repository |
-| Instrumented (emulator) | 7 | Migration 4→5 + chuỗi 1→5, hồi quy bữa ăn (Room), nhập dữ liệu cảm xúc cũ, **Compose UI** (điểm sức khỏe, biểu đồ tuần) |
-| Backend | 16 | Endpoint, xác thực đầu vào, JSON schema, Gemini/OpenAI, model dự phòng, chế độ giả lập, **bảng dinh dưỡng** (khớp/không khớp, độ hợp lý từng dòng) |
+| JVM unit | 60 | Điểm sức khỏe + **lịch sử tuần & nhận xét**, BMI châu Á, TDEE, lịch nhắc/thuốc, tuân thủ, quét ảnh (nguồn calo), Health Connect mapping, **ViewModel** (Profile, Mental, Reports) với fake repository |
+| Instrumented (emulator) | 7 | Migration 4→5 + chuỗi 1→5, hồi quy bữa ăn (Room), nhập dữ liệu cảm xúc cũ, **Compose UI** (điểm sức khỏe, biểu đồ tuần) — chạy đạt ở cả tiếng Việt và tiếng Anh |
+| Backend | 18 | Endpoint, xác thực đầu vào, JSON schema, Gemini/OpenAI, model dự phòng, chế độ giả lập, **bảng dinh dưỡng** (khớp/không khớp, độ hợp lý từng dòng), ngôn ngữ trả lời, mã lỗi |
 | Lint | 0 lỗi | `./gradlew :app:lintDebug` |
 
 CI (GitHub Actions) chạy unit test, Lint, build APK và test backend mỗi lần push.
@@ -141,5 +143,5 @@ Kiểm thử thủ công trên emulator (Android 17): báo thức thuốc kêu �
 - Không có đăng nhập (ứng dụng một người dùng, offline) — có chủ đích; đồng bộ nhiều thiết bị cần backend có xác thực.
 - Cơ sở dữ liệu trên máy chưa mã hóa (SQLCipher); backend chỉ chạy cục bộ (cần HTTPS khi triển khai thật).
 - Nhắc nhở thói quen/nước vẫn dùng WorkManager (có thể trễ khi Doze); chỉ lịch thuốc dùng báo thức chính xác.
-- Văn bản giao diện còn viết trực tiếp trong code (chưa đưa vào `strings.xml` để đa ngôn ngữ).
+- Bản tiếng Anh chưa dùng `plurals` (Lint cảnh báo `PluralsCandidate`); thanh tab giữ cỡ chữ chuẩn khi phóng to chữ để không bị cắt.
 - Bảng món Việt (`server/data/vn-foods.json`) là giá trị **xấp xỉ** theo công thức phổ biến, chưa đối chiếu từng món với Bảng thành phần thực phẩm Việt Nam; chưa có bộ ảnh món Việt được cân để đánh giá.

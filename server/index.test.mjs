@@ -222,3 +222,45 @@ test('food table: every entry has plausible per-100 g values', () => {
     if (f.kcal > 40) assert.ok(Math.abs(fromMacros - f.kcal) / f.kcal < 0.3, `${f.key}: ${f.kcal} vs ${fromMacros.toFixed(0)}`);
   }
 });
+
+test('language: lang "en" switches chat instructions and food names; default stays Vietnamese', async () => {
+  const seen = [];
+  const answer = { is_food: true, notes: 'n', foods: [{ name: 'Rice', table_key: '', estimated_grams: 100, calories: 130, protein_g: 3, carbs_g: 28, fat_g: 0, confidence: 0.9 }] };
+  const gemini = createServer({ provider: { name: 'gemini', apiKey: 'g', model: 'm' }, mock: false, fetchImpl: async (_url, options) => {
+    seen.push(JSON.parse(options.body).systemInstruction.parts[0].text);
+    const text = seen.length <= 2 ? 'ok' : JSON.stringify(answer);
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }), { status: 200 });
+  } });
+  await new Promise((resolve) => gemini.listen(0, '127.0.0.1', resolve));
+  const at = (path, body) => fetch(`http://127.0.0.1:${gemini.address().port}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const messages = [{ role: 'user', content: 'Hi' }];
+  await at('/api/chat', { messages });
+  await at('/api/chat', { messages, lang: 'en' });
+  await at('/api/food-image', { image: IMAGE, mimeType: 'image/jpeg' });
+  await at('/api/food-image', { image: IMAGE, mimeType: 'image/jpeg', lang: 'en' });
+  gemini.close();
+  assert.match(seen[0], /tiếng Việt/);
+  assert.match(seen[1], /in English/);
+  assert.doesNotMatch(seen[2], /Language override/);
+  assert.match(seen[3], /Language override: write every `name`/);
+});
+
+test('errors carry a stable code the app can translate', async () => {
+  const srv = createServer({ provider: { name: 'gemini', apiKey: 'g', model: 'm' }, mock: false, fetchImpl: async () => new Response('{}', { status: 403 }) });
+  await new Promise((resolve) => srv.listen(0, '127.0.0.1', resolve));
+  const at = (path, body) => fetch(`http://127.0.0.1:${srv.address().port}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const auth = await at('/api/chat', { messages: [{ role: 'user', content: 'Hi' }] });
+  const badImage = await at('/api/food-image', { image: IMAGE, mimeType: 'image/gif' });
+  const unknown = await at('/api/nope', {});
+  srv.close();
+  assert.equal(auth.status, 502);
+  assert.equal((await auth.json()).code, 'upstream_auth');
+  assert.equal((await badImage.json()).code, 'bad_image');
+  assert.equal((await unknown.json()).code, 'not_found');
+  const none = createServer({ provider: null, mock: false });
+  await new Promise((resolve) => none.listen(0, '127.0.0.1', resolve));
+  const r = await fetch(`http://127.0.0.1:${none.address().port}/api/chat`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+  none.close();
+  assert.equal(r.status, 503);
+  assert.equal((await r.json()).code, 'not_configured');
+});

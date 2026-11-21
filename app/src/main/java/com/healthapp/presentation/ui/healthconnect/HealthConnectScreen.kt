@@ -1,5 +1,13 @@
 package com.healthapp.presentation.ui.healthconnect
 
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.foundation.selection.toggleable
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,13 +42,13 @@ import com.healthapp.presentation.viewmodel.HealthConnectViewModel
 import java.time.format.DateTimeFormatter
 
 private val dataTypes = listOf(
-    HealthPermission.getReadPermission(StepsRecord::class) to "Số bước",
-    HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class) to "Năng lượng vận động",
-    HealthPermission.getReadPermission(SleepSessionRecord::class) to "Giấc ngủ",
-    HealthPermission.getReadPermission(HeartRateRecord::class) to "Nhịp tim",
-    HealthPermission.getReadPermission(WeightRecord::class) to "Cân nặng",
-    HealthPermission.getReadPermission(BloodPressureRecord::class) to "Huyết áp",
-    HealthPermission.getReadPermission(BloodGlucoseRecord::class) to "Đường huyết"
+    HealthPermission.getReadPermission(StepsRecord::class) to R.string.stat_steps,
+    HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class) to R.string.hc_active_energy,
+    HealthPermission.getReadPermission(SleepSessionRecord::class) to R.string.stat_sleep,
+    HealthPermission.getReadPermission(HeartRateRecord::class) to R.string.stat_heart_rate,
+    HealthPermission.getReadPermission(WeightRecord::class) to R.string.metric_weight,
+    HealthPermission.getReadPermission(BloodPressureRecord::class) to R.string.stat_bp,
+    HealthPermission.getReadPermission(BloodGlucoseRecord::class) to R.string.stat_glucose
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,57 +80,60 @@ fun HealthConnectScreen(navController: NavController, viewModel: HealthConnectVi
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "Nhập số bước, giấc ngủ, nhịp tim, cân nặng, huyết áp và đường huyết từ đồng hồ, vòng đeo hoặc các ứng dụng sức khỏe khác qua Health Connect. Chỉ đọc, dữ liệu lưu trên thiết bị.",
+                stringResource(R.string.hc_intro),
                 color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium
             )
 
             when (state.availability) {
-                HcAvailability.NOT_SUPPORTED -> InfoCard("Thiết bị chưa hỗ trợ Health Connect", "Health Connect cần Android 9 trở lên. Trên Android 13 trở xuống, hãy cài ứng dụng Health Connect từ Google Play.")
+                HcAvailability.NOT_SUPPORTED -> InfoCard(stringResource(R.string.hc_unsupported), stringResource(R.string.hc_unsupported_sub))
                 HcAvailability.NEEDS_UPDATE -> {
-                    InfoCard("Cần cài hoặc cập nhật Health Connect", "Mở Google Play để cài đặt/cập nhật, rồi quay lại đây.")
+                    InfoCard(stringResource(R.string.hc_install), stringResource(R.string.hc_install_sub))
                     Button(onClick = {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.apps.healthdata&url=healthconnect%3A%2F%2Fonboarding")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    }, modifier = Modifier.fillMaxWidth()) { Text("Mở Google Play") }
+                    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.open_play)) }
                 }
                 HcAvailability.AVAILABLE -> {
                     StatusCard(state.connected, state.syncing, state.lastSync?.format(DateTimeFormatter.ofPattern("HH:mm dd/MM")), state.lastSummary?.let {
-                        "Lần gần nhất: ${it.days} ngày bước chân, ${it.sleep} giấc ngủ, ${it.heartRate} giờ nhịp tim, ${it.weight} cân nặng, ${it.bloodPressure} huyết áp, ${it.glucose} đường huyết."
+                        stringResource(R.string.hc_last_summary, it.days, it.sleep, it.heartRate, it.weight, it.bloodPressure, it.glucose)
                     })
 
                     AppCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Loại dữ liệu", fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
+                            Text(stringResource(R.string.data_types), fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
+                            val grantedText = stringResource(R.string.access_granted)
+                            val notGrantedText = stringResource(R.string.access_not_granted)
                             dataTypes.forEach { (perm, label) ->
                                 val ok = perm in state.granted
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Row(Modifier.semantics(mergeDescendants = true) { stateDescription = if (ok) grantedText else notGrantedText },
+                                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     Icon(if (ok) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, null, tint = if (ok) HealthPalette.Sky.strong else HealthPalette.Subtle, modifier = Modifier.size(20.dp))
-                                    Text(label, color = if (ok) HealthPalette.Ink else HealthPalette.Muted)
+                                    Text(stringResource(label), color = if (ok) HealthPalette.Ink else HealthPalette.Muted)
                                 }
                             }
                         }
                     }
 
                     if (!state.connected || state.granted.size < viewModel.permissions.size) {
-                        PrimaryButton(if (state.connected) "Cấp thêm quyền" else "Kết nối Health Connect", { launcher.launch(viewModel.permissions) }, color = HealthPalette.Sky.strong)
+                        PrimaryButton(stringResource(if (state.connected) R.string.hc_grant_more else R.string.hc_connect), { launcher.launch(viewModel.permissions) }, color = HealthPalette.Sky.strong)
                     }
                     if (state.connected) {
                         OutlinedButton(onClick = viewModel::syncNow, enabled = !state.syncing, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.Sync, null); Spacer(Modifier.width(8.dp)); Text("Đồng bộ ngay")
+                            Icon(Icons.Default.Sync, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.sync_now))
                         }
                         TextButton(onClick = { confirmDisconnect = true }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                            Text("Ngắt kết nối")
+                            Text(stringResource(R.string.disconnect))
                         }
                     }
                     Text(
-                        "Tự đồng bộ khi mở ứng dụng (tối đa 15 phút/lần), lấy 30 ngày gần nhất ở lần đầu. Số bước nhập từ Health Connect được cộng cùng số bước bạn tự nhập trong ngày.",
+                        stringResource(R.string.hc_sync_note),
                         style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted
                     )
                 }
             }
             state.error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }
-            TextButton(onClick = { showPrivacy = true }) { Text("Dữ liệu được dùng thế nào?") }
+            TextButton(onClick = { showPrivacy = true }) { Text(stringResource(R.string.hc_how_used)) }
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -131,18 +142,21 @@ fun HealthConnectScreen(navController: NavController, viewModel: HealthConnectVi
         var removeImported by remember { mutableStateOf(true) }
         AlertDialog(
             onDismissRequest = { confirmDisconnect = false },
-            title = { Text("Ngắt kết nối Health Connect?") },
+            title = { Text(stringResource(R.string.hc_disconnect_q)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Ứng dụng sẽ ngừng đồng bộ và thu hồi quyền đọc. Dữ liệu trong Health Connect không bị ảnh hưởng.")
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = removeImported, onCheckedChange = { removeImported = it })
-                        Text("Xóa dữ liệu đã nhập vào ứng dụng (giữ dữ liệu bạn tự nhập)")
+                    Text(stringResource(R.string.hc_disconnect_body))
+                    Row(
+                        Modifier.fillMaxWidth().toggleable(value = removeImported, role = Role.Checkbox, onValueChange = { removeImported = it }),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = removeImported, onCheckedChange = null)
+                        Text(stringResource(R.string.hc_remove_imported))
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { viewModel.disconnect(removeImported); confirmDisconnect = false }) { Text("Ngắt kết nối") } },
-            dismissButton = { TextButton(onClick = { confirmDisconnect = false }) { Text("Hủy") } }
+            confirmButton = { TextButton(onClick = { viewModel.disconnect(removeImported); confirmDisconnect = false }) { Text(stringResource(R.string.disconnect)) } },
+            dismissButton = { TextButton(onClick = { confirmDisconnect = false }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 
@@ -150,7 +164,7 @@ fun HealthConnectScreen(navController: NavController, viewModel: HealthConnectVi
         AlertDialog(
             onDismissRequest = { showPrivacy = false },
             text = { Box(Modifier.heightIn(max = 480.dp)) { HealthDataPrivacy() } },
-            confirmButton = { TextButton(onClick = { showPrivacy = false }) { Text("Đóng") } }
+            confirmButton = { TextButton(onClick = { showPrivacy = false }) { Text(stringResource(R.string.action_close)) } }
         )
     }
 }
@@ -160,13 +174,13 @@ private fun StatusCard(connected: Boolean, syncing: Boolean, lastSync: String?, 
     AppCard(Modifier.fillMaxWidth(), color = if (connected) HealthPalette.Sky.strong else HealthPalette.Surface) {
         Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val fg = if (connected) HealthPalette.Surface else HealthPalette.Ink
-            Text(if (connected) "ĐÃ KẾT NỐI" else "CHƯA KẾT NỐI", color = if (connected) HealthPalette.Emerald.soft else HealthPalette.Muted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+            Text(stringResource(if (connected) R.string.connected_caps else R.string.not_connected_caps), color = if (connected) HealthPalette.Emerald.soft else HealthPalette.Muted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
             Text(
                 when {
-                    syncing -> "Đang đồng bộ…"
-                    lastSync != null -> "Đồng bộ lúc $lastSync"
-                    connected -> "Chưa đồng bộ"
-                    else -> "Kết nối để nhập dữ liệu tự động"
+                    syncing -> stringResource(R.string.syncing)
+                    lastSync != null -> stringResource(R.string.synced_at, lastSync)
+                    connected -> stringResource(R.string.not_synced)
+                    else -> stringResource(R.string.connect_to_import)
                 },
                 color = fg, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
             )

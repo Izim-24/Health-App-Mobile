@@ -1,5 +1,14 @@
 package com.healthapp.presentation.ui.dashboard
 
+import com.healthapp.presentation.ui.text.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
+import androidx.annotation.StringRes
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -32,7 +41,6 @@ import com.healthapp.presentation.viewmodel.DashboardViewModel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel = hiltViewModel()) {
@@ -58,9 +66,9 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
     when {
         uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = HealthPalette.Primary) }
         uiState.error != null -> Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Không thể tải dữ liệu sức khỏe", style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
+            Text(stringResource(R.string.dash_load_error), style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
             Text(uiState.error.orEmpty(), color = HealthPalette.Muted)
-            TextButton(onClick = { viewModel.refreshDashboard() }) { Text("Thử lại") }
+            TextButton(onClick = { viewModel.refreshDashboard() }) { Text(stringResource(R.string.action_retry)) }
         }
         else -> Column(
             Modifier.fillMaxSize().background(HealthPalette.Background).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)
@@ -69,18 +77,21 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
             Row(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("vi"))).replaceFirstChar { it.uppercase() },
+                        LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM", currentLocale())).replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted
                     )
-                    Text("${greeting()}, ${uiState.userName ?: "bạn"} 👋", style = MaterialTheme.typography.headlineSmall, color = HealthPalette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(stringResource(R.string.dash_greeting, stringResource(greeting()), uiState.userName ?: stringResource(R.string.dash_you)), style = MaterialTheme.typography.headlineSmall, color = HealthPalette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+                val profileLabel = stringResource(R.string.nav_profile)
                 Box(
-                    Modifier.size(46.dp).clip(CircleShape).background(HealthPalette.HeroGradient).clickable { navController.navigate("profile") },
+                    Modifier.size(48.dp).clip(CircleShape).background(HealthPalette.HeroGradient)
+                        .clickable(onClickLabel = profileLabel) { navController.navigate("profile") }
+                        .semantics(mergeDescendants = true) { contentDescription = profileLabel; role = Role.Button },
                     contentAlignment = Alignment.Center
                 ) {
                     val initial = uiState.userName?.firstOrNull()?.uppercase()
                     if (initial != null) Text(initial, color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    else Icon(Icons.Rounded.Person, "Hồ sơ", tint = Color.White)
+                    else Icon(Icons.Rounded.Person, null, tint = Color.White)
                 }
             }
 
@@ -89,34 +100,34 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
 
             // Quick actions
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                QuickAction(Icons.Rounded.Medication, "Thuốc", HealthPalette.Indigo) { navController.navigate("medications") }
-                QuickAction(Icons.Rounded.WaterDrop, "Uống nước", HealthPalette.Sky) { navController.navigate("water") }
-                QuickAction(Icons.Rounded.AutoAwesome, "Trợ lý AI", HealthPalette.Violet) { navController.navigate("ai_chat") }
-                QuickAction(Icons.Rounded.NotificationsActive, "Nhắc nhở", HealthPalette.Amber) { navController.navigate("reminders") }
+                QuickAction(Icons.Rounded.Medication, stringResource(R.string.quick_meds), HealthPalette.Indigo) { navController.navigate("medications") }
+                QuickAction(Icons.Rounded.WaterDrop, stringResource(R.string.quick_water), HealthPalette.Sky) { navController.navigate("water") }
+                QuickAction(Icons.Rounded.AutoAwesome, stringResource(R.string.quick_ai), HealthPalette.Violet) { navController.navigate("ai_chat") }
+                QuickAction(Icons.Rounded.NotificationsActive, stringResource(R.string.quick_reminders), HealthPalette.Amber) { navController.navigate("reminders") }
             }
             Spacer(Modifier.height(22.dp))
 
-            SectionHeader("Chỉ số hôm nay", action = "Chi tiết") { navController.navigate("health") }
+            SectionHeader(stringResource(R.string.dash_today_stats), action = stringResource(R.string.action_details)) { navController.navigate("health") }
             val toHealth = { navController.navigate("health") }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatTile(Icons.AutoMirrored.Rounded.DirectionsWalk, "Số bước", uiState.totalSteps?.let { "%,d".format(it).replace(',', '.') } ?: "—",
-                    uiState.totalSteps?.let { "bước hôm nay" } ?: "Chưa ghi nhận", HealthPalette.Orange, Modifier.weight(1f), toHealth)
-                StatTile(Icons.Rounded.WaterDrop, "Nước uống", uiState.waterIntakeMl?.let { "$it ml" } ?: "—",
-                    if (uiState.waterIntakeMl == null) "Chưa ghi nhận" else "hôm nay", HealthPalette.Sky, Modifier.weight(1f)) { navController.navigate("water") }
+                StatTile(Icons.AutoMirrored.Rounded.DirectionsWalk, stringResource(R.string.stat_steps), uiState.totalSteps?.let { grouped(it) } ?: "—",
+                    stringResource(if (uiState.totalSteps != null) R.string.stat_steps_today else R.string.not_recorded), HealthPalette.Orange, Modifier.weight(1f), toHealth)
+                StatTile(Icons.Rounded.WaterDrop, stringResource(R.string.stat_water), uiState.waterIntakeMl?.let { stringResource(R.string.ml_value, it) } ?: "—",
+                    stringResource(if (uiState.waterIntakeMl == null) R.string.not_recorded else R.string.today_lower), HealthPalette.Sky, Modifier.weight(1f)) { navController.navigate("water") }
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatTile(Icons.Rounded.Bedtime, "Giấc ngủ", uiState.sleepDurationMinutes?.let { "${it / 60}g ${it % 60}p" } ?: "—",
-                    if (uiState.sleepDurationMinutes == null) "Chưa ghi nhận" else "đêm qua", HealthPalette.Violet, Modifier.weight(1f), toHealth)
-                StatTile(Icons.Rounded.Favorite, "Nhịp tim", uiState.heartRateBpm?.let { "$it bpm" } ?: "—",
-                    if (uiState.heartRateBpm == null) "Chưa có số đo" else "lần đo gần nhất", HealthPalette.Coral, Modifier.weight(1f), toHealth)
+                StatTile(Icons.Rounded.Bedtime, stringResource(R.string.stat_sleep), uiState.sleepDurationMinutes?.let { stringResource(R.string.duration_hm, it / 60, it % 60) } ?: "—",
+                    stringResource(if (uiState.sleepDurationMinutes == null) R.string.not_recorded else R.string.last_night), HealthPalette.Violet, Modifier.weight(1f), toHealth)
+                StatTile(Icons.Rounded.Favorite, stringResource(R.string.stat_heart_rate), uiState.heartRateBpm?.let { stringResource(R.string.bpm_value, it) } ?: "—",
+                    stringResource(if (uiState.heartRateBpm == null) R.string.no_reading else R.string.latest_reading), HealthPalette.Coral, Modifier.weight(1f), toHealth)
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 val bp = if (uiState.bloodPressureSystolic != null && uiState.bloodPressureDiastolic != null) "${uiState.bloodPressureSystolic}/${uiState.bloodPressureDiastolic}" else null
-                StatTile(Icons.Rounded.MonitorHeart, "Huyết áp", bp ?: "—", if (bp == null) "Chưa có số đo" else "mmHg", HealthPalette.Pink, Modifier.weight(1f), toHealth)
-                StatTile(Icons.Rounded.Bloodtype, "Đường huyết", uiState.glucoseValue?.let { "%.1f".format(it) } ?: "—",
-                    uiState.glucoseUnit ?: "Chưa có số đo", HealthPalette.Indigo, Modifier.weight(1f), toHealth)
+                StatTile(Icons.Rounded.MonitorHeart, stringResource(R.string.stat_bp), bp ?: "—", if (bp == null) stringResource(R.string.no_reading) else "mmHg", HealthPalette.Pink, Modifier.weight(1f), toHealth)
+                StatTile(Icons.Rounded.Bloodtype, stringResource(R.string.stat_glucose), uiState.glucoseValue?.let { oneDecimal(it) } ?: "—",
+                    uiState.glucoseUnit ?: stringResource(R.string.no_reading), HealthPalette.Indigo, Modifier.weight(1f), toHealth)
             }
             Spacer(Modifier.height(12.dp))
             AppCard(Modifier.fillMaxWidth(), onClick = { navController.navigate("profile") }) {
@@ -124,31 +135,31 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
                     IconBadge(Icons.Rounded.MonitorWeight, HealthPalette.Emerald)
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Cân nặng · BMI", style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted)
-                        Text(uiState.weightKg?.let { "${"%.1f".format(it)} kg" } ?: "Chưa có", style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink)
+                        Text(stringResource(R.string.weight_bmi), style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted)
+                        Text(uiState.weightKg?.let { stringResource(R.string.kg_value, oneDecimal(it)) } ?: stringResource(R.string.not_set), style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink)
                     }
-                    uiState.bmi?.let { Pill("BMI ${"%.1f".format(it)}", HealthPalette.Emerald) }
+                    uiState.bmi?.let { Pill(stringResource(R.string.bmi_value, oneDecimal(it)), HealthPalette.Emerald) }
                 }
             }
             Spacer(Modifier.height(22.dp))
 
-            SectionHeader("Dinh dưỡng", action = "Nhật ký") { navController.navigate("nutrition") }
+            SectionHeader(stringResource(R.string.section_nutrition), action = stringResource(R.string.action_diary)) { navController.navigate("nutrition") }
             uiState.nutrition?.let { NutritionSummaryCard(it, compact = true) }
-                ?: AppCard(Modifier.fillMaxWidth()) { Text("Chưa có dữ liệu dinh dưỡng hôm nay.", Modifier.padding(18.dp), color = HealthPalette.Muted) }
+                ?: AppCard(Modifier.fillMaxWidth()) { Text(stringResource(R.string.dash_no_nutrition), Modifier.padding(18.dp), color = HealthPalette.Muted) }
             Spacer(Modifier.height(22.dp))
 
-            SectionHeader("Thói quen", action = "Quản lý") { navController.navigate("habits") }
+            SectionHeader(stringResource(R.string.section_habits), action = stringResource(R.string.action_manage)) { navController.navigate("habits") }
             HabitsCard(uiState.habitCompletedToday, uiState.totalHabitsActive, uiState.habits.filterNot { it.isCompletedToday }.take(3).map { it.id to it.name },
                 onCheck = { id -> viewModel.setHabitCompleted(id, true) }, onOpen = { navController.navigate("habits") })
             Spacer(Modifier.height(22.dp))
 
-            SectionHeader("Nhắc nhở hôm nay", action = "Sửa") { navController.navigate("reminders") }
+            SectionHeader(stringResource(R.string.dash_reminders_today), action = stringResource(R.string.action_edit)) { navController.navigate("reminders") }
             AppCard(Modifier.fillMaxWidth()) {
                 if (uiState.reminders.isEmpty()) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         IconBadge(Icons.Rounded.NotificationsNone, HealthPalette.Amber)
                         Spacer(Modifier.width(14.dp))
-                        Text("Chưa có lời nhắc nào. Thêm nhắc uống nước hoặc đi ngủ.", color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.dash_no_reminders), color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium)
                     }
                 } else {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -168,19 +179,21 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
     }
 }
 
-private fun greeting(): String = when (LocalTime.now().hour) {
-    in 5..10 -> "Chào buổi sáng"
-    in 11..13 -> "Chào buổi trưa"
-    in 14..17 -> "Chào buổi chiều"
-    else -> "Chào buổi tối"
+@StringRes
+private fun greeting(): Int = when (LocalTime.now().hour) {
+    in 5..10 -> R.string.greet_morning
+    in 11..13 -> R.string.greet_noon
+    in 14..17 -> R.string.greet_afternoon
+    else -> R.string.greet_evening
 }
 
 @Composable
 private fun ScoreHero(score: Int?, details: com.healthapp.domain.usecase.HealthScoreResult?, onClick: () -> Unit) {
-    GradientCard(HealthPalette.HeroGradient, Modifier.fillMaxWidth(), onClick = onClick) {
+    val heroDescription = stringResource(R.string.score_hero_cd, score?.toString() ?: "—")
+    GradientCard(HealthPalette.HeroGradient, Modifier.fillMaxWidth().semantics { contentDescription = heroDescription }, onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Điểm sức khỏe", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .85f))
+                Text(stringResource(R.string.health_score), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .85f))
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(score?.toString() ?: "—", style = MaterialTheme.typography.displayLarge, color = Color.White)
@@ -188,9 +201,9 @@ private fun ScoreHero(score: Int?, details: com.healthapp.domain.usecase.HealthS
                 }
                 Text(
                     when {
-                        details?.score != null -> "${details.grade} · ${details.components.size} chỉ số"
-                        details != null -> "Cần thêm ${(HealthScore.MIN_AREAS - details.components.size).coerceAtLeast(1)} chỉ số để tính điểm"
-                        else -> "Chưa đủ dữ liệu để tính điểm"
+                        details?.score != null -> stringResource(R.string.score_grade_areas, details.grade!!.title(), details.components.size)
+                        details != null -> stringResource(R.string.score_need_more, (HealthScore.MIN_AREAS - details.components.size).coerceAtLeast(1))
+                        else -> stringResource(R.string.score_not_enough)
                     },
                     style = MaterialTheme.typography.bodyMedium, color = Color.White
                 )
@@ -211,24 +224,24 @@ private fun ScoreHero(score: Int?, details: com.healthapp.domain.usecase.HealthS
             ) {
                 Icon(Icons.Rounded.Lightbulb, null, tint = Color(0xFFFFE066), modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(tip, style = MaterialTheme.typography.bodySmall, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(tip.text(), style = MaterialTheme.typography.bodySmall, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             }
         }
         Spacer(Modifier.height(12.dp))
-        Text("Xem chi tiết  →", style = MaterialTheme.typography.labelLarge, color = Color.White)
+        Text(stringResource(R.string.see_details), style = MaterialTheme.typography.labelLarge, color = Color.White)
     }
 }
 
 @Composable
 private fun QuickAction(icon: ImageVector, label: String, accent: Accent, onClick: () -> Unit) {
     Column(
-        Modifier.width(78.dp).clip(RoundedCornerShape(18.dp)).clickable(onClick = onClick).padding(vertical = 4.dp),
+        Modifier.width(78.dp).clip(RoundedCornerShape(18.dp)).clickable(role = Role.Button, onClick = onClick).padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Box(Modifier.size(58.dp).clip(RoundedCornerShape(20.dp)).background(accent.gradient), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = Color.White, modifier = Modifier.size(26.dp))
         }
-        Text(label, style = MaterialTheme.typography.labelMedium, color = HealthPalette.Ink, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = HealthPalette.Ink, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 
@@ -240,21 +253,24 @@ private fun HabitsCard(done: Int, total: Int, pending: List<Pair<String, String>
                 IconBadge(Icons.Rounded.CheckCircle, HealthPalette.Violet)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Tiến độ hôm nay", style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted)
-                    Text("$done / $total hoàn thành", style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink)
+                    Text(stringResource(R.string.today_progress), style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted)
+                    Text(stringResource(R.string.done_of_total, done, total), style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink)
                 }
             }
             Spacer(Modifier.height(12.dp))
             AccentProgress(if (total > 0) done.toFloat() / total else 0f, HealthPalette.Violet)
             if (total == 0) {
-                Text("Chưa có thói quen nào — tạo thói quen đầu tiên.", Modifier.padding(top = 12.dp), color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.dash_no_habits), Modifier.padding(top = 12.dp), color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium)
             } else if (pending.isEmpty()) {
-                Text("Tuyệt vời! Bạn đã hoàn thành tất cả hôm nay 🎉", Modifier.padding(top = 12.dp), color = HealthPalette.Violet.strong, style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.dash_all_habits_done), Modifier.padding(top = 12.dp), color = HealthPalette.Violet.strong, style = MaterialTheme.typography.bodyMedium)
             } else {
                 Spacer(Modifier.height(6.dp))
                 pending.forEach { (id, name) ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = false, onCheckedChange = { if (it) onCheck(id) }, colors = CheckboxDefaults.colors(uncheckedColor = HealthPalette.Subtle, checkedColor = HealthPalette.Violet.strong))
+                    Row(
+                        Modifier.fillMaxWidth().toggleable(value = false, role = Role.Checkbox, onValueChange = { if (it) onCheck(id) }),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = false, onCheckedChange = null, colors = CheckboxDefaults.colors(uncheckedColor = HealthPalette.Subtle, checkedColor = HealthPalette.Violet.strong))
                         Text(name, color = HealthPalette.Ink, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
@@ -272,10 +288,10 @@ fun NutritionSummaryCard(nutrition: NutritionSummary, compact: Boolean = false) 
                 IconBadge(Icons.Rounded.LocalFireDepartment, HealthPalette.Orange)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(if (compact) "Năng lượng hôm nay" else "Dinh dưỡng hôm nay", style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted)
+                    Text(stringResource(if (compact) R.string.energy_today else R.string.nutrition_today), style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted)
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text("${nutrition.totalCalories}", style = MaterialTheme.typography.headlineMedium, color = HealthPalette.Ink)
-                        Text(if (nutrition.targetCalories > 0) " / ${nutrition.targetCalories} kcal" else " kcal", style = MaterialTheme.typography.bodyMedium, color = HealthPalette.Muted, modifier = Modifier.padding(bottom = 4.dp))
+                        Text(if (nutrition.targetCalories > 0) stringResource(R.string.kcal_of_target, nutrition.targetCalories) else stringResource(R.string.kcal_unit), style = MaterialTheme.typography.bodyMedium, color = HealthPalette.Muted, modifier = Modifier.padding(bottom = 4.dp))
                     }
                 }
             }
@@ -283,9 +299,9 @@ fun NutritionSummaryCard(nutrition: NutritionSummary, compact: Boolean = false) 
             AccentProgress(if (nutrition.targetCalories > 0) nutrition.totalCalories.toFloat() / nutrition.targetCalories else 0f, HealthPalette.Orange)
             Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MacroPill("Đạm", nutrition.totalProtein, nutrition.targetProtein, HealthPalette.Coral, Modifier.weight(1f))
-                MacroPill("Tinh bột", nutrition.totalCarbs, nutrition.targetCarbs, HealthPalette.Amber, Modifier.weight(1f))
-                MacroPill("Chất béo", nutrition.totalFat, nutrition.targetFat, HealthPalette.Sky, Modifier.weight(1f))
+                MacroPill(stringResource(R.string.macro_protein), nutrition.totalProtein, nutrition.targetProtein, HealthPalette.Coral, Modifier.weight(1f))
+                MacroPill(stringResource(R.string.macro_carbs), nutrition.totalCarbs, nutrition.targetCarbs, HealthPalette.Amber, Modifier.weight(1f))
+                MacroPill(stringResource(R.string.macro_fat), nutrition.totalFat, nutrition.targetFat, HealthPalette.Sky, Modifier.weight(1f))
             }
         }
     }
@@ -295,7 +311,7 @@ fun NutritionSummaryCard(nutrition: NutritionSummary, compact: Boolean = false) 
 private fun MacroPill(label: String, value: Double, target: Double, accent: Accent, modifier: Modifier = Modifier) {
     Column(modifier.clip(RoundedCornerShape(16.dp)).background(accent.soft).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = accent.strong)
-        Text("${value.toInt()} g", style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
+        Text(stringResource(R.string.grams_value, value.toInt()), style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
         if (target > 0) AccentProgress((value / target).toFloat(), accent, track = HealthPalette.Surface, height = 5.dp)
     }
 }

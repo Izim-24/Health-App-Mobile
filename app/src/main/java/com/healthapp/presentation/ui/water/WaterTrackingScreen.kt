@@ -1,5 +1,12 @@
 package com.healthapp.presentation.ui.water
 
+import com.healthapp.presentation.ui.text.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.LiveRegionMode
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -43,7 +50,7 @@ fun WaterTrackingScreen(
     Scaffold(
         containerColor = HealthPalette.Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = { BackTopBar("Nước uống") { navController.popBackStack() } }
+        topBar = { BackTopBar(stringResource(R.string.link_water)) { navController.popBackStack() } }
     ) { padding ->
         if (uiState.isLoading) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = sky.strong) }
@@ -53,10 +60,10 @@ fun WaterTrackingScreen(
             GradientCard(sky.gradient, Modifier.fillMaxWidth().padding(top = 4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Hôm nay", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .85f))
+                        Text(stringResource(R.string.today), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .85f))
                         Text("${uiState.totalWaterToday} ml", style = MaterialTheme.typography.displaySmall, color = Color.White)
                         Text(
-                            if (uiState.waterGoal > 0) "Mục tiêu ${uiState.waterGoal} ml · còn ${(uiState.waterGoal - uiState.totalWaterToday).coerceAtLeast(0)} ml" else "Chưa đặt mục tiêu",
+                            if (uiState.waterGoal > 0) stringResource(R.string.water_goal_left, uiState.waterGoal, (uiState.waterGoal - uiState.totalWaterToday).coerceAtLeast(0)) else stringResource(R.string.no_goal),
                             style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .9f)
                         )
                     }
@@ -80,15 +87,17 @@ fun WaterTrackingScreen(
                 ) {
                     Icon(Icons.Rounded.Edit, null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (uiState.waterGoal > 0) "Sửa mục tiêu" else "Đặt mục tiêu", style = MaterialTheme.typography.labelMedium, color = Color.White)
+                    Text(stringResource(if (uiState.waterGoal > 0) R.string.edit_goal else R.string.set_goal), style = MaterialTheme.typography.labelMedium, color = Color.White)
                 }
             }
-            uiState.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
+            uiState.error?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp).semantics { liveRegion = LiveRegionMode.Polite }) }
 
-            SectionHeader("Thêm nhanh", modifier = Modifier.padding(top = 14.dp))
+            SectionHeader(stringResource(R.string.quick_add), modifier = Modifier.padding(top = 14.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                listOf(Triple(1, "100 ml", "Ngụm"), Triple(2, "250 ml", "Cốc"), Triple(3, "500 ml", "Chai")).forEach { (option, amount, label) ->
-                    AppCard(Modifier.weight(1f), onClick = { viewModel.addQuickWater(option) }, color = sky.soft) {
+                listOf(Triple(1, "100 ml", R.string.water_sip), Triple(2, "250 ml", R.string.water_glass), Triple(3, "500 ml", R.string.water_bottle)).forEach { (option, amount, labelRes) ->
+                    val label = stringResource(labelRes)
+                    val addLabel = stringResource(R.string.add_water_cd, label, amount)
+                    AppCard(Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = addLabel }, onClick = { viewModel.addQuickWater(option) }, color = sky.soft) {
                         Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Icon(Icons.Rounded.LocalDrink, null, tint = sky.strong, modifier = Modifier.size((18 + option * 5).dp))
                             Text(amount, style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
@@ -98,10 +107,10 @@ fun WaterTrackingScreen(
                 }
             }
 
-            SectionHeader("Nhật ký hôm nay", modifier = Modifier.padding(top = 18.dp))
+            SectionHeader(stringResource(R.string.today_log), modifier = Modifier.padding(top = 18.dp))
             if (uiState.waterLogs.isEmpty()) {
                 AppCard(Modifier.fillMaxWidth()) {
-                    Text("Chưa có lượt uống nào. Chạm một nút ở trên để ghi.", Modifier.padding(18.dp), color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.no_water_logs), Modifier.padding(18.dp), color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -114,15 +123,15 @@ fun WaterTrackingScreen(
 
     if (showGoalDialog) AlertDialog(
         onDismissRequest = { showGoalDialog = false },
-        title = { Text("Mục tiêu nước mỗi ngày", style = MaterialTheme.typography.titleLarge) },
+        title = { Text(stringResource(R.string.water_goal_title), style = MaterialTheme.typography.titleLarge) },
         text = {
             OutlinedTextField(
-                goalInput, { goalInput = it.filter(Char::isDigit) }, label = { Text("ml mỗi ngày") }, singleLine = true,
+                goalInput, { goalInput = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.ml_per_day)) }, singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = MaterialTheme.shapes.medium
             )
         },
-        confirmButton = { Button(onClick = { viewModel.setGoal(goalInput.toIntOrNull() ?: 0); showGoalDialog = false }) { Text("Lưu") } },
-        dismissButton = { TextButton(onClick = { showGoalDialog = false }) { Text("Hủy") } }
+        confirmButton = { Button(onClick = { viewModel.setGoal(goalInput.toIntOrNull() ?: 0); showGoalDialog = false }) { Text(stringResource(R.string.action_save)) } },
+        dismissButton = { TextButton(onClick = { showGoalDialog = false }) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
@@ -134,7 +143,7 @@ fun WaterLogItem(log: WaterIntake, onDelete: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Text("${log.amountMl} ml", style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink, modifier = Modifier.weight(1f))
             Text(log.recordedAt.format(DateTimeFormatter.ofPattern("HH:mm")), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
-            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, contentDescription = "Xóa", tint = HealthPalette.Subtle) }
+            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, contentDescription = stringResource(R.string.delete_water_cd, log.amountMl, log.recordedAt.format(DateTimeFormatter.ofPattern("HH:mm"))), tint = HealthPalette.Subtle) }
         }
     }
 }

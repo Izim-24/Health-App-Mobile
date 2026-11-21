@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI Health & Habit Tracker — an offline-first Android app (Vietnamese UI) for health tracking, habits,
+AI Health & Habit Tracker — an offline-first Android app (Vietnamese + English UI) for health tracking, habits,
 nutrition with AI food-photo estimates, medication reminders and Health Connect import. A small Node
 backend in `server/` holds the AI key and calls Gemini (free tier) or OpenAI.
 
@@ -88,6 +88,19 @@ The model names each food, estimates grams and picks a `table_key`; the server r
 with `server/data/food-table.json` (per 100 g) when the key matches and labels each item `source: table|ai`.
 Regenerate the table with `node eval/build-food-table.mjs` (Nutrition5k ingredients, eval dishes excluded, plus
 `data/vn-foods.json` approximate Vietnamese dishes) — never edit `food-table.json` by hand.
+
+## Language & accessibility
+
+- All UI text lives in `res/values/strings.xml` (Vietnamese, default) and `res/values-en/strings.xml`; keep keys
+  and placeholders identical (`StringResourcesTest` enforces it). Never hard-code UI text in Kotlin.
+- Domain returns structured values (enums, `ScoreDetail`, `ScoreInsight`), never sentences; format them in
+  `presentation/ui/text/DomainText.kt`. ViewModels expose `UiText` (resource id or already-final text).
+- Data-layer text (notifications, errors) uses `AppLocale.localized(context).getString(...)`.
+- Per-app language: `core/AppLocale` (LocaleManager on 13+, stored choice + `attachBaseContext` below).
+  The backend gets `lang` and returns a stable `code` on errors; map codes to strings in `AIRepositoryImpl`.
+- Stored values stay language-independent (e.g. mood ids are the original Vietnamese labels).
+- Icon-only buttons need a content description naming the item; selections use `selectable`/`toggleable`
+  with a `Role`; error text gets `liveRegion`; touch targets ≥ 48 dp.
 
 ## Design
 

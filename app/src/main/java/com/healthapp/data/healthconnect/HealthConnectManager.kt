@@ -1,5 +1,6 @@
 package com.healthapp.data.healthconnect
 
+import com.healthapp.R
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
@@ -95,7 +96,7 @@ class HealthConnectManager @Inject constructor(
             sync(force = true)
         } else {
             refresh()
-            mutable.update { it.copy(error = "Chưa cấp quyền đọc dữ liệu nào trong Health Connect.") }
+            mutable.update { it.copy(error = com.healthapp.core.AppLocale.localized(context).getString(R.string.err_hc_no_permission)) }
         }
     }
 
@@ -110,7 +111,7 @@ class HealthConnectManager @Inject constructor(
     }
 
     override suspend fun sync(force: Boolean): Result<HcSyncSummary> = mutex.withLock {
-        val hc = client ?: return Result.failure(IllegalStateException("Health Connect không khả dụng trên thiết bị này."))
+        val hc = client ?: return Result.failure(IllegalStateException(com.healthapp.core.AppLocale.localized(context).getString(R.string.err_hc_unavailable)))
         mutable.update { it.copy(syncing = true, error = null) }
         val result = runCatching {
             val granted = hc.permissionController.getGrantedPermissions()
@@ -168,7 +169,7 @@ class HealthConnectManager @Inject constructor(
         mutable.update { s ->
             result.fold(
                 onSuccess = { s.copy(syncing = false, lastSummary = it, lastSync = LocalDateTime.now(), error = null) },
-                onFailure = { s.copy(syncing = false, error = "Đồng bộ thất bại: ${it.message}") }
+                onFailure = { s.copy(syncing = false, error = com.healthapp.core.AppLocale.localized(context).getString(R.string.err_hc_sync_failed, it.message.orEmpty())) }
             )
         }
         result

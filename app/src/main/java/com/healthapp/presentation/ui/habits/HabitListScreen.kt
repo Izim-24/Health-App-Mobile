@@ -1,5 +1,11 @@
 package com.healthapp.presentation.ui.habits
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -50,7 +56,7 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
     Box(Modifier.fillMaxSize().background(HealthPalette.Background)) {
         Column(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                ScreenHeader("Thói quen", "Tiến bộ mỗi ngày", subtitle = "Từng bước nhỏ, đều đặn mỗi ngày.", accent = HealthPalette.Violet)
+                ScreenHeader(stringResource(R.string.section_habits), stringResource(R.string.habits_header), subtitle = stringResource(R.string.habits_header_sub), accent = HealthPalette.Violet)
                 if (uiState.habits.isNotEmpty()) {
                     val done = uiState.habits.count { it.isCompletedToday }
                     val total = uiState.habits.count { it.isEnabled }.coerceAtLeast(1)
@@ -58,9 +64,9 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
                     GradientCard(HealthPalette.Violet.gradient, Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text("Hôm nay", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .85f))
-                                Text("$done / $total thói quen", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                                Text(if (done == total) "Hoàn thành tất cả — tuyệt vời! 🎉" else "Còn ${total - done} việc nữa", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .9f))
+                                Text(stringResource(R.string.today), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .85f))
+                                Text(stringResource(R.string.habits_of_total, done, total), style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                                Text(if (done == total) stringResource(R.string.habits_all_done) else stringResource(R.string.habits_left, total - done), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .9f))
                             }
                             Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
                                 CircularProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxSize(), color = Color.White, trackColor = Color.White.copy(alpha = .25f), strokeWidth = 8.dp, strokeCap = androidx.compose.ui.graphics.StrokeCap.Round)
@@ -73,15 +79,15 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
 
             when {
                 uiState.isLoading && uiState.habits.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = HealthPalette.Violet.strong) }
-                uiState.error != null && uiState.habits.isEmpty() -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Text(uiState.error ?: "Không tải được thói quen", color = HealthPalette.Muted) }
+                uiState.error != null && uiState.habits.isEmpty() -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Text(uiState.error ?: stringResource(R.string.err_load_habits), color = HealthPalette.Muted) }
                 uiState.habits.isEmpty() -> Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     IconBadge(Icons.Rounded.EmojiEvents, HealthPalette.Violet, size = 72.dp)
                     Spacer(Modifier.height(16.dp))
-                    Text("Bắt đầu từ một mục tiêu nhỏ", style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink)
+                    Text(stringResource(R.string.habits_empty_title), style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink)
                     Spacer(Modifier.height(6.dp))
-                    Text("Tạo thói quen của riêng bạn và đánh dấu khi hoàn thành.", color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(stringResource(R.string.habits_empty_sub), color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     Spacer(Modifier.height(20.dp))
-                    PrimaryButton("Tạo thói quen", { editingHabit = null; showHabitDialog = true }, Modifier.widthIn(max = 260.dp), icon = Icons.Rounded.Add, color = HealthPalette.Violet.strong)
+                    PrimaryButton(stringResource(R.string.create_habit), { editingHabit = null; showHabitDialog = true }, Modifier.widthIn(max = 260.dp), icon = Icons.Rounded.Add, color = HealthPalette.Violet.strong)
                 }
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -108,7 +114,7 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
             contentColor = Color.White,
             shape = CircleShape,
             icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
-            text = { Text("Thói quen mới") }
+            text = { Text(stringResource(R.string.new_habit)) }
         )
     }
 
@@ -132,25 +138,27 @@ private fun HabitCard(habit: Habit, date: String, onToggle: (Boolean) -> Unit, o
     val done = habit.isCompletedToday
     AppCard(Modifier.fillMaxWidth(), color = if (done) HealthPalette.Violet.soft else HealthPalette.Surface, border = !done) {
         Row(Modifier.fillMaxWidth().padding(start = 14.dp, top = 14.dp, bottom = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Large round check target
+            // Large round check target; TalkBack reads "Done: <habit>, checked/not checked".
+            val doneLabel = stringResource(R.string.habit_done_cd, habit.name)
             Box(
-                Modifier.size(44.dp).clip(CircleShape)
+                Modifier.size(48.dp).clip(CircleShape)
                     .background(if (done) HealthPalette.Violet.strong else HealthPalette.SurfaceAlt)
-                    .clickable { onToggle(!done) },
+                    .toggleable(value = done, role = Role.Checkbox, onValueChange = onToggle)
+                    .semantics { contentDescription = doneLabel },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Rounded.Check, contentDescription = if (done) "Bỏ đánh dấu" else "Đánh dấu hoàn thành", tint = if (done) Color.White else HealthPalette.Subtle)
+                Icon(Icons.Rounded.Check, contentDescription = null, tint = if (done) Color.White else HealthPalette.Subtle)
             }
             Column(Modifier.weight(1f).padding(start = 14.dp)) {
                 Text(
                     habit.name, style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink,
                     textDecoration = if (done) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
                 )
-                val goal = if (habit.goalValue != null) "${formatAmount(habit.goalValue)} ${habit.goalUnit.orEmpty()} mỗi ngày" else "Hằng ngày"
-                Text(if (done) "Đã xong hôm nay · $goal" else goal, style = MaterialTheme.typography.bodySmall, color = if (done) HealthPalette.Violet.strong else HealthPalette.Muted)
+                val goal = if (habit.goalValue != null) stringResource(R.string.habit_goal_daily, formatAmount(habit.goalValue), habit.goalUnit.orEmpty()) else stringResource(R.string.every_day)
+                Text(if (done) stringResource(R.string.habit_done_today, goal) else goal, style = MaterialTheme.typography.bodySmall, color = if (done) HealthPalette.Violet.strong else HealthPalette.Muted)
             }
-            IconButton(onClick = onEdit) { Icon(Icons.Rounded.Edit, contentDescription = "Chỉnh sửa", tint = HealthPalette.Muted) }
-            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, contentDescription = "Xóa", tint = HealthPalette.Subtle) }
+            IconButton(onClick = onEdit) { Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_named, habit.name), tint = HealthPalette.Muted) }
+            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, contentDescription = stringResource(R.string.delete_item, habit.name), tint = HealthPalette.Subtle) }
         }
     }
 }
@@ -164,22 +172,22 @@ private fun HabitEditorDialog(habit: Habit?, onDismiss: () -> Unit, onSave: (Str
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (habit == null) "Tạo thói quen" else "Chỉnh sửa thói quen") },
+        title = { Text(stringResource(if (habit == null) R.string.create_habit else R.string.edit_habit)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Tên thói quen") }, singleLine = true)
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.habit_name)) }, singleLine = true)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = amount,
                         onValueChange = { value -> if (value.all { it.isDigit() || it == '.' || it == ',' }) amount = value },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Mục tiêu (tùy chọn)") },
+                        label = { Text(stringResource(R.string.goal_optional)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true
                     )
-                    OutlinedTextField(value = unit, onValueChange = { unit = it }, modifier = Modifier.weight(1f), label = { Text("Đơn vị") }, singleLine = true)
+                    OutlinedTextField(value = unit, onValueChange = { unit = it }, modifier = Modifier.weight(1f), label = { Text(stringResource(R.string.unit)) }, singleLine = true)
                 }
-                Text("Ví dụ: Uống nước · 2 · lít", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                Text(stringResource(R.string.habit_example), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             }
         },
         confirmButton = {
@@ -187,9 +195,9 @@ private fun HabitEditorDialog(habit: Habit?, onDismiss: () -> Unit, onSave: (Str
                 val validAmount = parsedAmount?.takeIf { it > 0 }
                 val validUnit = unit.trim().takeIf { it.isNotEmpty() }
                 onSave(name.trim(), validAmount, validUnit)
-            }, enabled = name.isNotBlank() && (amount.isBlank() || (parsedAmount != null && parsedAmount > 0 && unit.isNotBlank()))) { Text("Lưu") }
+            }, enabled = name.isNotBlank() && (amount.isBlank() || (parsedAmount != null && parsedAmount > 0 && unit.isNotBlank()))) { Text(stringResource(R.string.action_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 

@@ -1,5 +1,7 @@
 package com.healthapp.presentation.viewmodel
 
+import com.healthapp.presentation.ui.text.UiText
+import com.healthapp.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.repository.AccountSession
@@ -33,7 +35,7 @@ data class AIFoodScannerUiState(
     val mealType: MealType = MealType.SNACK,
     val isSaving: Boolean = false,
     val saved: Boolean = false,
-    val error: String? = null
+    val error: UiText? = null
 ) {
     val totals: ScanTotals get() = FoodScan.totals(items)
     val hasResult: Boolean get() = items.isNotEmpty()
@@ -58,11 +60,11 @@ class AIFoodScannerViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isAnalyzing = false, items = items, notes = analysis.notes, isMock = analysis.isMock,
-                            error = if (items.isEmpty()) "AI không trả về món ăn hợp lệ. Hãy thử ảnh khác." else null
+                            error = if (items.isEmpty()) UiText.Res(R.string.err_no_foods) else null
                         )
                     }
                 }
-                .onFailure { e -> _uiState.update { it.copy(isAnalyzing = false, error = e.message ?: "Không phân tích được ảnh.") } }
+                .onFailure { e -> _uiState.update { it.copy(isAnalyzing = false, error = e.message?.let(UiText::Raw) ?: UiText.Res(R.string.err_analyze)) } }
         }
     }
 
@@ -104,7 +106,7 @@ class AIFoodScannerViewModel @Inject constructor(
                 )
                 nutritionRepository.addMeal(accountId, meal).getOrThrow()
             }.onSuccess { _uiState.update { it.copy(isSaving = false, saved = true) } }
-                .onFailure { e -> _uiState.update { it.copy(isSaving = false, error = e.message ?: "Không lưu được bữa ăn.") } }
+                .onFailure { e -> _uiState.update { it.copy(isSaving = false, error = e.message?.let(UiText::Raw) ?: UiText.Res(R.string.err_save_meal)) } }
         }
     }
 

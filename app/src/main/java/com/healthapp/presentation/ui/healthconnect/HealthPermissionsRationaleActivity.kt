@@ -1,5 +1,7 @@
 package com.healthapp.presentation.ui.healthconnect
 
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,6 +28,11 @@ class HealthPermissionsRationaleActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent { HealthAppTheme { HealthDataPrivacy(onClose = ::finish) } }
     }
+
+    // Android 12 and older: use the in-app language choice here too.
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.healthapp.core.AppLocale.localized(newBase))
+    }
 }
 
 @Composable
@@ -34,26 +41,21 @@ fun HealthDataPrivacy(onClose: (() -> Unit)? = null) {
         Modifier.fillMaxSize().background(HealthPalette.Background).verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Quyền riêng tư dữ liệu sức khỏe", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = HealthPalette.Ink)
-        Text("Ứng dụng chỉ ĐỌC các loại dữ liệu bạn cho phép từ Health Connect:", color = HealthPalette.Ink)
+        Text(stringResource(R.string.privacy_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = HealthPalette.Ink)
+        Text(stringResource(R.string.privacy_reads), color = HealthPalette.Ink)
         Text(
-            "• Số bước và năng lượng vận động — tổng theo ngày\n" +
-                "• Giấc ngủ — giờ đi ngủ, giờ thức dậy\n" +
-                "• Nhịp tim — trung bình theo từng giờ\n" +
-                "• Cân nặng, huyết áp, đường huyết",
+            stringResource(R.string.privacy_list),
             color = HealthPalette.Ink
         )
-        Text("Dữ liệu được dùng để hiển thị bảng điều khiển, biểu đồ và báo cáo trong ứng dụng.", color = HealthPalette.Ink)
+        Text(stringResource(R.string.privacy_use), color = HealthPalette.Ink)
         Text(
-            "Dữ liệu chỉ được lưu trên thiết bị này. Ứng dụng không ghi vào Health Connect, không gửi dữ liệu sức khỏe lên máy chủ, " +
-                "không dùng cho quảng cáo và không chia sẻ với bên thứ ba. Trợ lý AI chỉ nhận nội dung bạn tự gõ.",
+            stringResource(R.string.privacy_storage),
             color = HealthPalette.Ink
         )
         Text(
-            "Bạn có thể thu hồi quyền bất cứ lúc nào trong Health Connect, hoặc trong ứng dụng: Cài đặt → Health Connect → Ngắt kết nối " +
-                "(có tùy chọn xóa dữ liệu đã nhập).",
+            stringResource(R.string.privacy_revoke),
             color = HealthPalette.Muted, style = MaterialTheme.typography.bodySmall
         )
-        onClose?.let { Button(onClick = it, modifier = Modifier.fillMaxWidth()) { Text("Đã hiểu") } }
+        onClose?.let { Button(onClick = it, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.got_it)) } }
     }
 }

@@ -1,5 +1,8 @@
 package com.healthapp.presentation.viewmodel
 
+import com.healthapp.presentation.ui.text.UiText
+import com.healthapp.R
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.repository.AccountSession
@@ -13,7 +16,7 @@ import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 
-enum class ReportPeriod(val label: String) { DAY("Ngày"), WEEK("Tuần"), MONTH("Tháng") }
+enum class ReportPeriod(@StringRes val label: Int) { DAY(R.string.period_day), WEEK(R.string.period_week), MONTH(R.string.period_month) }
 
 data class ReportsUiState(
     val loading: Boolean = true,
@@ -32,7 +35,7 @@ data class ReportsUiState(
     val avgWaterMl: Int = 0,
     val completedHabits: Int = 0,
     val activeHabits: Int = 0,
-    val error: String? = null
+    val error: UiText? = null
 )
 
 @HiltViewModel
@@ -67,7 +70,7 @@ class ReportsViewModel @Inject constructor(
                     completedHabits = r.completedHabits, activeHabits = r.activeHabits
                 )
             }.onSuccess { if (mutable.value.period == period) mutable.value = it }
-                .onFailure { mutable.value = mutable.value.copy(loading = false, error = it.message ?: "Không tải được báo cáo") }
+                .onFailure { mutable.value = mutable.value.copy(loading = false, error = it.message?.let(UiText::Raw) ?: UiText.Res(R.string.err_load_report)) }
         }
     }
 }

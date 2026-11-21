@@ -1,5 +1,7 @@
 package com.healthapp.presentation.viewmodel
 
+import com.healthapp.presentation.ui.text.UiText
+import com.healthapp.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.repository.MedicationRepository
@@ -27,7 +29,7 @@ data class MedicationUiState(
     val todayDoses: List<ScheduledDose> = emptyList(),
     val todayAdherence: Adherence = Adherence(0, 0),
     val weekAdherence: Adherence = Adherence(0, 0),
-    val error: String? = null
+    val error: UiText? = null
 )
 
 /** Raw editor input; validated in [MedicationViewModel.save]. */
@@ -55,7 +57,7 @@ class MedicationViewModel @Inject constructor(
                 val today = LocalDate.now()
                 combine(repository.observeMedications(), repository.observeLogs(today.minusDays(6), today)) { meds, logs -> meds to logs }
                     .collect { (meds, logs) -> recompute(meds, logs) }
-            }.onFailure { e -> mutable.update { it.copy(loading = false, error = e.message) } }
+            }.onFailure { e -> mutable.update { it.copy(loading = false, error = e.message?.let(UiText::Raw)) } }
         }
     }
 
@@ -84,14 +86,14 @@ class MedicationViewModel @Inject constructor(
     )
 
     /** Returns an error message, or null when saved. */
-    fun save(draft: MedicationDraft): String? {
+    fun save(draft: MedicationDraft): UiText? {
         val name = draft.name.trim()
-        if (name.isEmpty()) return "Nhập tên thuốc."
-        val times = MedicationSchedule.parseTimes(draft.times) ?: return "Giờ uống không hợp lệ. Ví dụ: 08:00, 20:00"
-        if (times.size > 12) return "Tối đa 12 lần mỗi ngày."
-        if (draft.days.isEmpty()) return "Chọn ít nhất một ngày."
-        val duration = draft.durationDays.trim().takeIf { it.isNotEmpty() }?.let { it.toIntOrNull() ?: return "Số ngày không hợp lệ." }
-        if (duration != null && duration !in 1..3650) return "Số ngày cần từ 1 đến 3650."
+        if (name.isEmpty()) return UiText.Res(R.string.err_med_name)
+        val times = MedicationSchedule.parseTimes(draft.times) ?: return UiText.Res(R.string.err_med_times)
+        if (times.size > 12) return UiText.Res(R.string.err_med_max_times)
+        if (draft.days.isEmpty()) return UiText.Res(R.string.err_med_days)
+        val duration = draft.durationDays.trim().takeIf { it.isNotEmpty() }?.let { it.toIntOrNull() ?: return UiText.Res(R.string.err_med_duration) }
+        if (duration != null && duration !in 1..3650) return UiText.Res(R.string.err_med_duration_range)
 
         val existing = state.value.medications.firstOrNull { it.id == draft.id }
         val start = existing?.startDate ?: LocalDate.now()
@@ -108,7 +110,7 @@ class MedicationViewModel @Inject constructor(
             createdAt = existing?.createdAt ?: LocalDateTime.now()
         )
         viewModelScope.launch {
-            repository.save(med).onFailure { e -> mutable.update { it.copy(error = e.message ?: "Không thể lưu thuốc") } }
+            repository.save(med).onFailure { e -> mutable.update { it.copy(error = e.message?.let(UiText::Raw) ?: UiText.Res(R.string.err_med_save)) } }
         }
         return null
     }
@@ -118,16 +120,16 @@ class MedicationViewModel @Inject constructor(
         val newStatus = if (dose.status == status) null else status
         viewModelScope.launch {
             repository.logDose(dose.medication.id, dose.date, dose.time, newStatus)
-                .onFailure { e -> mutable.update { it.copy(error = e.message) } }
+                .onFailure { e -> mutable.update { it.copy(error = e.message?.let(UiText::Raw)) } }
         }
     }
 
     fun setActive(med: Medication, active: Boolean) {
-        viewModelScope.launch { repository.setActive(med, active).onFailure { e -> mutable.update { it.copy(error = e.message) } } }
+        viewModelScope.launch { repository.setActive(med, active).onFailure { e -> mutable.update { it.copy(error = e.message?.let(UiText::Raw)) } } }
     }
 
     fun delete(med: Medication) {
-        viewModelScope.launch { repository.delete(med).onFailure { e -> mutable.update { it.copy(error = e.message) } } }
+        viewModelScope.launch { repository.delete(med).onFailure { e -> mutable.update { it.copy(error = e.message?.let(UiText::Raw)) } } }
     }
 
     fun clearError() = mutable.update { it.copy(error = null) }

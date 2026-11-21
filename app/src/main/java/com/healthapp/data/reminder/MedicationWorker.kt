@@ -75,14 +75,15 @@ class MedicationWorker(appContext: Context, params: WorkerParameters) : Coroutin
                     .putExtra(MedicationActionReceiver.KEY_STATUS, status.name),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
+            val res = com.healthapp.core.AppLocale.localized(context)
             val body = listOfNotNull(med.dosage.takeIf { it.isNotBlank() }, med.instructions?.takeIf { it.isNotBlank() }).joinToString(" · ")
             val notification = NotificationCompat.Builder(context, ReminderWorker.CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle("Đến giờ uống ${med.name}")
-                .setContentText(body.ifBlank { "Liều lúc ${time}" })
+                .setContentTitle(res.getString(R.string.notif_med_title, med.name))
+                .setContentText(body.ifBlank { res.getString(R.string.notif_med_dose_at, time.toString()) })
                 .setContentIntent(open)
-                .addAction(0, "Đã uống", action(DoseStatus.TAKEN))
-                .addAction(0, "Bỏ qua", action(DoseStatus.SKIPPED))
+                .addAction(0, res.getString(R.string.action_taken), action(DoseStatus.TAKEN))
+                .addAction(0, res.getString(R.string.action_skip_dose), action(DoseStatus.SKIPPED))
                 .setAutoCancel(true)
                 .setCategory(NotificationCompat.CATEGORY_REMINDER)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -92,7 +93,7 @@ class MedicationWorker(appContext: Context, params: WorkerParameters) : Coroutin
     }
 }
 
-/** Handles "Đã uống" / "Bỏ qua" taps on a dose notification without opening the app. */
+/** Handles "Taken" / "Skip" taps on a dose notification without opening the app. */
 class MedicationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val medId = intent.getStringExtra(MedicationWorker.KEY_MED_ID) ?: return

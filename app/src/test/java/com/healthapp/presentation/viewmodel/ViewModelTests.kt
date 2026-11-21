@@ -130,7 +130,7 @@ class ViewModelTests {
     @Test fun mood_invalidSaveSurfacesError() {
         val vm = MentalHealthViewModel(FakeMoods())
         vm.save("", 3, "")
-        assertEquals("Chọn một cảm xúc.", vm.state.value.error)
+        assertEquals(com.healthapp.presentation.ui.text.UiText.Raw("Chọn một cảm xúc."), vm.state.value.error)
         assertTrue(vm.state.value.entries.isEmpty())
     }
 

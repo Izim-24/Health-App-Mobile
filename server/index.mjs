@@ -14,7 +14,16 @@ const tableInstructions = `
 - table_key: the entry from the reference list below that best matches the item as served (same food AND preparation, e.g. "scrambled eggs", not "eggs" raw). Copy it exactly. Use "" if nothing fits well — never force a poor match.
 Reference list: ${tableKeyList}`;
 
-const instructions = `Bạn là trợ lý cung cấp thông tin sức khỏe bằng tiếng Việt. Trả lời ngắn gọn, rõ ràng và thừa nhận khi không chắc chắn. Không tự chẩn đoán, kê đơn hoặc thay đổi liều thuốc. Không khẳng định đã xem hồ sơ, chỉ số hay kết quả xét nghiệm nếu người dùng chưa gửi trong cuộc trò chuyện. Với dấu hiệu có thể khẩn cấp, hướng dẫn người dùng tìm trợ giúp y tế tại địa phương ngay. Nhắc rằng thông tin chỉ mang tính tham khảo khi phù hợp.`;
+const instructionsVi = `Bạn là trợ lý cung cấp thông tin sức khỏe bằng tiếng Việt. Trả lời ngắn gọn, rõ ràng và thừa nhận khi không chắc chắn. Không tự chẩn đoán, kê đơn hoặc thay đổi liều thuốc. Không khẳng định đã xem hồ sơ, chỉ số hay kết quả xét nghiệm nếu người dùng chưa gửi trong cuộc trò chuyện. Với dấu hiệu có thể khẩn cấp, hướng dẫn người dùng tìm trợ giúp y tế tại địa phương ngay. Nhắc rằng thông tin chỉ mang tính tham khảo khi phù hợp.`;
+const instructionsEn = `You are an assistant that gives health information in English. Answer briefly and clearly, and say when you are unsure. Do not diagnose, prescribe or change medication doses. Do not claim to have seen records, readings or test results the user has not sent in the conversation. For possible emergencies, tell the user to seek local medical help immediately. Mention that the information is for reference only when appropriate.`;
+
+/** The app sends its UI language ("vi" default, or "en"); answers and food names follow it. */
+export const langOf = (v) => (v === 'en' ? 'en' : 'vi');
+const chatInstructions = (lang) => (lang === 'en' ? instructionsEn : instructionsVi);
+// Appended only for English so the Vietnamese prompt (the one evaluated) stays unchanged.
+const foodLanguage = (lang) => (lang === 'en'
+  ? '\n- Language override: write every `name` and the `notes` sentence in English (e.g. "White rice", "Beef pho", "Fried egg"), not Vietnamese.'
+  : '');
 
 const foodInstructionsV1 = `You estimate the nutrition of food in a photo for a Vietnamese health diary app.
 - List each distinct food or drink that is visible (max 8). Use the common Vietnamese name (e.g. "Cơm trắng", "Phở bò", "Trứng chiên").
@@ -203,7 +212,8 @@ async function postJson(fetchImpl, url, headers, body) {
 }
 
 /** Chat completion. Returns { answer } or { error, status? }. */
-export async function chatWithProvider({ provider, messages, fetchImpl = fetch }) {
+export async function chatWithProvider({ provider, messages, fetchImpl = fetch, lang = 'vi' }) {
+  const instructions = chatInstructions(lang);
   if (provider.name === 'gemini') {
     const r = await postJson(fetchImpl, geminiUrl(provider.model), { 'x-goog-api-key': provider.apiKey }, {
       systemInstruction: { parts: [{ text: instructions }] },
@@ -228,8 +238,8 @@ export async function chatWithProvider({ provider, messages, fetchImpl = fetch }
  * The single model call behind /api/food-image. Exported so the accuracy harness
  * (eval-food.mjs) measures exactly what the app gets. Returns { food } or { error, status? }.
  */
-export async function estimateFood({ provider, fetchImpl = fetch, image, mimeType, prompt = DEFAULT_FOOD_PROMPT, useTable = true }) {
-  const foodInstructions = (FOOD_PROMPTS[prompt] ?? FOOD_PROMPTS[DEFAULT_FOOD_PROMPT]) + tableInstructions;
+export async function estimateFood({ provider, fetchImpl = fetch, image, mimeType, prompt = DEFAULT_FOOD_PROMPT, useTable = true, lang = 'vi' }) {
+  const foodInstructions = (FOOD_PROMPTS[prompt] ?? FOOD_PROMPTS[DEFAULT_FOOD_PROMPT]) + foodLanguage(lang) + tableInstructions;
   let text;
   if (provider.name === 'gemini') {
     const r = await postJson(fetchImpl, geminiUrl(provider.model), { 'x-goog-api-key': provider.apiKey }, {
@@ -277,6 +287,9 @@ export async function withFallback(provider, call) {
   return { ...second, model: provider.fallbackModel, fellBack: true };
 }
 
+/** Stable error codes the app maps to text in its own language (the Vietnamese `error` stays for other clients). */
+const upstreamCode = (status) => (status === 401 || status === 403 ? 'upstream_auth' : status === 429 ? 'upstream_quota' : 'upstream_error');
+
 const upstreamError = (status) => (
   status === 401 || status === 403 ? 'Khóa API backend không hợp lệ hoặc không có quyền.'
     : status === 429 ? 'Dịch vụ AI đang giới hạn lượt dùng (gói miễn phí) — thử lại sau ít phút.'
@@ -308,19 +321,20 @@ export function createServer({
       return send(res, 200, { status: 'ok', configured: Boolean(provider), provider: provider?.name ?? null, model: provider?.model ?? null, mock: mock && !provider });
     }
     const route = req.method === 'POST' && (req.url === '/api/chat' || req.url === '/api/food-image') ? req.url : null;
-    if (!route) return send(res, 404, { error: 'Không tìm thấy.' });
-    if (!provider && !mock) return send(res, 503, { error: 'Backend chưa có GEMINI_API_KEY hoặc OPENAI_API_KEY.' });
-    if (limited(req)) return send(res, 429, { error: 'Vui lòng thử lại sau một phút.' });
+    if (!route) return send(res, 404, { error: 'Không tìm thấy.', code: 'not_found' });
+    if (!provider && !mock) return send(res, 503, { error: 'Backend chưa có GEMINI_API_KEY hoặc OPENAI_API_KEY.', code: 'not_configured' });
+    if (limited(req)) return send(res, 429, { error: 'Vui lòng thử lại sau một phút.', code: 'rate_limited' });
 
     try {
-      if (!req.headers['content-type']?.startsWith('application/json')) return send(res, 415, { error: 'Chỉ nhận JSON.' });
+      if (!req.headers['content-type']?.startsWith('application/json')) return send(res, 415, { error: 'Chỉ nhận JSON.', code: 'bad_request' });
 
       if (route === '/api/chat') {
         const body = await readBody(req, 16_384);
-        if (!validMessages(body?.messages)) return send(res, 400, { error: 'Nội dung hội thoại không hợp lệ.' });
-        if (!provider) return send(res, 200, { answer: '[GIẢ LẬP] Đây là câu trả lời mẫu, không phải từ AI.' });
-        const result = await withFallback(provider, (p) => chatWithProvider({ provider: p, messages: body.messages, fetchImpl }));
-        if (result.error) return send(res, 502, { error: result.status ? upstreamError(result.status) : result.error });
+        if (!validMessages(body?.messages)) return send(res, 400, { error: 'Nội dung hội thoại không hợp lệ.', code: 'bad_request' });
+        const lang = langOf(body.lang);
+        if (!provider) return send(res, 200, { answer: lang === 'en' ? '[MOCK] This is a sample answer, not from AI.' : '[GIẢ LẬP] Đây là câu trả lời mẫu, không phải từ AI.' });
+        const result = await withFallback(provider, (p) => chatWithProvider({ provider: p, messages: body.messages, fetchImpl, lang }));
+        if (result.error) return send(res, 502, { error: result.status ? upstreamError(result.status) : result.error, code: result.status ? upstreamCode(result.status) : 'bad_output' });
         return send(res, 200, { answer: result.answer, model: result.model });
       }
 
@@ -328,15 +342,18 @@ export function createServer({
       const body = await readBody(req, MAX_IMAGE_BASE64 + 1024);
       const image = typeof body?.image === 'string' ? body.image : '';
       const mimeType = body?.mimeType;
-      if (!IMAGE_TYPES.has(mimeType)) return send(res, 400, { error: 'Định dạng ảnh không hỗ trợ (JPEG, PNG, WebP).' });
-      if (image.length < 100 || image.length > MAX_IMAGE_BASE64 || !/^[A-Za-z0-9+/]+=*$/.test(image)) return send(res, 400, { error: 'Ảnh không hợp lệ hoặc quá lớn.' });
+      if (!IMAGE_TYPES.has(mimeType)) return send(res, 400, { error: 'Định dạng ảnh không hỗ trợ (JPEG, PNG, WebP).', code: 'bad_image' });
+      if (image.length < 100 || image.length > MAX_IMAGE_BASE64 || !/^[A-Za-z0-9+/]+=*$/.test(image)) return send(res, 400, { error: 'Ảnh không hợp lệ hoặc quá lớn.', code: image.length > MAX_IMAGE_BASE64 ? 'too_large' : 'bad_image' });
       if (!provider) return send(res, 200, { ...MOCK_FOOD, mock: true });
 
-      const result = await withFallback(provider, (p) => estimateFood({ provider: p, fetchImpl, image, mimeType }));
-      if (result.error) return send(res, 502, { error: result.status ? upstreamError(result.status) : result.error });
+      const result = await withFallback(provider, (p) => estimateFood({ provider: p, fetchImpl, image, mimeType, lang: langOf(body.lang) }));
+      if (result.error) return send(res, 502, { error: result.status ? upstreamError(result.status) : result.error, code: result.status ? upstreamCode(result.status) : 'bad_output' });
       return send(res, 200, { ...result.food, mock: false, model: result.model });
     } catch (error) {
-      return send(res, error.status || 502, { error: error.status ? error.message : 'Không kết nối được dịch vụ AI.' });
+      return send(res, error.status || 502, {
+        error: error.status ? error.message : 'Không kết nối được dịch vụ AI.',
+        code: error.status === 413 ? 'too_large' : error.status ? 'bad_request' : 'unreachable'
+      });
     }
   });
 }

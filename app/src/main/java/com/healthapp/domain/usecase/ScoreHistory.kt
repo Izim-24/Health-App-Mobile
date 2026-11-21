@@ -28,8 +28,28 @@ data class WeekScore(val weekEnd: LocalDate, val input: HealthScoreInput, val re
     val score: Int? get() = result.score
 }
 
-data class ScoreInsight(val text: String, val trend: Trend) {
+/** One week-over-week observation; the UI turns it into a sentence. */
+sealed interface ScoreInsight {
+    val trend: Trend
     enum class Trend { UP, DOWN, INFO }
+
+    /** Overall score change; |diff| < 3 counts as stable. */
+    data class ScoreChange(val diff: Int) : ScoreInsight {
+        override val trend get() = if (diff >= 3) Trend.UP else if (diff <= -3) Trend.DOWN else Trend.INFO
+    }
+    data class SleepChange(val deltaHours: Double, val nowHours: Double, override val trend: Trend) : ScoreInsight
+    data class StepsChange(val deltaSteps: Int) : ScoreInsight {
+        override val trend get() = if (deltaSteps > 0) Trend.UP else Trend.DOWN
+    }
+    data class MedsChange(val nowPct: Int, val beforePct: Int) : ScoreInsight {
+        override val trend get() = if (nowPct > beforePct) Trend.UP else Trend.DOWN
+    }
+    data class HabitsChange(val nowPct: Int, val beforePct: Int) : ScoreInsight {
+        override val trend get() = if (nowPct > beforePct) Trend.UP else Trend.DOWN
+    }
+    data class Focus(val best: ScoreArea, val bestScore: Int, val worst: ScoreArea, val worstScore: Int) : ScoreInsight {
+        override val trend get() = Trend.INFO
+    }
 }
 
 /**
@@ -109,12 +129,7 @@ object ScoreHistory {
         val prev = previous?.input
 
         if (current.score != null && previous?.score != null) {
-            val diff = current.score!! - previous.score!!
-            out += when {
-                diff >= 3 -> ScoreInsight("Điểm tăng $diff so với 7 ngày trước đó.", ScoreInsight.Trend.UP)
-                diff <= -3 -> ScoreInsight("Điểm giảm ${-diff} so với 7 ngày trước đó.", ScoreInsight.Trend.DOWN)
-                else -> ScoreInsight("Điểm ổn định so với 7 ngày trước đó.", ScoreInsight.Trend.INFO)
-            }
+            out += ScoreInsight.ScoreChange(current.score!! - previous.score!!)
         }
 
         if (prev != null) {
@@ -122,37 +137,25 @@ object ScoreHistory {
             val sleepBefore = prev.avgSleepMinutes
             if (sleepNow != null && sleepBefore != null) {
                 val dh = (sleepNow - sleepBefore) / 60.0
-                if (abs(dh) >= 0.3) out += ScoreInsight(
-                    "Ngủ ${if (dh > 0) "nhiều" else "ít"} hơn ${"%.1f".format(abs(dh))} giờ/đêm (${"%.1f".format(sleepNow / 60)} giờ).",
-                    // More sleep is only better while it moves toward the 7–9 h range, so compare guideline scores.
-                    trendOf(HealthScore.sleepScore(sleepNow) - HealthScore.sleepScore(sleepBefore))
+                // More sleep is only better while it moves toward the 7–9 h range, so compare guideline scores.
+                if (abs(dh) >= 0.3) out += ScoreInsight.SleepChange(
+                    dh, sleepNow / 60, trendOf(HealthScore.sleepScore(sleepNow) - HealthScore.sleepScore(sleepBefore))
                 )
             }
             val stepsNow = cur.avgDailySteps
             val stepsBefore = prev.avgDailySteps
             if (stepsNow != null && stepsBefore != null) {
                 val ds = (stepsNow - stepsBefore).roundToInt()
-                if (abs(ds) >= 500) out += ScoreInsight(
-                    "${if (ds > 0) "Nhiều" else "Ít"} hơn ${"%,d".format(abs(ds)).replace(',', '.')} bước/ngày so với tuần trước.",
-                    if (ds > 0) ScoreInsight.Trend.UP else ScoreInsight.Trend.DOWN
-                )
+                if (abs(ds) >= 500) out += ScoreInsight.StepsChange(ds)
             }
             rate(cur.medsTaken, cur.medsDue)?.let { now ->
                 rate(prev.medsTaken, prev.medsDue)?.let { before ->
-                    val d = now - before
-                    if (abs(d) >= 10) out += ScoreInsight(
-                        "Uống thuốc đúng lịch ${if (d > 0) "tốt hơn" else "kém hơn"}: $now% (tuần trước $before%).",
-                        if (d > 0) ScoreInsight.Trend.UP else ScoreInsight.Trend.DOWN
-                    )
+                    if (abs(now - before) >= 10) out += ScoreInsight.MedsChange(now, before)
                 }
             }
             rate(cur.habitCompletedDays, cur.habitPossibleDays)?.let { now ->
                 rate(prev.habitCompletedDays, prev.habitPossibleDays)?.let { before ->
-                    val d = now - before
-                    if (abs(d) >= 10) out += ScoreInsight(
-                        "Hoàn thành thói quen $now% (tuần trước $before%).",
-                        if (d > 0) ScoreInsight.Trend.UP else ScoreInsight.Trend.DOWN
-                    )
+                    if (abs(now - before) >= 10) out += ScoreInsight.HabitsChange(now, before)
                 }
             }
         }
@@ -161,10 +164,7 @@ object ScoreHistory {
         if (parts.size >= 2) {
             val best = parts.maxBy { it.score }
             val worst = parts.minBy { it.score }
-            if (worst.score < 100 && best.area != worst.area) out += ScoreInsight(
-                "Mạnh nhất: ${best.area.label} (${best.score}). Nên ưu tiên: ${worst.area.label} (${worst.score}).",
-                ScoreInsight.Trend.INFO
-            )
+            if (worst.score < 100 && best.area != worst.area) out += ScoreInsight.Focus(best.area, best.score, worst.area, worst.score)
         }
         return out
     }

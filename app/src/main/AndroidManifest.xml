@@ -10,17 +10,13 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
-    <!-- Storage - For image picker (runtime permission needed on older devices) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Gallery photos come from the system photo picker, which needs no storage permission. -->
 
     <!-- Notifications - For reminders -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Exact dose reminders (user-grantable on Android 12+) and re-arming them after a reboot -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-    <!-- Location - Optional for activity tracking -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- Health Connect - Optional, requires runtime permission -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
@@ -43,6 +39,7 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.HealthApp"

@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.healthapp.R
 import com.healthapp.domain.usecase.HealthScore
 import com.healthapp.domain.usecase.HealthScoreInput
 import com.healthapp.domain.usecase.ScoreData
@@ -23,6 +24,10 @@ import org.junit.runner.RunWith
 class HealthScoreSheetUiTest {
     @get:Rule val compose = createComposeRule()
 
+    // Expected text comes from the app's resources, so the test passes in Vietnamese and in English.
+    private val ctx = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+    private fun str(id: Int, vararg args: Any) = ctx.getString(id, *args)
+
     @Test fun showsScoreAndAreas_andTappingMissingAreaNavigates() {
         val result = HealthScore.calculate(
             HealthScoreInput(avgSleepMinutes = 450.0, sleepNights = 5, avgDailySteps = 9000.0, stepDays = 5, bmi = 21.0)
@@ -31,9 +36,9 @@ class HealthScoreSheetUiTest {
         compose.setContent { HealthAppTheme { HealthScoreSheet(result, onDismiss = {}, onOpen = { opened = it }) } }
 
         // Score 100 also appears on every area row, so check the unique "/100 · grade" line.
-        compose.onNodeWithText("/100 · ${result.grade}", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Giấc ngủ").assertIsDisplayed()
-        compose.onNodeWithText("Huyết áp").performScrollTo().performClick() // the one missing area
+        compose.onNodeWithText(str(R.string.score_of_100_grade, str(R.string.grade_excellent)), substring = true).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.area_sleep)).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.area_blood_pressure)).performScrollTo().performClick() // the one missing area
         compose.waitForIdle()
         assertEquals("health", opened)
     }
@@ -50,15 +55,16 @@ class HealthScoreSheetUiTest {
         compose.setContent {
             HealthAppTheme { HealthScoreSheet(weeks.last().result, onDismiss = {}, onOpen = {}, history = weeks, insights = insights) }
         }
-        compose.onNodeWithText("4 tuần gần đây").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Tuần đến Nay", substring = true).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.weeks_recent, 4)).assertIsDisplayed()
+        compose.onNodeWithContentDescription(str(R.string.week_bar_cd, str(R.string.week_now), ""), substring = true).assertIsDisplayed()
         // The sheet opens half-expanded, so the insight row is composed but may sit below the fold.
-        compose.onNodeWithText("Điểm tăng", substring = true).assertExists()
+        val change = (insights.first() as com.healthapp.domain.usecase.ScoreInsight.ScoreChange).diff
+        compose.onNodeWithText(str(R.string.insight_score_up, change)).assertExists()
     }
 
     @Test fun notEnoughData_explainsWhatIsNeeded() {
         val result = HealthScore.calculate(HealthScoreInput(bmi = 21.0))
         compose.setContent { HealthAppTheme { HealthScoreSheet(result, onDismiss = {}, onOpen = {}) } }
-        compose.onNodeWithText("Cần ít nhất ${HealthScore.MIN_AREAS} chỉ số", substring = true).assertIsDisplayed()
+        compose.onNodeWithText(str(R.string.score_min_areas_have, HealthScore.MIN_AREAS, 1)).assertIsDisplayed()
     }
 }

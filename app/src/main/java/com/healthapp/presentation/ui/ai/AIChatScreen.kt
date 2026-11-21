@@ -1,5 +1,11 @@
 package com.healthapp.presentation.ui.ai
 
+import com.healthapp.presentation.ui.text.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,11 +27,7 @@ import com.healthapp.presentation.ui.components.*
 import com.healthapp.presentation.ui.theme.HealthPalette
 import com.healthapp.presentation.viewmodel.AIChatViewModel
 
-private val suggestions = listOf(
-    "Huyết áp 130/85 có cao không?",
-    "Gợi ý bữa sáng nhiều đạm",
-    "Làm sao để ngủ ngon hơn?"
-)
+private val suggestions = listOf(R.string.chat_suggest_bp, R.string.chat_suggest_breakfast, R.string.chat_suggest_sleep)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -37,7 +39,7 @@ fun AIChatScreen(onBack: () -> Unit = {}, viewModel: AIChatViewModel = hiltViewM
     Scaffold(
         containerColor = HealthPalette.Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = { BackTopBar("Trợ lý AI", onBack) }
+        topBar = { BackTopBar(stringResource(R.string.quick_ai), onBack) }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
             LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 8.dp)) {
@@ -45,17 +47,18 @@ fun AIChatScreen(onBack: () -> Unit = {}, viewModel: AIChatViewModel = hiltViewM
                     GradientCard(violet.gradient, Modifier.fillMaxWidth()) {
                         IconBadge(Icons.Rounded.AutoAwesome, violet, onDark = true)
                         Spacer(Modifier.height(12.dp))
-                        Text("Xin chào! Tôi có thể giúp gì?", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                        Text(stringResource(R.string.chat_hello), style = MaterialTheme.typography.titleLarge, color = Color.White)
                         Text(
-                            "Hỏi về thuật ngữ y tế, thói quen lành mạnh hoặc chuẩn bị câu hỏi cho bác sĩ. Không dùng để chẩn đoán hay đổi thuốc.",
+                            stringResource(R.string.chat_intro),
                             style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .9f)
                         )
                     }
                     Spacer(Modifier.height(14.dp))
-                    Text("Thử hỏi", style = MaterialTheme.typography.labelLarge, color = HealthPalette.Muted)
+                    Text(stringResource(R.string.chat_try), style = MaterialTheme.typography.labelLarge, color = HealthPalette.Muted)
                     Spacer(Modifier.height(8.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        suggestions.forEach { s ->
+                        suggestions.forEach { res ->
+                            val s = stringResource(res)
                             AssistChip(
                                 onClick = { draft = s }, label = { Text(s) }, shape = CircleShape,
                                 colors = AssistChipDefaults.assistChipColors(containerColor = violet.soft, labelColor = violet.strong),
@@ -78,14 +81,14 @@ fun AIChatScreen(onBack: () -> Unit = {}, viewModel: AIChatViewModel = hiltViewM
                 }
                 if (state.sending) item { LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape), color = violet.strong, trackColor = violet.soft) }
             }
-            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            state.error?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 12.dp).clip(RoundedCornerShape(28.dp)).background(HealthPalette.Surface).padding(start = 6.dp, end = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextField(
                     draft, { draft = it.take(2000) }, modifier = Modifier.weight(1f),
-                    placeholder = { Text("Nhập câu hỏi…", color = HealthPalette.Subtle) }, maxLines = 4,
+                    placeholder = { Text(stringResource(R.string.chat_placeholder), color = HealthPalette.Subtle) }, maxLines = 4,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent
@@ -96,7 +99,7 @@ fun AIChatScreen(onBack: () -> Unit = {}, viewModel: AIChatViewModel = hiltViewM
                     onClick = { viewModel.send(draft); draft = "" }, enabled = canSend,
                     colors = IconButtonDefaults.iconButtonColors(containerColor = violet.strong, contentColor = Color.White, disabledContainerColor = HealthPalette.SurfaceAlt, disabledContentColor = HealthPalette.Subtle)
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = "Gửi câu hỏi", modifier = Modifier.size(20.dp))
+                    Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = stringResource(R.string.chat_send), modifier = Modifier.size(20.dp))
                 }
             }
         }

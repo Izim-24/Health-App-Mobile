@@ -52,7 +52,7 @@ class HealthScoreTest {
             avgSleepMinutes = 480.0, sleepNights = 3, avgDailySteps = 5000.0, stepDays = 3, bmi = 15.2
         ))
         assertEquals(65, r.score)
-        assertEquals("Cần cải thiện", r.grade)
+        assertEquals(ScoreGrade.FAIR, r.grade)
         assertEquals(ScoreArea.BMI, r.topTip?.area) // weakest area with a tip
     }
 

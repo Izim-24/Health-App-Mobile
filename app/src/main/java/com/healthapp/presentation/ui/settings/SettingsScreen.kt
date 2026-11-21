@@ -1,5 +1,17 @@
 package com.healthapp.presentation.ui.settings
 
+import com.healthapp.presentation.ui.text.*
+import com.healthapp.core.AppLocale
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -51,7 +63,7 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = 
             putExtra(Intent.EXTRA_SUBJECT, file.name)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(send, "Lưu hoặc chia sẻ bản xuất"))
+        context.startActivity(Intent.createChooser(send, context.getString(R.string.export_chooser)))
         viewModel.exportConsumed()
     }
 
@@ -59,7 +71,7 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = 
         containerColor = HealthPalette.Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            BackTopBar("Cài đặt & dữ liệu") { navController.popBackStack() }
+            BackTopBar(stringResource(R.string.settings_title)) { navController.popBackStack() }
         }
     ) { padding ->
         Column(
@@ -67,27 +79,28 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = 
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             ThemeSelector(state.themeMode, viewModel::setThemeMode)
-            SettingRow(Icons.Default.Notifications, HealthPalette.Amber, "Nhắc nhở", "Uống nước, vận động, bữa ăn, giấc ngủ") { navController.navigate("reminders") }
-            SettingRow(Icons.Default.Sync, HealthPalette.Sky, "Health Connect", "Nhập bước chân, giấc ngủ, nhịp tim… từ đồng hồ và ứng dụng khác") { navController.navigate("health_connect") }
-            SettingRow(Icons.Default.Medication, HealthPalette.Indigo, "Lịch uống thuốc", "Giờ uống, số ngày dùng, lịch sử liều") { navController.navigate("medications") }
-            SettingRow(Icons.Default.FileDownload, HealthPalette.Emerald, "Xuất dữ liệu (JSON)", "Tạo bản sao toàn bộ nhật ký để lưu hoặc gửi cho bác sĩ") { if (!state.busy) viewModel.export() }
+            LanguageSelector()
+            SettingRow(Icons.Default.Notifications, HealthPalette.Amber, stringResource(R.string.link_reminders), stringResource(R.string.set_reminders_sub)) { navController.navigate("reminders") }
+            SettingRow(Icons.Default.Sync, HealthPalette.Sky, "Health Connect", stringResource(R.string.set_hc_sub)) { navController.navigate("health_connect") }
+            SettingRow(Icons.Default.Medication, HealthPalette.Indigo, stringResource(R.string.link_meds), stringResource(R.string.set_meds_sub)) { navController.navigate("medications") }
+            SettingRow(Icons.Default.FileDownload, HealthPalette.Emerald, stringResource(R.string.set_export), stringResource(R.string.set_export_sub)) { if (!state.busy) viewModel.export() }
             if (com.healthapp.BuildConfig.DEBUG) {
-                SettingRow(Icons.Default.Science, HealthPalette.Violet, "Nạp dữ liệu mẫu (demo)", "14 ngày bữa ăn, giấc ngủ, bước chân, chỉ số, thói quen, thuốc — gắn nhãn mẫu") { if (!state.busy) viewModel.seedDemoData() }
-                if (state.hasDemoData) SettingRow(Icons.Default.LayersClear, HealthPalette.Amber, "Xóa dữ liệu mẫu", "Chỉ xóa dữ liệu mẫu, giữ nguyên dữ liệu bạn nhập") { if (!state.busy) viewModel.clearDemoData() }
+                SettingRow(Icons.Default.Science, HealthPalette.Violet, stringResource(R.string.set_demo), stringResource(R.string.set_demo_sub)) { if (!state.busy) viewModel.seedDemoData() }
+                if (state.hasDemoData) SettingRow(Icons.Default.LayersClear, HealthPalette.Amber, stringResource(R.string.set_demo_clear), stringResource(R.string.set_demo_clear_sub)) { if (!state.busy) viewModel.clearDemoData() }
             }
-            SettingRow(Icons.Default.DeleteForever, HealthPalette.Coral, "Xóa toàn bộ dữ liệu", "Xóa hồ sơ, nhật ký và nhắc nhở trên thiết bị này", danger = true) { confirmDelete = true }
+            SettingRow(Icons.Default.DeleteForever, HealthPalette.Coral, stringResource(R.string.set_delete_all), stringResource(R.string.set_delete_all_sub), danger = true) { confirmDelete = true }
 
             AppCard(Modifier.fillMaxWidth(), color = HealthPalette.Emerald.soft) {
                 Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Default.Shield, null, tint = HealthPalette.Emerald.strong)
                     Text(
-                        "Dữ liệu sức khỏe chỉ lưu trên thiết bị (kể cả dữ liệu nhập từ Health Connect). Sao lưu tự động của Android đang tắt. Bản xuất chứa thông tin nhạy cảm — chỉ chia sẻ với người bạn tin tưởng.",
+                        stringResource(R.string.set_privacy_note),
                         style = MaterialTheme.typography.bodySmall, color = HealthPalette.Ink
                     )
                 }
             }
             if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            state.message?.let { Text(it, color = HealthPalette.Primary) }
+            state.message?.let { Text(it.resolve(), color = HealthPalette.Primary, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -95,12 +108,12 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = 
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Xóa toàn bộ dữ liệu?") },
-            text = { Text("Hồ sơ, bữa ăn, thói quen, chỉ số, thuốc, check-in cảm xúc và nhắc nhở sẽ bị xóa vĩnh viễn khỏi thiết bị. Không thể hoàn tác. Hãy xuất dữ liệu trước nếu cần.") },
+            title = { Text(stringResource(R.string.set_delete_title)) },
+            text = { Text(stringResource(R.string.set_delete_body)) },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; viewModel.deleteAll() }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Xóa vĩnh viễn") }
+                TextButton(onClick = { confirmDelete = false; viewModel.deleteAll() }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text(stringResource(R.string.set_delete_confirm)) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Hủy") } }
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 }
@@ -114,7 +127,7 @@ private fun SettingRow(icon: ImageVector, accent: com.healthapp.presentation.ui.
                 Text(title, style = MaterialTheme.typography.titleSmall, color = if (danger) accent.strong else HealthPalette.Ink)
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             }
-            Text("›", style = MaterialTheme.typography.titleLarge, color = HealthPalette.Subtle)
+            Text("›", style = MaterialTheme.typography.titleLarge, color = HealthPalette.Subtle, modifier = Modifier.clearAndSetSemantics { })
         }
     }
 }
@@ -122,32 +135,65 @@ private fun SettingRow(icon: ImageVector, accent: com.healthapp.presentation.ui.
 /** Giao diện: follow the system, or force light/dark. */
 @Composable
 private fun ThemeSelector(mode: com.healthapp.domain.model.ThemeMode, onSelect: (com.healthapp.domain.model.ThemeMode) -> Unit) {
+    SegmentedSetting(
+        Icons.Default.DarkMode, HealthPalette.Violet, stringResource(R.string.appearance), stringResource(R.string.appearance_sub),
+        options = listOf(
+            com.healthapp.domain.model.ThemeMode.SYSTEM to stringResource(R.string.follow_phone),
+            com.healthapp.domain.model.ThemeMode.LIGHT to stringResource(R.string.theme_light),
+            com.healthapp.domain.model.ThemeMode.DARK to stringResource(R.string.theme_dark)
+        ),
+        selected = mode, onSelect = onSelect
+    )
+}
+
+/** In-app language (Android 13+ also shows it in system Settings → Apps → Language). */
+@Composable
+private fun LanguageSelector() {
+    val context = LocalContext.current
+    // Language names are written in their own language, so they read the same whichever is active.
+    SegmentedSetting(
+        Icons.Default.Translate, HealthPalette.Sky, stringResource(R.string.language), stringResource(R.string.language_sub),
+        options = listOf(AppLocale.SYSTEM to stringResource(R.string.follow_phone), "vi" to "Tiếng Việt", "en" to "English"),
+        selected = AppLocale.current(context),
+        onSelect = { tag -> context.findActivity()?.let { AppLocale.set(it, tag) } }
+    )
+}
+
+private tailrec fun android.content.Context.findActivity(): android.app.Activity? = when (this) {
+    is android.app.Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+@Composable
+private fun <T> SegmentedSetting(
+    icon: ImageVector, accent: com.healthapp.presentation.ui.theme.Accent, title: String, subtitle: String,
+    options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit
+) {
     AppCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconBadge(Icons.Default.DarkMode, HealthPalette.Violet)
+                IconBadge(icon, accent)
                 Spacer(Modifier.width(14.dp))
                 Column {
-                    Text("Giao diện", style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
-                    Text("Sáng, tối hoặc theo cài đặt của máy", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                    Text(title, style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
                 }
             }
             Row(
                 Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.CircleShape).background(HealthPalette.SurfaceAlt).padding(4.dp)
+                    .selectableGroup()
             ) {
-                listOf(
-                    com.healthapp.domain.model.ThemeMode.SYSTEM to "Theo máy",
-                    com.healthapp.domain.model.ThemeMode.LIGHT to "Sáng",
-                    com.healthapp.domain.model.ThemeMode.DARK to "Tối"
-                ).forEach { (m, label) ->
-                    val selected = m == mode
+                options.forEach { (value, label) ->
+                    val isSelected = value == selected
                     Box(
-                        Modifier.weight(1f).clip(androidx.compose.foundation.shape.CircleShape)
-                            .background(if (selected) HealthPalette.Violet.strong else androidx.compose.ui.graphics.Color.Transparent)
-                            .clickable { onSelect(m) }.padding(vertical = 9.dp),
+                        Modifier.weight(1f).heightIn(min = 48.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(if (isSelected) accent.strong else androidx.compose.ui.graphics.Color.Transparent)
+                            .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(value) }),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(label, style = MaterialTheme.typography.labelLarge, color = if (selected) androidx.compose.ui.graphics.Color.White else HealthPalette.Muted)
+                        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1,
+                            color = if (isSelected) androidx.compose.ui.graphics.Color.White else HealthPalette.Muted)
                     }
                 }
             }

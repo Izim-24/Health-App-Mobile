@@ -2,20 +2,39 @@ package com.healthapp.domain.usecase
 
 import kotlin.math.roundToInt
 
-enum class ScoreArea(val label: String, val weight: Int) {
-    SLEEP("Giấc ngủ", 20),
-    ACTIVITY("Vận động", 20),
-    BLOOD_PRESSURE("Huyết áp", 20),
-    BMI("BMI", 15),
-    MEDICATION("Uống thuốc đúng giờ", 15),
-    HABITS("Thói quen", 10)
+/** Areas of the score and their weights. The UI supplies the names (string resources). */
+enum class ScoreArea(val weight: Int) {
+    SLEEP(20),
+    ACTIVITY(20),
+    BLOOD_PRESSURE(20),
+    BMI(15),
+    MEDICATION(15),
+    HABITS(10)
 }
+
+/** ACC/AHA 2017 blood-pressure categories with their score. */
+enum class BpCategory(val score: Int) { NORMAL(100), ELEVATED(80), STAGE_1(60), STAGE_2(35), CRISIS(10) }
+
+enum class ScoreGrade { EXCELLENT, GOOD, FAIR, POOR }
+
+/** What an area's score is based on; formatted by the UI. */
+sealed interface ScoreDetail {
+    data class Sleep(val avgHours: Double, val nights: Int) : ScoreDetail
+    data class Activity(val avgSteps: Int, val days: Int) : ScoreDetail
+    data class BloodPressure(val systolic: Int, val diastolic: Int, val category: BpCategory) : ScoreDetail
+    data class Bmi(val bmi: Double, val category: BmiCategory) : ScoreDetail
+    data class Medication(val taken: Int, val due: Int) : ScoreDetail
+    data class Habits(val done: Int, val possible: Int) : ScoreDetail
+}
+
+/** Advice shown when an area has room to improve. */
+enum class ScoreTip { SLEEP_MORE, SLEEP_LESS, MORE_STEPS, BP_SEE_DOCTOR, BP_LIFESTYLE, BMI_RANGE, MED_REMINDERS, FEWER_HABITS }
 
 data class ScoreComponent(
     val area: ScoreArea,
-    val score: Int,        // 0..100
-    val detail: String,    // what the score is based on
-    val tip: String?       // shown when there is room to improve
+    val score: Int,            // 0..100
+    val detail: ScoreDetail,   // what the score is based on
+    val tip: ScoreTip?         // shown when there is room to improve
 )
 
 data class HealthScoreResult(
@@ -23,12 +42,12 @@ data class HealthScoreResult(
     val components: List<ScoreComponent>,
     val missing: List<ScoreArea>
 ) {
-    val grade: String? get() = score?.let {
+    val grade: ScoreGrade? get() = score?.let {
         when {
-            it >= 85 -> "Rất tốt"
-            it >= 70 -> "Tốt"
-            it >= 50 -> "Cần cải thiện"
-            else -> "Cần chú ý"
+            it >= 85 -> ScoreGrade.EXCELLENT
+            it >= 70 -> ScoreGrade.GOOD
+            it >= 50 -> ScoreGrade.FAIR
+            else -> ScoreGrade.POOR
         }
     }
     /** The weakest area with a tip, to surface on the dashboard. */
@@ -72,17 +91,19 @@ object HealthScore {
 
     fun stepsScore(avgSteps: Double): Int = ((avgSteps - 2000) / (8000 - 2000) * 100).roundToInt().coerceIn(0, 100)
 
-    /** ACC/AHA category score and Vietnamese label. */
-    fun bloodPressure(sys: Int, dia: Int): Pair<Int, String> = when {
-        sys > 180 || dia > 120 -> 10 to "rất cao — cần đi khám ngay"
-        sys >= 140 || dia >= 90 -> 35 to "tăng huyết áp độ 2"
-        sys >= 130 || dia >= 80 -> 60 to "tăng huyết áp độ 1"
-        sys >= 120 -> 80 to "hơi cao"
-        else -> 100 to "bình thường"
+    /** ACC/AHA 2017 category; the worse of systolic/diastolic counts. */
+    fun bpCategory(sys: Int, dia: Int): BpCategory = when {
+        sys > 180 || dia > 120 -> BpCategory.CRISIS
+        sys >= 140 || dia >= 90 -> BpCategory.STAGE_2
+        sys >= 130 || dia >= 80 -> BpCategory.STAGE_1
+        sys >= 120 -> BpCategory.ELEVATED
+        else -> BpCategory.NORMAL
     }
 
-    fun bmiScore(bmi: Double): Pair<Int, String> =
-        HealthCalculations.bmiCategory(bmi).let { it.score to it.label }
+    fun bloodPressure(sys: Int, dia: Int): Pair<Int, BpCategory> = bpCategory(sys, dia).let { it.score to it }
+
+    fun bmiScore(bmi: Double): Pair<Int, BmiCategory> =
+        HealthCalculations.bmiCategory(bmi).let { it.score to it }
 
     fun calculate(input: HealthScoreInput): HealthScoreResult {
         val parts = mutableListOf<ScoreComponent>()
@@ -90,38 +111,32 @@ object HealthScore {
         input.avgSleepMinutes?.takeIf { input.sleepNights > 0 }?.let { m ->
             val s = sleepScore(m)
             val h = m / 60
-            parts += ScoreComponent(ScoreArea.SLEEP, s,
-                "Trung bình ${"%.1f".format(h)} giờ/đêm (${input.sleepNights} đêm gần nhất)",
-                when { h < 7 -> "Ngủ thêm để đạt 7–9 giờ mỗi đêm."; h > 9 -> "Ngủ quá 9 giờ thường xuyên — cân nhắc hỏi bác sĩ nếu luôn mệt."; else -> null })
+            parts += ScoreComponent(ScoreArea.SLEEP, s, ScoreDetail.Sleep(h, input.sleepNights),
+                when { h < 7 -> ScoreTip.SLEEP_MORE; h > 9 -> ScoreTip.SLEEP_LESS; else -> null })
         }
         input.avgDailySteps?.takeIf { input.stepDays > 0 }?.let { avg ->
             val s = stepsScore(avg)
-            parts += ScoreComponent(ScoreArea.ACTIVITY, s,
-                "Trung bình ${avg.roundToInt()} bước/ngày (${input.stepDays} ngày)",
-                if (s < 100) "Đặt mục tiêu khoảng 8.000 bước/ngày; thêm 1.000 bước mỗi tuần." else null)
+            parts += ScoreComponent(ScoreArea.ACTIVITY, s, ScoreDetail.Activity(avg.roundToInt(), input.stepDays),
+                if (s < 100) ScoreTip.MORE_STEPS else null)
         }
         if (input.systolic != null && input.diastolic != null) {
-            val (s, label) = bloodPressure(input.systolic, input.diastolic)
-            parts += ScoreComponent(ScoreArea.BLOOD_PRESSURE, s,
-                "${input.systolic}/${input.diastolic} mmHg — $label",
-                when { s <= 35 -> "Huyết áp cao: nên trao đổi với bác sĩ."; s < 100 -> "Giảm muối, vận động đều và đo lại vào ngày khác."; else -> null })
+            val (s, category) = bloodPressure(input.systolic, input.diastolic)
+            parts += ScoreComponent(ScoreArea.BLOOD_PRESSURE, s, ScoreDetail.BloodPressure(input.systolic, input.diastolic, category),
+                when { s <= 35 -> ScoreTip.BP_SEE_DOCTOR; s < 100 -> ScoreTip.BP_LIFESTYLE; else -> null })
         }
         input.bmi?.takeIf { it > 0 }?.let { bmi ->
-            val (s, label) = bmiScore(bmi)
-            parts += ScoreComponent(ScoreArea.BMI, s, "BMI ${"%.1f".format(bmi)} — $label",
-                if (s < 100) "BMI khuyến nghị cho người châu Á là ${HealthCalculations.BMI_NORMAL_RANGE}; tham khảo chuyên gia dinh dưỡng." else null)
+            val (s, category) = bmiScore(bmi)
+            parts += ScoreComponent(ScoreArea.BMI, s, ScoreDetail.Bmi(bmi, category), if (s < 100) ScoreTip.BMI_RANGE else null)
         }
         if (input.medsDue > 0) {
             val rate = input.medsTaken.toDouble() / input.medsDue
             parts += ScoreComponent(ScoreArea.MEDICATION, (rate * 100).roundToInt().coerceIn(0, 100),
-                "${input.medsTaken}/${input.medsDue} liều đã uống trong 7 ngày",
-                if (rate < 0.8) "Bật nhắc nhở và đánh dấu liều ngay khi uống." else null)
+                ScoreDetail.Medication(input.medsTaken, input.medsDue), if (rate < 0.8) ScoreTip.MED_REMINDERS else null)
         }
         if (input.habitPossibleDays > 0) {
             val rate = input.habitCompletedDays.toDouble() / input.habitPossibleDays
             parts += ScoreComponent(ScoreArea.HABITS, (rate * 100).roundToInt().coerceIn(0, 100),
-                "Hoàn thành ${input.habitCompletedDays}/${input.habitPossibleDays} lượt thói quen trong 7 ngày",
-                if (rate < 0.7) "Bớt số thói quen hoặc đặt nhắc nhở để duy trì đều hơn." else null)
+                ScoreDetail.Habits(input.habitCompletedDays, input.habitPossibleDays), if (rate < 0.7) ScoreTip.FEWER_HABITS else null)
         }
 
         val present = parts.map { it.area }.toSet()

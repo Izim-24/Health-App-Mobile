@@ -1,5 +1,7 @@
 package com.healthapp.presentation.viewmodel
 
+import com.healthapp.presentation.ui.text.UiText
+import com.healthapp.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.repository.AccountSession
@@ -26,7 +28,7 @@ import javax.inject.Inject
 data class NutritionUiState(
     val isLoading: Boolean = true,
     val isSearchingFoods: Boolean = false,
-    val error: String? = null,
+    val error: UiText? = null,
     val meals: List<Meal> = emptyList(),
     val summary: NutritionSummary? = null,
     val foods: List<Food> = emptyList()
@@ -72,7 +74,7 @@ class NutritionViewModel @Inject constructor(
         searchJob = viewModelScope.launch {
             _uiState.update { it.copy(isSearchingFoods = true, error = null) }
             repository.searchFoods(query).onSuccess { foods -> _uiState.update { it.copy(foods = foods, isSearchingFoods = false) } }
-                .onFailure { error -> _uiState.update { it.copy(error = error.message, isSearchingFoods = false) } }
+                .onFailure { error -> _uiState.update { it.copy(error = error.message?.let(UiText::Raw), isSearchingFoods = false) } }
         }
     }
 
@@ -97,26 +99,26 @@ class NutritionViewModel @Inject constructor(
                 )
                 repository.addMeal(accountId, meal).getOrThrow()
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+                _uiState.update { it.copy(error = e.message?.let(UiText::Raw)) }
             }
         }
     }
 
     fun addCustomFood(name: String, calories: Int, protein: Double, carbs: Double, fat: Double) {
         if (name.isBlank() || calories !in 0..2000 || listOf(protein, carbs, fat).any { !it.isFinite() || it < 0 || it > 100 }) {
-            _uiState.update { it.copy(error = "Kiểm tra tên và thành phần cho 100 g thực phẩm.") }
+            _uiState.update { it.copy(error = UiText.Res(R.string.err_custom_food)) }
             return
         }
         viewModelScope.launch {
             val food = Food(UUID.randomUUID().toString(), name.trim(), calories, protein, carbs, fat, 0.0, 0.0, 0, 100, "USER_CREATED")
             repository.addCustomFood(food).onSuccess { searchFoods("") }
-                .onFailure { error -> _uiState.update { it.copy(error = error.message) } }
+                .onFailure { error -> _uiState.update { it.copy(error = error.message?.let(UiText::Raw)) } }
         }
     }
 
     fun deleteMeal(mealId: String) {
         viewModelScope.launch {
-            repository.deleteMeal(mealId).onFailure { error -> _uiState.update { it.copy(error = error.message) } }
+            repository.deleteMeal(mealId).onFailure { error -> _uiState.update { it.copy(error = error.message?.let(UiText::Raw)) } }
         }
     }
 

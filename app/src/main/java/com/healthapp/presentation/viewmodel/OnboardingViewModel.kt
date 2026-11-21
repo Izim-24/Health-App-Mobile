@@ -1,5 +1,7 @@
 package com.healthapp.presentation.viewmodel
 
+import com.healthapp.presentation.ui.text.UiText
+import com.healthapp.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.model.ActivityLevel
@@ -31,7 +33,7 @@ data class OnboardingUiState(
     val calorieGoal: String = "",
     val waterGoalMl: Int? = null,
     val bmi: Double? = null,
-    val error: String? = null,
+    val error: UiText? = null,
     val saving: Boolean = false,
     val finished: Boolean = false
 ) {
@@ -59,21 +61,21 @@ class OnboardingViewModel @Inject constructor(
     private fun weight(s: OnboardingUiState) = s.weightKg.replace(',', '.').toDoubleOrNull()
 
     /** Returns an error for the current step, or null if the user may continue. */
-    private fun validate(s: OnboardingUiState): String? = when (s.step) {
+    private fun validate(s: OnboardingUiState): UiText? = when (s.step) {
         1 -> when {
-            s.name.isBlank() -> "Nhập tên của bạn."
-            s.birthDate == null -> "Chọn ngày sinh."
-            (HealthCalculations.ageOn(s.birthDate) ?: -1) !in 15..110 -> "Ứng dụng dành cho người từ 15 tuổi."
-            s.gender == null -> "Chọn giới tính (dùng để ước tính năng lượng)."
+            s.name.isBlank() -> UiText.Res(R.string.err_enter_name)
+            s.birthDate == null -> UiText.Res(R.string.err_pick_birth)
+            (HealthCalculations.ageOn(s.birthDate) ?: -1) !in 15..110 -> UiText.Res(R.string.err_age)
+            s.gender == null -> UiText.Res(R.string.err_pick_gender)
             else -> null
         }
         2 -> when {
-            (s.heightCm.toIntOrNull() ?: 0) !in 100..250 -> "Chiều cao cần từ 100 đến 250 cm."
-            (weight(s) ?: 0.0) !in 20.0..400.0 -> "Cân nặng cần từ 20 đến 400 kg."
-            s.activity == null -> "Chọn mức vận động."
+            (s.heightCm.toIntOrNull() ?: 0) !in 100..250 -> UiText.Res(R.string.err_height_range)
+            (weight(s) ?: 0.0) !in 20.0..400.0 -> UiText.Res(R.string.err_weight_range)
+            s.activity == null -> UiText.Res(R.string.err_pick_activity)
             else -> null
         }
-        3 -> if ((s.calorieGoal.toIntOrNull() ?: 0) !in 800..6000) "Mục tiêu năng lượng cần từ 800 đến 6000 kcal." else null
+        3 -> if ((s.calorieGoal.toIntOrNull() ?: 0) !in 800..6000) UiText.Res(R.string.err_energy_range) else null
         else -> null
     }
 
@@ -125,7 +127,7 @@ class OnboardingViewModel @Inject constructor(
                 s.waterGoalMl?.let { water.setDailyGoal(accountId, it) }
                 settings.setOnboardingDone(true)
             }.onSuccess { mutable.update { it.copy(saving = false, finished = true) } }
-                .onFailure { e -> mutable.update { it.copy(saving = false, error = e.message ?: "Không lưu được hồ sơ.") } }
+                .onFailure { e -> mutable.update { it.copy(saving = false, error = e.message?.let { UiText.Raw(it) } ?: UiText.Res(R.string.err_save_profile)) } }
         }
     }
 }

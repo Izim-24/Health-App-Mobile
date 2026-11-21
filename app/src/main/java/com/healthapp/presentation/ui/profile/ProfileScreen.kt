@@ -1,5 +1,12 @@
 package com.healthapp.presentation.ui.profile
 
+import com.healthapp.presentation.ui.text.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.LiveRegionMode
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -35,13 +42,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import com.healthapp.presentation.viewmodel.ProfileViewModel
 
-private val genderLabels = mapOf(Gender.MALE to "Nam", Gender.FEMALE to "Nữ", Gender.OTHER to "Khác")
+private val genderLabels = mapOf(Gender.MALE to R.string.gender_male, Gender.FEMALE to R.string.gender_female, Gender.OTHER to R.string.gender_other)
 private val activityLabels = mapOf(
-    ActivityLevel.SEDENTARY to "Ít vận động",
-    ActivityLevel.LIGHTLY_ACTIVE to "Nhẹ (1–3 buổi/tuần)",
-    ActivityLevel.MODERATELY_ACTIVE to "Vừa (3–5 buổi/tuần)",
-    ActivityLevel.VERY_ACTIVE to "Nhiều (6–7 buổi/tuần)",
-    ActivityLevel.EXTRA_ACTIVE to "Rất nhiều / lao động nặng"
+    ActivityLevel.SEDENTARY to R.string.activity_sedentary,
+    ActivityLevel.LIGHTLY_ACTIVE to R.string.activity_light_long,
+    ActivityLevel.MODERATELY_ACTIVE to R.string.activity_moderate_long,
+    ActivityLevel.VERY_ACTIVE to R.string.activity_very_long,
+    ActivityLevel.EXTRA_ACTIVE to R.string.activity_extra_long
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -58,7 +65,7 @@ fun ProfileScreen(navController: NavController, viewModel: ProfileViewModel = hi
     Scaffold(
         containerColor = HealthPalette.Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = { BackTopBar("Hồ sơ") { navController.popBackStack() } }
+        topBar = { BackTopBar(stringResource(R.string.nav_profile)) { navController.popBackStack() } }
     ) { padding ->
     Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
         GradientCard(HealthPalette.HeroGradient, Modifier.fillMaxWidth()) {
@@ -68,15 +75,15 @@ fun ProfileScreen(navController: NavController, viewModel: ProfileViewModel = hi
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(state.name.ifBlank { "Hồ sơ của bạn" }, style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 1)
-                    Text("Thông tin lưu trên thiết bị", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .85f))
+                    Text(state.name.ifBlank { stringResource(R.string.profile_yours) }, style = MaterialTheme.typography.titleLarge, color = Color.White, maxLines = 1)
+                    Text(stringResource(R.string.stored_on_device), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .85f))
                 }
             }
             if (bmi != null) {
                 Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    HeroStat("BMI", "%.1f".format(bmi), bmiLabel(bmi))
-                    weight?.let { HealthCalculations.suggestedWaterMl(it) }?.let { HeroStat("Nước gợi ý", "${it} ml", "mỗi ngày") }
+                    HeroStat("BMI", oneDecimal(bmi), HealthCalculations.bmiCategory(bmi).title())
+                    weight?.let { HealthCalculations.suggestedWaterMl(it) }?.let { HeroStat(stringResource(R.string.water_suggested), stringResource(R.string.ml_value, it), stringResource(R.string.per_day)) }
                 }
             }
         }
@@ -84,62 +91,62 @@ fun ProfileScreen(navController: NavController, viewModel: ProfileViewModel = hi
         if (state.loading) CircularProgressIndicator(color = HealthPalette.Primary) else {
             AppCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Thông tin cá nhân", style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
-                    OutlinedTextField(state.name, { viewModel.update(it, state.birthDate, state.heightCm, state.weightKg, state.calorieGoal) }, label = { Text("Họ tên") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = fieldShape)
-                    OutlinedTextField(state.birthDate, { viewModel.update(state.name, it, state.heightCm, state.weightKg, state.calorieGoal) }, label = { Text("Ngày sinh (YYYY-MM-DD)") }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = fieldShape)
-                    Text("Giới tính", style = MaterialTheme.typography.labelLarge, color = HealthPalette.Ink)
+                    Text(stringResource(R.string.personal_info), style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
+                    OutlinedTextField(state.name, { viewModel.update(it, state.birthDate, state.heightCm, state.weightKg, state.calorieGoal) }, label = { Text(stringResource(R.string.full_name)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = fieldShape)
+                    OutlinedTextField(state.birthDate, { viewModel.update(state.name, it, state.heightCm, state.weightKg, state.calorieGoal) }, label = { Text(stringResource(R.string.birth_date_iso)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, shape = fieldShape)
+                    Text(stringResource(R.string.gender), style = MaterialTheme.typography.labelLarge, color = HealthPalette.Ink)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Gender.entries.forEach { g ->
                             FilterChip(
-                                selected = state.gender == g, onClick = { viewModel.setGender(g) }, label = { Text(genderLabels[g].orEmpty()) }, shape = CircleShape,
+                                selected = state.gender == g, onClick = { viewModel.setGender(g) }, label = { Text(genderLabels[g]?.let { stringResource(it) }.orEmpty()) }, shape = CircleShape,
                                 colors = FilterChipDefaults.filterChipColors(selectedContainerColor = HealthPalette.Primary, selectedLabelColor = Color.White)
                             )
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedTextField(state.heightCm, { viewModel.update(state.name, state.birthDate, it, state.weightKg, state.calorieGoal) }, label = { Text("Cao (cm)") }, modifier = Modifier.weight(1f), singleLine = true, shape = fieldShape, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                        OutlinedTextField(state.weightKg, { viewModel.update(state.name, state.birthDate, state.heightCm, it, state.calorieGoal) }, label = { Text("Nặng (kg)") }, modifier = Modifier.weight(1f), singleLine = true, shape = fieldShape, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                        OutlinedTextField(state.heightCm, { viewModel.update(state.name, state.birthDate, it, state.weightKg, state.calorieGoal) }, label = { Text(stringResource(R.string.height_short)) }, modifier = Modifier.weight(1f), singleLine = true, shape = fieldShape, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                        OutlinedTextField(state.weightKg, { viewModel.update(state.name, state.birthDate, state.heightCm, it, state.calorieGoal) }, label = { Text(stringResource(R.string.weight_short)) }, modifier = Modifier.weight(1f), singleLine = true, shape = fieldShape, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
                     }
                     ExposedDropdownMenuBox(expanded = activityMenu, onExpandedChange = { activityMenu = it }) {
                         OutlinedTextField(
-                            value = state.activityLevel?.let { activityLabels[it] }.orEmpty(),
+                            value = state.activityLevel?.let { activityLabels[it] }?.let { stringResource(it) }.orEmpty(),
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Mức vận động") },
+                            label = { Text(stringResource(R.string.activity_level)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(activityMenu) },
                             modifier = Modifier.menuAnchor().fillMaxWidth(),
                             shape = fieldShape
                         )
                         ExposedDropdownMenu(expanded = activityMenu, onDismissRequest = { activityMenu = false }) {
                             ActivityLevel.entries.forEach { level ->
-                                DropdownMenuItem(text = { Text(activityLabels[level].orEmpty()) }, onClick = { viewModel.setActivityLevel(level); activityMenu = false })
+                                DropdownMenuItem(text = { Text(activityLabels[level]?.let { stringResource(it) }.orEmpty()) }, onClick = { viewModel.setActivityLevel(level); activityMenu = false })
                             }
                         }
                     }
-                    OutlinedTextField(state.calorieGoal, { viewModel.update(state.name, state.birthDate, state.heightCm, state.weightKg, it) }, label = { Text("Mục tiêu năng lượng (kcal/ngày)") }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    SoftButton("Tính mục tiêu calo & macro", viewModel::calculateTargets, HealthPalette.Orange, Modifier.fillMaxWidth(), icon = Icons.Default.Calculate)
+                    OutlinedTextField(state.calorieGoal, { viewModel.update(state.name, state.birthDate, state.heightCm, state.weightKg, it) }, label = { Text(stringResource(R.string.energy_goal_day)) }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    SoftButton(stringResource(R.string.calc_targets), viewModel::calculateTargets, HealthPalette.Orange, Modifier.fillMaxWidth(), icon = Icons.Default.Calculate)
                     state.suggestion?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = HealthPalette.Ink,
+                        Text(it.resolve(), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Ink,
                             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(HealthPalette.Orange.soft).padding(12.dp))
                     }
                     Text(
-                        if (bmi != null) "BMI ${"%.1f".format(bmi)} · ${bmiLabel(bmi)} · chuẩn châu Á: bình thường ${HealthCalculations.BMI_NORMAL_RANGE}" else "BMI sẽ hiện khi có chiều cao và cân nặng",
+                        if (bmi != null) stringResource(R.string.bmi_line, oneDecimal(bmi), HealthCalculations.bmiCategory(bmi).title(), bmiNormalRange()) else stringResource(R.string.bmi_needs_data),
                         style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted
                     )
-                    state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-                    if (state.saved) Pill("Đã lưu hồ sơ ✓", HealthPalette.Emerald)
-                    PrimaryButton("Lưu hồ sơ", viewModel::save)
+                    state.error?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+                    if (state.saved) Pill(stringResource(R.string.profile_saved), HealthPalette.Emerald)
+                    PrimaryButton(stringResource(R.string.save_profile), viewModel::save)
                 }
             }
         }
-        SectionHeader("Tiện ích", modifier = Modifier.padding(top = 18.dp))
+        SectionHeader(stringResource(R.string.section_tools), modifier = Modifier.padding(top = 18.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            LinkRow(Icons.Default.Assessment, HealthPalette.Indigo, "Báo cáo sức khỏe") { navController.navigate("reports") }
-            LinkRow(Icons.Default.LocalDrink, HealthPalette.Sky, "Nước uống") { navController.navigate("water") }
-            LinkRow(Icons.Default.Medication, HealthPalette.Indigo, "Lịch uống thuốc") { navController.navigate("medications") }
-            LinkRow(Icons.Default.Notifications, HealthPalette.Amber, "Nhắc nhở") { navController.navigate("reminders") }
-            LinkRow(Icons.Default.ChatBubbleOutline, HealthPalette.Violet, "Hỏi trợ lý AI") { navController.navigate("ai_chat") }
-            LinkRow(Icons.Default.Settings, HealthPalette.Emerald, "Cài đặt & dữ liệu") { navController.navigate("settings") }
+            LinkRow(Icons.Default.Assessment, HealthPalette.Indigo, stringResource(R.string.link_reports)) { navController.navigate("reports") }
+            LinkRow(Icons.Default.LocalDrink, HealthPalette.Sky, stringResource(R.string.link_water)) { navController.navigate("water") }
+            LinkRow(Icons.Default.Medication, HealthPalette.Indigo, stringResource(R.string.link_meds)) { navController.navigate("medications") }
+            LinkRow(Icons.Default.Notifications, HealthPalette.Amber, stringResource(R.string.link_reminders)) { navController.navigate("reminders") }
+            LinkRow(Icons.Default.ChatBubbleOutline, HealthPalette.Violet, stringResource(R.string.link_ai)) { navController.navigate("ai_chat") }
+            LinkRow(Icons.Default.Settings, HealthPalette.Emerald, stringResource(R.string.link_settings)) { navController.navigate("settings") }
         }
         Spacer(Modifier.height(28.dp))
     }
@@ -155,7 +162,6 @@ private fun RowScope.HeroStat(label: String, value: String, detail: String) {
     }
 }
 
-private fun bmiLabel(bmi: Double) = HealthCalculations.bmiCategory(bmi).label
 
 @Composable
 private fun LinkRow(icon: ImageVector, accent: com.healthapp.presentation.ui.theme.Accent, label: String, onClick: () -> Unit) {
@@ -163,7 +169,7 @@ private fun LinkRow(icon: ImageVector, accent: com.healthapp.presentation.ui.the
         Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
             IconBadge(icon, accent, size = 40.dp)
             Text(label, style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink, modifier = Modifier.weight(1f))
-            Text("›", style = MaterialTheme.typography.titleLarge, color = HealthPalette.Subtle)
+            Text("›", style = MaterialTheme.typography.titleLarge, color = HealthPalette.Subtle, modifier = Modifier.clearAndSetSemantics { })
         }
     }
 }

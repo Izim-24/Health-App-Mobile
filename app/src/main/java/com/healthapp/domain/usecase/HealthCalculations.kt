@@ -20,13 +20,14 @@ data class EnergyTargets(
  * commonly used in Vietnam: overweight starts at 23 and obesity at 25, lower than the global
  * WHO 25/30. [score] is this category's contribution to the dashboard health score.
  */
-enum class BmiCategory(val label: String, val score: Int) {
-    SEVERELY_UNDERWEIGHT("thiếu cân nhiều", 40),
-    UNDERWEIGHT("thiếu cân", 70),
-    NORMAL("bình thường", 100),
-    OVERWEIGHT("thừa cân", 80),
-    OBESE_1("béo phì độ I", 55),
-    OBESE_2("béo phì độ II", 35)
+/** WHO Asia-Pacific BMI categories. The UI supplies the label (string resources). */
+enum class BmiCategory(val score: Int) {
+    SEVERELY_UNDERWEIGHT(40),
+    UNDERWEIGHT(70),
+    NORMAL(100),
+    OVERWEIGHT(80),
+    OBESE_1(55),
+    OBESE_2(35)
 }
 
 /** Pure health formulas used by the profile and dashboard. No Android dependencies. */
@@ -38,7 +39,9 @@ object HealthCalculations {
         return weightKg / (m * m)
     }
 
-    const val BMI_NORMAL_RANGE = "18,5–22,9"
+    /** Normal range for adults in the WHO Asia-Pacific classification. */
+    const val BMI_NORMAL_MIN = 18.5
+    const val BMI_NORMAL_MAX = 22.9
 
     /** Classified on the value rounded to 1 decimal, so the label always matches the displayed BMI. */
     fun bmiCategory(bmi: Double): BmiCategory {

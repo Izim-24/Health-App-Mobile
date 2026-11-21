@@ -1,5 +1,12 @@
 package com.healthapp.presentation.ui.health
 
+import com.healthapp.presentation.ui.text.*
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
+import androidx.annotation.StringRes
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,7 +47,9 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 private enum class HealthEntryKind { HEART_RATE, BLOOD_PRESSURE, GLUCOSE, WEIGHT, SLEEP, ACTIVITY }
-private enum class TrendMetric(val label: String) { WEIGHT("Cân nặng"), HEART_RATE("Nhịp tim"), GLUCOSE("Đường huyết"), SLEEP("Giấc ngủ"), STEPS("Bước chân") }
+private enum class TrendMetric(@StringRes val label: Int) {
+    WEIGHT(R.string.metric_weight), HEART_RATE(R.string.stat_heart_rate), GLUCOSE(R.string.stat_glucose), SLEEP(R.string.stat_sleep), STEPS(R.string.metric_steps)
+}
 private data class TrendPoint(val date: LocalDate, val value: Float)
 
 private val TrendMetric.accent: Accent @Composable get() = when (this) {
@@ -61,7 +70,7 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
     val latest = state.vitals.groupBy { it.type }.mapValues { (_, values) -> values.maxByOrNull { it.recordedAt } }
 
     Column(Modifier.fillMaxSize().background(HealthPalette.Background).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-        ScreenHeader("Sức khỏe", "Theo dõi chỉ số", subtitle = "Nhập số đo từ máy đo, đồng hồ hoặc đồng bộ tự động.", accent = HealthPalette.Coral)
+        ScreenHeader(stringResource(R.string.tab_health), stringResource(R.string.health_header), subtitle = stringResource(R.string.health_header_sub), accent = HealthPalette.Coral)
 
         GradientCard(HealthPalette.Sky.gradient, Modifier.fillMaxWidth(), onClick = { navController.navigate("health_connect") }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -69,38 +78,38 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text("Health Connect", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                    Text("Tự nhập bước chân, giấc ngủ, nhịp tim từ đồng hồ và ứng dụng khác", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .9f))
+                    Text(stringResource(R.string.hc_card_sub), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .9f))
                 }
                 Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = Color.White)
             }
         }
 
-        SectionHeader("Chỉ số gần nhất", modifier = Modifier.padding(top = 14.dp))
+        SectionHeader(stringResource(R.string.latest_readings), modifier = Modifier.padding(top = 14.dp))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val hr = latest[VitalType.HEART_RATE]
-            HealthValueCard(Icons.Rounded.Favorite, HealthPalette.Coral, "Nhịp tim", hr?.let { "${it.value.toInt()} bpm" }, hr?.recordedAt, origin(hr?.id, hr?.source)) { entry = HealthEntryKind.HEART_RATE }
+            HealthValueCard(Icons.Rounded.Favorite, HealthPalette.Coral, stringResource(R.string.stat_heart_rate), hr?.let { stringResource(R.string.bpm_value, it.value.toInt()) }, hr?.recordedAt, origin(hr?.id, hr?.source)) { entry = HealthEntryKind.HEART_RATE }
             val bp = latest[VitalType.BLOOD_PRESSURE]
-            HealthValueCard(Icons.Rounded.MonitorHeart, HealthPalette.Pink, "Huyết áp", bp?.let { "${it.value.toInt()}/${it.secondaryValue?.toInt() ?: "—"} mmHg" }, bp?.recordedAt, origin(bp?.id, bp?.source)) { entry = HealthEntryKind.BLOOD_PRESSURE }
+            HealthValueCard(Icons.Rounded.MonitorHeart, HealthPalette.Pink, stringResource(R.string.stat_bp), bp?.let { stringResource(R.string.bp_value, it.value.toInt(), it.secondaryValue?.toInt()?.toString() ?: "—") }, bp?.recordedAt, origin(bp?.id, bp?.source)) { entry = HealthEntryKind.BLOOD_PRESSURE }
             val glucose = latest[VitalType.GLUCOSE]
-            HealthValueCard(Icons.Rounded.Bloodtype, HealthPalette.Indigo, "Đường huyết", glucose?.let { "${"%.1f".format(it.value)} ${it.unit}" }, glucose?.recordedAt, origin(glucose?.id, glucose?.source)) { entry = HealthEntryKind.GLUCOSE }
+            HealthValueCard(Icons.Rounded.Bloodtype, HealthPalette.Indigo, stringResource(R.string.stat_glucose), glucose?.let { stringResource(R.string.value_unit, oneDecimal(it.value), it.unit) }, glucose?.recordedAt, origin(glucose?.id, glucose?.source)) { entry = HealthEntryKind.GLUCOSE }
             val weight = state.weights.firstOrNull()
-            HealthValueCard(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, "Cân nặng", weight?.let { "${"%.1f".format(it.weight)} kg" }, weight?.recordedAt, origin(weight?.id)) { entry = HealthEntryKind.WEIGHT }
+            HealthValueCard(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, stringResource(R.string.metric_weight), weight?.let { stringResource(R.string.kg_value, oneDecimal(it.weight)) }, weight?.recordedAt, origin(weight?.id)) { entry = HealthEntryKind.WEIGHT }
             val sleep = state.sleeps.firstOrNull()
-            HealthValueCard(Icons.Rounded.Bedtime, HealthPalette.Violet, "Giấc ngủ", sleep?.let { "${it.durationMinutes / 60} giờ ${it.durationMinutes % 60} phút" }, sleep?.wakeupTime, origin(sleep?.id)) { entry = HealthEntryKind.SLEEP }
+            HealthValueCard(Icons.Rounded.Bedtime, HealthPalette.Violet, stringResource(R.string.stat_sleep), sleep?.let { stringResource(R.string.sleep_duration, it.durationMinutes / 60, it.durationMinutes % 60) }, sleep?.wakeupTime, origin(sleep?.id)) { entry = HealthEntryKind.SLEEP }
             val stepActivities = state.activities.filter { it.date == LocalDate.now().toString() }
             val stepsToday = stepActivities.takeIf { it.isNotEmpty() }?.sumOf { it.steps }
             val lastStep = stepActivities.maxByOrNull { it.recordedAt }
-            HealthValueCard(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Orange, "Số bước hôm nay", stepsToday?.let { "$it bước" }, lastStep?.recordedAt, origin(lastStep?.id)) { entry = HealthEntryKind.ACTIVITY }
+            HealthValueCard(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Orange, stringResource(R.string.steps_today_title), stepsToday?.let { stringResource(R.string.steps_value, grouped(it)) }, lastStep?.recordedAt, origin(lastStep?.id)) { entry = HealthEntryKind.ACTIVITY }
         }
 
-        SectionHeader("Xu hướng", modifier = Modifier.padding(top = 18.dp))
+        SectionHeader(stringResource(R.string.section_trends), modifier = Modifier.padding(top = 18.dp))
         PeriodSelector(trendDays) { trendDays = it }
         Spacer(Modifier.height(12.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             TrendMetric.entries.forEach { metric ->
                 val selected = trendMetric == metric
                 FilterChip(
-                    selected = selected, onClick = { trendMetric = metric }, label = { Text(metric.label) },
+                    selected = selected, onClick = { trendMetric = metric }, label = { Text(stringResource(metric.label)) },
                     shape = CircleShape,
                     border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected, borderColor = HealthPalette.Line, selectedBorderColor = metric.accent.strong),
                     colors = FilterChipDefaults.filterChipColors(selectedContainerColor = metric.accent.strong, selectedLabelColor = Color.White, containerColor = HealthPalette.Surface, labelColor = HealthPalette.Ink)
@@ -118,19 +127,19 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
         }.filter { it.date >= firstDate && it.date <= LocalDate.now() }.sortedBy { it.date }
         TrendChart(trendMetric, trendPoints)
 
-        SectionHeader("Lịch sử đo", modifier = Modifier.padding(top = 18.dp))
+        SectionHeader(stringResource(R.string.section_history), modifier = Modifier.padding(top = 18.dp))
         val history = state.vitals.sortedByDescending { it.recordedAt }.take(20)
         if (history.isEmpty() && state.weights.isEmpty() && state.sleeps.isEmpty() && state.activities.isEmpty()) {
             AppCard(Modifier.fillMaxWidth()) {
-                Text("Chưa có lần đo nào. Chạm “Ghi” ở một chỉ số để bắt đầu.", Modifier.padding(18.dp), color = HealthPalette.Muted)
+                Text(stringResource(R.string.no_readings), Modifier.padding(18.dp), color = HealthPalette.Muted)
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             history.forEach { record -> VitalHistoryRow(record, onDelete = { viewModel.deleteVital(record.id) }) }
-            state.weights.take(10).forEach { HealthHistoryLabel(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, "Cân nặng", "${"%.1f".format(it.weight)} kg", it.recordedAt, origin(it.id)) }
-            state.sleeps.take(10).forEach { HealthHistoryLabel(Icons.Rounded.Bedtime, HealthPalette.Violet, "Giấc ngủ", "${it.durationMinutes / 60} giờ ${it.durationMinutes % 60} phút", it.wakeupTime, origin(it.id)) }
+            state.weights.take(10).forEach { HealthHistoryLabel(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, stringResource(R.string.metric_weight), stringResource(R.string.kg_value, oneDecimal(it.weight)), it.recordedAt, origin(it.id)) }
+            state.sleeps.take(10).forEach { HealthHistoryLabel(Icons.Rounded.Bedtime, HealthPalette.Violet, stringResource(R.string.stat_sleep), stringResource(R.string.sleep_duration, it.durationMinutes / 60, it.durationMinutes % 60), it.wakeupTime, origin(it.id)) }
             state.activities.take(10).forEach {
-                HealthHistoryLabel(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Orange, "Bước chân", "${it.steps} bước" + if (it.durationMinutes > 0) " · ${it.durationMinutes} phút" else "", it.recordedAt, origin(it.id))
+                HealthHistoryLabel(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Orange, stringResource(R.string.metric_steps), if (it.durationMinutes > 0) stringResource(R.string.steps_with_minutes, grouped(it.steps), it.durationMinutes) else stringResource(R.string.steps_value, grouped(it.steps)), it.recordedAt, origin(it.id))
             }
         }
         Spacer(Modifier.height(28.dp))
@@ -149,30 +158,39 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
             entry = null
         })
     }
+    // Errors used to be cleared without being shown; show them briefly instead.
     state.error?.let { error ->
-        LaunchedEffect(error) { viewModel.clearError() }
+        val message = error.resolve()
+        val context = androidx.compose.ui.platform.LocalContext.current
+        LaunchedEffect(error) {
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+            viewModel.clearError()
+        }
     }
 }
 
 /** Where an entry came from, from its id prefix / source field: imported, sample (demo) or typed by the user. */
+@Composable
 private fun origin(id: String?, source: String? = null): String = when {
     source == "HEALTH_CONNECT" || id?.startsWith("hc_") == true -> "Health Connect"
-    source == "DEMO" || id?.startsWith("demo_") == true -> "Dữ liệu mẫu"
-    else -> "Nhập tay"
+    source == "DEMO" || id?.startsWith("demo_") == true -> stringResource(R.string.origin_demo)
+    else -> stringResource(R.string.origin_manual)
 }
 
+@Composable
 private fun sourceLabel(origin: String, time: LocalDateTime) =
-    "$origin · ${time.format(DateTimeFormatter.ofPattern("HH:mm dd/MM"))}"
+    stringResource(R.string.origin_time, origin, time.format(DateTimeFormatter.ofPattern("HH:mm dd/MM")))
 
 /** Segmented control: Ngày / Tuần / Tháng. */
 @Composable
 private fun PeriodSelector(days: Int, onSelect: (Int) -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(CircleShape).background(HealthPalette.SurfaceAlt).padding(4.dp)) {
-        listOf(1 to "Ngày", 7 to "Tuần", 30 to "Tháng").forEach { (d, label) ->
+    Row(Modifier.fillMaxWidth().clip(CircleShape).background(HealthPalette.SurfaceAlt).padding(4.dp).selectableGroup()) {
+        listOf(1 to R.string.period_day, 7 to R.string.period_week, 30 to R.string.period_month).forEach { (d, labelRes) ->
+            val label = stringResource(labelRes)
             val selected = d == days
             Box(
                 Modifier.weight(1f).clip(CircleShape).background(if (selected) HealthPalette.Surface else Color.Transparent)
-                    .clickable { onSelect(d) }.padding(vertical = 9.dp),
+                    .heightIn(min = 48.dp).selectable(selected = selected, role = Role.RadioButton, onClick = { onSelect(d) }),
                 contentAlignment = Alignment.Center
             ) {
                 Text(label, style = MaterialTheme.typography.labelLarge, color = if (selected) HealthPalette.Ink else HealthPalette.Muted)
@@ -202,12 +220,12 @@ private fun TrendChart(metric: TrendMetric, points: List<TrendPoint>) {
     AppCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(metric.label, style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink, modifier = Modifier.weight(1f))
-                Pill("${points.size} lần ghi", accent)
+                Text(stringResource(metric.label), style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink, modifier = Modifier.weight(1f))
+                Pill(stringResource(R.string.entries_count, points.size), accent)
             }
             if (points.isEmpty()) {
                 Box(Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) {
-                    Text("Chưa có dữ liệu trong khoảng này", color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.no_data_in_range), color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
                 Text("%.1f".format(points.last().value), style = MaterialTheme.typography.headlineMedium, color = accent.strong, modifier = Modifier.padding(top = 6.dp))
@@ -258,10 +276,10 @@ private fun HealthValueCard(icon: ImageVector, accent: Accent, title: String, va
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted)
-                Text(value ?: "Chưa có", style = MaterialTheme.typography.titleMedium, color = if (value == null) HealthPalette.Subtle else HealthPalette.Ink)
+                Text(value ?: stringResource(R.string.not_set), style = MaterialTheme.typography.titleMedium, color = if (value == null) HealthPalette.Subtle else HealthPalette.Ink)
                 recordedAt?.let { Text(sourceLabel(origin, it), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted) }
             }
-            SoftButton("Ghi", onAdd, accent, icon = Icons.Rounded.Add)
+            SoftButton(stringResource(R.string.action_log), onAdd, accent, icon = Icons.Rounded.Add)
         }
     }
 }
@@ -269,9 +287,9 @@ private fun HealthValueCard(icon: ImageVector, accent: Accent, title: String, va
 @Composable
 private fun VitalHistoryRow(measurement: VitalMeasurement, onDelete: () -> Unit) {
     val (label, value) = when (measurement.type) {
-        VitalType.HEART_RATE -> "Nhịp tim" to "${measurement.value.toInt()} ${measurement.unit}"
-        VitalType.BLOOD_PRESSURE -> "Huyết áp" to "${measurement.value.toInt()}/${measurement.secondaryValue?.toInt()} ${measurement.unit}"
-        VitalType.GLUCOSE -> "Đường huyết" to "${"%.1f".format(measurement.value)} ${measurement.unit}"
+        VitalType.HEART_RATE -> stringResource(R.string.stat_heart_rate) to "${measurement.value.toInt()} ${measurement.unit}"
+        VitalType.BLOOD_PRESSURE -> stringResource(R.string.stat_bp) to "${measurement.value.toInt()}/${measurement.secondaryValue?.toInt()} ${measurement.unit}"
+        VitalType.GLUCOSE -> stringResource(R.string.stat_glucose) to stringResource(R.string.value_unit, oneDecimal(measurement.value), measurement.unit)
     }
     val (icon, accent) = when (measurement.type) {
         VitalType.HEART_RATE -> Icons.Rounded.Favorite to HealthPalette.Coral
@@ -287,7 +305,7 @@ private fun VitalHistoryRow(measurement: VitalMeasurement, onDelete: () -> Unit)
                 Text(sourceLabel(origin(measurement.id, measurement.source), measurement.recordedAt), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             }
             Text(value, style = MaterialTheme.typography.titleSmall, color = accent.strong)
-            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, "Xóa $label", tint = HealthPalette.Subtle) }
+            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, stringResource(R.string.delete_item, label), tint = HealthPalette.Subtle) }
         }
     }
 }
@@ -299,20 +317,20 @@ private fun HealthEntryDialog(kind: HealthEntryKind, onDismiss: () -> Unit, onSa
     var unit by remember(kind) { mutableStateOf(if (kind == HealthEntryKind.GLUCOSE) "mmol/L" else "") }
     var quality by remember(kind) { mutableStateOf("") }
     val title = when (kind) {
-        HealthEntryKind.HEART_RATE -> "Ghi nhịp tim"
-        HealthEntryKind.BLOOD_PRESSURE -> "Ghi huyết áp"
-        HealthEntryKind.GLUCOSE -> "Ghi đường huyết"
-        HealthEntryKind.WEIGHT -> "Ghi cân nặng"
-        HealthEntryKind.SLEEP -> "Ghi giấc ngủ"
-        HealthEntryKind.ACTIVITY -> "Ghi bước chân"
+        HealthEntryKind.HEART_RATE -> stringResource(R.string.log_heart_rate)
+        HealthEntryKind.BLOOD_PRESSURE -> stringResource(R.string.log_bp)
+        HealthEntryKind.GLUCOSE -> stringResource(R.string.log_glucose)
+        HealthEntryKind.WEIGHT -> stringResource(R.string.log_weight)
+        HealthEntryKind.SLEEP -> stringResource(R.string.log_sleep)
+        HealthEntryKind.ACTIVITY -> stringResource(R.string.log_steps)
     }
     val firstLabel = when (kind) {
-        HealthEntryKind.HEART_RATE -> "Nhịp tim (bpm)"
-        HealthEntryKind.BLOOD_PRESSURE -> "Tâm thu (mmHg)"
-        HealthEntryKind.GLUCOSE -> "Đường huyết"
-        HealthEntryKind.WEIGHT -> "Cân nặng (kg)"
-        HealthEntryKind.SLEEP -> "Giờ đi ngủ (HH:mm)"
-        HealthEntryKind.ACTIVITY -> "Số bước"
+        HealthEntryKind.HEART_RATE -> stringResource(R.string.field_heart_rate)
+        HealthEntryKind.BLOOD_PRESSURE -> stringResource(R.string.field_systolic)
+        HealthEntryKind.GLUCOSE -> stringResource(R.string.stat_glucose)
+        HealthEntryKind.WEIGHT -> stringResource(R.string.weight_kg)
+        HealthEntryKind.SLEEP -> stringResource(R.string.field_bedtime)
+        HealthEntryKind.ACTIVITY -> stringResource(R.string.field_steps)
     }
     val firstValue = first.replace(',', '.').toDoubleOrNull()
     val secondValue = second.replace(',', '.').toDoubleOrNull()
@@ -329,14 +347,14 @@ private fun HealthEntryDialog(kind: HealthEntryKind, onDismiss: () -> Unit, onSa
         title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(value = first, onValueChange = { first = it }, label = { Text(firstLabel) }, placeholder = { Text(if (kind == HealthEntryKind.SLEEP) "22:30" else "Nhập giá trị") }, keyboardOptions = KeyboardOptions(keyboardType = if (kind == HealthEntryKind.SLEEP) KeyboardType.Text else KeyboardType.Decimal), singleLine = true, shape = MaterialTheme.shapes.medium)
+                OutlinedTextField(value = first, onValueChange = { first = it }, label = { Text(firstLabel) }, placeholder = { Text(if (kind == HealthEntryKind.SLEEP) "22:30" else stringResource(R.string.enter_value)) }, keyboardOptions = KeyboardOptions(keyboardType = if (kind == HealthEntryKind.SLEEP) KeyboardType.Text else KeyboardType.Decimal), singleLine = true, shape = MaterialTheme.shapes.medium)
                 if (kind == HealthEntryKind.BLOOD_PRESSURE || kind == HealthEntryKind.ACTIVITY || kind == HealthEntryKind.SLEEP) {
                     val secondLabel = when (kind) {
-                        HealthEntryKind.BLOOD_PRESSURE -> "Tâm trương (mmHg)"
-                        HealthEntryKind.ACTIVITY -> "Thời lượng đi bộ (phút)"
-                        else -> "Giờ thức dậy (HH:mm)"
+                        HealthEntryKind.BLOOD_PRESSURE -> stringResource(R.string.field_diastolic)
+                        HealthEntryKind.ACTIVITY -> stringResource(R.string.field_walk_minutes)
+                        else -> stringResource(R.string.field_wake_time)
                     }
-                    OutlinedTextField(value = second, onValueChange = { second = it }, label = { Text(secondLabel) }, placeholder = { Text(if (kind == HealthEntryKind.SLEEP) "06:30" else "Nhập giá trị") }, keyboardOptions = KeyboardOptions(keyboardType = if (kind == HealthEntryKind.SLEEP) KeyboardType.Text else KeyboardType.Number), singleLine = true, shape = MaterialTheme.shapes.medium)
+                    OutlinedTextField(value = second, onValueChange = { second = it }, label = { Text(secondLabel) }, placeholder = { Text(if (kind == HealthEntryKind.SLEEP) "06:30" else stringResource(R.string.enter_value)) }, keyboardOptions = KeyboardOptions(keyboardType = if (kind == HealthEntryKind.SLEEP) KeyboardType.Text else KeyboardType.Number), singleLine = true, shape = MaterialTheme.shapes.medium)
                 }
                 if (kind == HealthEntryKind.GLUCOSE) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -344,21 +362,21 @@ private fun HealthEntryDialog(kind: HealthEntryKind, onDismiss: () -> Unit, onSa
                         FilterChip(selected = unit == "mg/dL", onClick = { unit = "mg/dL" }, label = { Text("mg/dL") }, shape = CircleShape)
                     }
                 }
-                if (kind == HealthEntryKind.SLEEP) OutlinedTextField(value = quality, onValueChange = { value -> if (value.length <= 2 && value.all(Char::isDigit)) quality = value }, label = { Text("Chất lượng ngủ (1–10, tùy chọn)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = MaterialTheme.shapes.medium)
+                if (kind == HealthEntryKind.SLEEP) OutlinedTextField(value = quality, onValueChange = { value -> if (value.length <= 2 && value.all(Char::isDigit)) quality = value }, label = { Text(stringResource(R.string.field_sleep_quality)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = MaterialTheme.shapes.medium)
                 val helpText = when (kind) {
-                    HealthEntryKind.HEART_RATE -> "Nhập nhịp tim hiển thị trên đồng hồ hoặc máy đo. Ví dụ: 72 bpm."
-                    HealthEntryKind.BLOOD_PRESSURE -> "Nhập hai số SYS/DIA từ máy đo huyết áp. Ví dụ: 120 và 80 mmHg."
-                    HealthEntryKind.GLUCOSE -> "Nhập kết quả từ máy đo đường huyết; chọn đúng đơn vị trên thiết bị."
-                    HealthEntryKind.WEIGHT -> "Nhập số cân nặng hiển thị trên cân."
-                    HealthEntryKind.SLEEP -> "Nhập giờ đi ngủ và giờ thức dậy đêm vừa qua. Ví dụ: 22:30 và 06:30."
-                    HealthEntryKind.ACTIVITY -> "Nhập số bước và thời lượng đi bộ từ thiết bị hoặc tự ghi."
+                    HealthEntryKind.HEART_RATE -> stringResource(R.string.hint_heart_rate)
+                    HealthEntryKind.BLOOD_PRESSURE -> stringResource(R.string.hint_bp)
+                    HealthEntryKind.GLUCOSE -> stringResource(R.string.hint_glucose)
+                    HealthEntryKind.WEIGHT -> stringResource(R.string.hint_weight)
+                    HealthEntryKind.SLEEP -> stringResource(R.string.hint_sleep)
+                    HealthEntryKind.ACTIVITY -> stringResource(R.string.hint_steps)
                 }
                 Text(helpText, style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             }
         },
         confirmButton = {
-            Button(onClick = { onSave(first, second, if (kind == HealthEntryKind.GLUCOSE) unit else quality) }, enabled = valid) { Text("Lưu số đo") }
+            Button(onClick = { onSave(first, second, if (kind == HealthEntryKind.GLUCOSE) unit else quality) }, enabled = valid) { Text(stringResource(R.string.save_reading)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }

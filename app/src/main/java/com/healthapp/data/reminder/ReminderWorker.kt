@@ -61,20 +61,24 @@ class ReminderWorker(appContext: Context, params: WorkerParameters) : CoroutineW
         fun ensureChannel(context: Context) {
             // minSdk is 26, so notification channels always exist.
             val manager = context.getSystemService(NotificationManager::class.java)
+            val res = com.healthapp.core.AppLocale.localized(context)
+            // Re-creating the channel updates its name if the language changed.
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Nhắc nhở sức khỏe", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Nhắc uống nước, vận động, ngủ, bữa ăn và thói quen"
+                NotificationChannel(CHANNEL_ID, res.getString(R.string.channel_reminders), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = res.getString(R.string.channel_reminders_desc)
                 }
             )
         }
 
-        fun bodyFor(type: ReminderType): String = when (type) {
-            ReminderType.WATER -> "Đến giờ uống một cốc nước rồi."
-            ReminderType.EXERCISE -> "Đứng dậy và vận động vài phút nhé."
-            ReminderType.SLEEP -> "Chuẩn bị đi ngủ để có giấc ngủ đủ giấc."
-            ReminderType.HABIT -> "Đừng quên hoàn thành thói quen hôm nay."
-            ReminderType.MEAL -> "Đến giờ ăn — nhớ ghi lại bữa ăn của bạn."
-        }
+        fun bodyFor(context: Context, type: ReminderType): String = com.healthapp.core.AppLocale.localized(context).getString(
+            when (type) {
+                ReminderType.WATER -> R.string.notif_water
+                ReminderType.EXERCISE -> R.string.notif_exercise
+                ReminderType.SLEEP -> R.string.notif_sleep
+                ReminderType.HABIT -> R.string.notif_habit
+                ReminderType.MEAL -> R.string.notif_meal
+            }
+        )
 
         fun notify(context: Context, reminder: Reminder) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -86,7 +90,7 @@ class ReminderWorker(appContext: Context, params: WorkerParameters) : CoroutineW
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(reminder.title)
-                .setContentText(bodyFor(reminder.reminderType))
+                .setContentText(bodyFor(context, reminder.reminderType))
                 .setContentIntent(pending)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)

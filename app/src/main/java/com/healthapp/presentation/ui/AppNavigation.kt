@@ -1,5 +1,7 @@
 package com.healthapp.presentation.ui
 
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -48,17 +50,17 @@ import com.healthapp.presentation.ui.medication.MedicationScreen
 import com.healthapp.presentation.ui.healthconnect.HealthConnectScreen
 import com.healthapp.presentation.ui.theme.HealthPalette
 
-private data class Tab(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val accent: com.healthapp.presentation.ui.theme.Accent)
+private data class Tab(val route: String, @androidx.annotation.StringRes val label: Int, val icon: androidx.compose.ui.graphics.vector.ImageVector, val accent: com.healthapp.presentation.ui.theme.Accent)
 
 @Composable
 fun AppNavigation(startDestination: String = "dashboard") {
     val navController = rememberNavController()
     val tabs = listOf(
-        Tab("dashboard", "Trang chủ", Icons.Rounded.Home, HealthPalette.Emerald),
-        Tab("health", "Sức khỏe", Icons.Rounded.MonitorHeart, HealthPalette.Coral),
-        Tab("nutrition", "Ăn uống", Icons.Rounded.Restaurant, HealthPalette.Orange),
-        Tab("habits", "Thói quen", Icons.Rounded.CheckCircle, HealthPalette.Violet),
-        Tab("mental", "Tinh thần", Icons.Rounded.Spa, HealthPalette.Pink)
+        Tab("dashboard", R.string.tab_home, Icons.Rounded.Home, HealthPalette.Emerald),
+        Tab("health", R.string.tab_health, Icons.Rounded.MonitorHeart, HealthPalette.Coral),
+        Tab("nutrition", R.string.tab_food, Icons.Rounded.Restaurant, HealthPalette.Orange),
+        Tab("habits", R.string.section_habits, Icons.Rounded.CheckCircle, HealthPalette.Violet),
+        Tab("mental", R.string.tab_mind, Icons.Rounded.Spa, HealthPalette.Pink)
     )
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -83,8 +85,17 @@ fun AppNavigation(startDestination: String = "dashboard") {
                                             restoreState = tab.route != "dashboard"
                                         }
                                     },
-                                    icon = { Icon(tab.icon, contentDescription = tab.label) },
-                                    label = { Text(tab.label, maxLines = 1, style = MaterialTheme.typography.labelSmall) },
+                                    icon = { Icon(tab.icon, contentDescription = null) },
+                                    label = {
+                                        // Five tabs share the width, so tab labels keep their normal size (otherwise long Vietnamese
+                                        // labels get cut). Icons + TalkBack labels carry the meaning; the rest of the app scales fully.
+                                        val d = androidx.compose.ui.platform.LocalDensity.current
+                                        androidx.compose.runtime.CompositionLocalProvider(
+                                            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, d.fontScale.coerceAtMost(1f))
+                                        ) {
+                                            Text(stringResource(tab.label), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    },
                                     colors = NavigationBarItemDefaults.colors(
                                         selectedIconColor = tab.accent.strong,
                                         selectedTextColor = tab.accent.strong,

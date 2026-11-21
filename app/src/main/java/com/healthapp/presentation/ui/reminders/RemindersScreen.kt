@@ -1,5 +1,11 @@
 package com.healthapp.presentation.ui.reminders
 
+import com.healthapp.presentation.ui.text.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -35,14 +41,15 @@ import com.healthapp.presentation.ui.theme.HealthPalette
 import com.healthapp.presentation.ui.components.*
 import com.healthapp.presentation.viewmodel.RemindersViewModel
 
-internal val dayLabels = mapOf(
-    DayOfWeek.MONDAY to "T2", DayOfWeek.TUESDAY to "T3", DayOfWeek.WEDNESDAY to "T4",
-    DayOfWeek.THURSDAY to "T5", DayOfWeek.FRIDAY to "T6", DayOfWeek.SATURDAY to "T7", DayOfWeek.SUNDAY to "CN"
+private val typeLabels = mapOf(
+    ReminderType.WATER to R.string.rtype_water, ReminderType.EXERCISE to R.string.rtype_exercise, ReminderType.SLEEP to R.string.rtype_sleep,
+    ReminderType.MEAL to R.string.rtype_meal, ReminderType.HABIT to R.string.rtype_habit
 )
 
-private val typeLabels = mapOf(
-    ReminderType.WATER to "Uống nước", ReminderType.EXERCISE to "Vận động", ReminderType.SLEEP to "Giấc ngủ",
-    ReminderType.MEAL to "Bữa ăn", ReminderType.HABIT to "Thói quen"
+/** Title saved with the reminder (and shown in its notification) when the user leaves it blank. */
+private val defaultTitles = mapOf(
+    ReminderType.WATER to R.string.rtitle_water, ReminderType.EXERCISE to R.string.rtitle_exercise, ReminderType.SLEEP to R.string.rtitle_sleep,
+    ReminderType.MEAL to R.string.rtitle_meal, ReminderType.HABIT to R.string.rtitle_habit
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,7 +69,7 @@ fun RemindersScreen(navController: NavController, viewModel: RemindersViewModel 
         containerColor = HealthPalette.Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            BackTopBar("Nhắc nhở") { navController.popBackStack() }
+            BackTopBar(stringResource(R.string.link_reminders)) { navController.popBackStack() }
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -76,7 +83,7 @@ fun RemindersScreen(navController: NavController, viewModel: RemindersViewModel 
                 contentColor = androidx.compose.ui.graphics.Color.White,
                 shape = androidx.compose.foundation.shape.CircleShape,
                 icon = { Icon(Icons.Default.Add, null) },
-                text = { Text("Thêm nhắc nhở") }
+                text = { Text(stringResource(R.string.add_reminder)) }
             )
         }
     ) { padding ->
@@ -86,22 +93,23 @@ fun RemindersScreen(navController: NavController, viewModel: RemindersViewModel 
             contentPadding = PaddingValues(bottom = 96.dp)
         ) {
             item {
-                Text("Nhắc bạn uống nước, vận động, ăn uống và đi ngủ đúng giờ. Thông báo được lên lịch trên thiết bị, không cần mạng.", color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.reminders_intro), color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium)
             }
             if (!permissionGranted) {
                 item {
                     Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = HealthPalette.Orange.soft)) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Thông báo đang tắt", fontWeight = FontWeight.Bold, color = HealthPalette.Ink)
-                            Text("Cho phép thông báo để nhận nhắc nhở đúng giờ.", color = HealthPalette.Ink, style = MaterialTheme.typography.bodySmall)
-                            Button(onClick = { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }) { Text("Cho phép thông báo") }
+                            Text(stringResource(R.string.notifications_off), fontWeight = FontWeight.Bold, color = HealthPalette.Ink)
+                            Text(stringResource(R.string.notifications_off_sub), color = HealthPalette.Ink, style = MaterialTheme.typography.bodySmall)
+                            Button(onClick = { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }) { Text(stringResource(R.string.allow_notifications)) }
                         }
                     }
                 }
             }
             state.error?.let { err ->
                 item {
-                    Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(err.resolve(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     LaunchedEffect(err) { kotlinx.coroutines.delay(4000); viewModel.clearError() }
                 }
             }
@@ -112,8 +120,8 @@ fun RemindersScreen(navController: NavController, viewModel: RemindersViewModel 
                     AppCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             IconBadge(Icons.Default.NotificationsActive, HealthPalette.Amber, size = 64.dp)
-                            Text("Chưa có nhắc nhở nào", fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
-                            Text("Thử thêm nhắc uống nước lúc 09:00 hoặc nhắc đi ngủ lúc 22:30.", color = HealthPalette.Muted, style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.no_reminders), fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
+                            Text(stringResource(R.string.no_reminders_sub), color = HealthPalette.Muted, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
@@ -154,10 +162,11 @@ private fun ReminderRow(reminder: Reminder, onToggle: (Boolean) -> Unit, onEdit:
             Column(Modifier.weight(1f)) {
                 Text(reminder.reminderTime, style = MaterialTheme.typography.displaySmall, color = if (reminder.isEnabled) accent.strong else HealthPalette.Subtle)
                 Text(reminder.title, color = HealthPalette.Ink, fontWeight = FontWeight.SemiBold)
-                val days = reminder.daysOfWeek?.joinToString(" ") { dayLabels[it].orEmpty() } ?: "Hằng ngày"
-                Text("${typeLabels[reminder.reminderType]} · $days", color = HealthPalette.Muted, style = MaterialTheme.typography.bodySmall)
+                val names = dayNames()
+                val days = reminder.daysOfWeek?.joinToString(" ") { names[it].orEmpty() } ?: stringResource(R.string.every_day)
+                Text("${typeLabels[reminder.reminderType]?.let { stringResource(it) }.orEmpty()} · $days", color = HealthPalette.Muted, style = MaterialTheme.typography.bodySmall)
             }
-            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Xóa nhắc nhở", tint = HealthPalette.Muted) }
+            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, stringResource(R.string.delete_item, reminder.title), tint = HealthPalette.Muted) }
             Switch(checked = reminder.isEnabled, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedTrackColor = accent.strong))
         }
     }
@@ -178,29 +187,30 @@ private fun ReminderEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "Nhắc nhở mới" else "Sửa nhắc nhở") },
+        title = { Text(stringResource(if (initial == null) R.string.new_reminder else R.string.edit_reminder)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
                 TimeInput(state = timeState)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ReminderType.entries.forEach { t ->
-                        FilterChip(selected = type == t, onClick = { type = t }, label = { Text(typeLabels[t].orEmpty()) })
+                        FilterChip(selected = type == t, onClick = { type = t }, label = { Text(typeLabels[t]?.let { stringResource(it) }.orEmpty()) })
                     }
                 }
-                OutlinedTextField(title, { title = it.take(60) }, label = { Text("Tiêu đề (tùy chọn)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Text("Lặp lại", style = MaterialTheme.typography.labelLarge)
+                OutlinedTextField(title, { title = it.take(60) }, label = { Text(stringResource(R.string.title_optional)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Text(stringResource(R.string.repeat), style = MaterialTheme.typography.labelLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     DayOfWeek.entries.forEach { d ->
-                        FilterChip(selected = d in days, onClick = { days = if (d in days) days - d else days + d }, label = { Text(dayLabels[d].orEmpty()) })
+                        FilterChip(selected = d in days, onClick = { days = if (d in days) days - d else days + d }, label = { Text(dayNames()[d].orEmpty()) })
                     }
                 }
             }
         },
         confirmButton = {
+            val defaultTitle = stringResource(defaultTitles.getValue(type))
             TextButton(enabled = days.isNotEmpty(), onClick = {
-                onSave(title, type, "%02d:%02d".format(timeState.hour, timeState.minute), DayOfWeek.entries.filter { it in days })
-            }) { Text("Lưu") }
+                onSave(title.ifBlank { defaultTitle }, type, "%02d:%02d".format(java.util.Locale.ROOT, timeState.hour, timeState.minute), DayOfWeek.entries.filter { it in days })
+            }) { Text(stringResource(R.string.action_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }

@@ -9,6 +9,8 @@
 
 ## Đã hoạt động
 
+- **Tiếng Việt và English**: toàn bộ giao diện nằm trong `strings.xml` (608 chuỗi mỗi ngôn ngữ); chọn ngôn ngữ trong **Cài đặt → Ngôn ngữ** (Theo máy / Tiếng Việt / English), Android 13+ cũng hiện trong Cài đặt hệ thống → Ứng dụng → Ngôn ngữ. Trợ lý AI và tên món từ ảnh trả lời theo ngôn ngữ đang chọn.
+- **Trợ năng**: nhãn TalkBack cho nút biểu tượng (kèm tên mục, ví dụ "Xóa Vitamin D3"), vai trò radio/checkbox cho lựa chọn, thông báo lỗi tự đọc (live region), vùng chạm ≥ 48 dp, kiểm tra với cỡ chữ 130%.
 - Lần đầu mở: **onboarding** 4 bước (tên, ngày sinh, giới tính → chiều cao, cân nặng, mức vận động → gợi ý calo/macro, nước, BMI), có thể bỏ qua. Giao diện **sáng / tối / theo máy** trong Cài đặt.
 - Dashboard: chỉ số đã nhập, thói quen, dinh dưỡng và trạng thái trống khi chưa có dữ liệu. **Điểm sức khỏe** (0–100) chấm từng mặt theo khuyến nghị công khai — giấc ngủ 7–9 giờ (7 đêm gần nhất), ~8.000 bước/ngày (ngày trọn vẹn gần nhất), huyết áp theo ACC/AHA 2017 (đo trong 30 ngày), BMI theo chuẩn châu Á–Thái Bình Dương của WHO (bình thường 18,5–22,9; thừa cân từ 23, béo phì từ 25 — cũng dùng cho nhãn BMI trong Hồ sơ), tỷ lệ uống thuốc và hoàn thành thói quen 7 ngày — rồi lấy trung bình có trọng số; cần ít nhất 3 mặt có dữ liệu. Chạm vào để xem chi tiết từng phần, gợi ý, **biểu đồ điểm 8 tuần** và **nhận xét so với tuần trước** (ngủ, bước chân, uống thuốc, thói quen) — mỗi tuần tính cùng quy tắc với điểm hôm nay. Không phải chẩn đoán y khoa.
 - Theo dõi sức khỏe: nhập nhịp tim, huyết áp, đường huyết, cân nặng, giấc ngủ và hoạt động; xem lịch sử, biểu đồ theo ngày/tuần/tháng.
@@ -29,7 +31,7 @@
 
 - Độ chính xác nhận diện ảnh mới được đánh giá trên 15 ảnh món Âu/Mỹ (Nutrition5k): sai số calo trung vị 16,5%. Chưa đánh giá trên món Việt. Tính calo theo bảng dinh dưỡng cho sai số tương đương AI tự đoán (trung vị ~20% trên bộ holdout); sai số chủ yếu do ước lượng gram. Giá trị món Việt trong bảng là xấp xỉ.
 - Không có đăng nhập (có chủ đích: ứng dụng một người dùng, offline). Đồng bộ nhiều thiết bị cần backend có xác thực.
-- Văn bản giao diện viết trực tiếp trong code, chưa đưa vào `strings.xml`.
+- Bản tiếng Anh chưa dùng `plurals` (ví dụ "1 nights" khi số là 1). Dữ liệu người dùng và dữ liệu mẫu giữ nguyên ngôn ngữ lúc nhập.
 - Đồng bộ Health Connect chạy nền khi không mở ứng dụng, xuất PDF, nhập lại bản xuất JSON, sức khỏe gia đình và quản trị chưa có luồng đầy đủ.
 - Dữ liệu cục bộ chưa mã hóa ở cấp ứng dụng. Sao lưu và chuyển dữ liệu ứng dụng đang tắt để tránh tự động sao chép thông tin sức khỏe.
 
@@ -43,13 +45,13 @@ Yêu cầu JDK 17 và Android SDK 35. Từ thư mục dự án:
 
 APK debug: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Kiểm thử (81 test):
+Kiểm thử (85 test):
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest          # 58 test JVM: domain, mapping, ViewModel
+.\gradlew.bat :app:testDebugUnitTest          # 60 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
 .\gradlew.bat :app:lintDebug                  # Android Lint: 0 lỗi
-.\gradlew.bat :app:connectedDebugAndroidTest  # 7 test trên emulator: migration Room, hồi quy, Compose UI
-cd server; npm test                          # 16 test backend
+.\gradlew.bat :app:connectedDebugAndroidTest  # 7 test trên emulator (chạy được ở cả tiếng Việt và tiếng Anh)
+cd server; npm test                          # 18 test backend
 ```
 
 Dữ liệu mẫu cho demo: **Hồ sơ → Cài đặt & dữ liệu → Nạp dữ liệu mẫu (demo)** (chỉ bản debug; dữ liệu gắn nhãn "Dữ liệu mẫu" và xóa riêng được).

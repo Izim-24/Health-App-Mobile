@@ -1,5 +1,7 @@
 package com.healthapp.presentation.viewmodel
 
+import com.healthapp.presentation.ui.text.UiText
+import com.healthapp.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.repository.AccountSession
@@ -12,7 +14,7 @@ import java.io.IOException
 import javax.inject.Inject
 
 data class ChatBubble(val fromUser: Boolean, val text: String)
-data class AIChatUiState(val messages: List<ChatBubble> = emptyList(), val sending: Boolean = false, val error: String? = null)
+data class AIChatUiState(val messages: List<ChatBubble> = emptyList(), val sending: Boolean = false, val error: UiText? = null)
 
 @HiltViewModel
 class AIChatViewModel @Inject constructor(
@@ -30,7 +32,12 @@ class AIChatViewModel @Inject constructor(
             runCatching { repository.chatWithAssistant(accountManager.getCurrentAccountId(), clean).getOrThrow() }
                 .onSuccess { answer -> mutable.value = mutable.value.copy(messages = mutable.value.messages + ChatBubble(false, answer), sending = false) }
                 .onFailure { error ->
-                    val message = if (error is IOException) "Không kết nối được backend trên máy tính. Hãy chạy server và dùng Android Emulator." else "Trợ lý chưa trả lời được. Kiểm tra khóa API và backend."
+                    val message = when {
+                        error is IOException -> UiText.Res(R.string.chat_err_offline)
+                        // Backend errors arrive already localized (quota, key, …) from the data layer.
+                        error is IllegalStateException && !error.message.isNullOrBlank() -> UiText.Raw(error.message!!)
+                        else -> UiText.Res(R.string.chat_err_generic)
+                    }
                     mutable.value = mutable.value.copy(sending = false, error = message)
                 }
         }

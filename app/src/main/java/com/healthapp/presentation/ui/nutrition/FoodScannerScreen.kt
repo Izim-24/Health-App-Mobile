@@ -1,9 +1,16 @@
 package com.healthapp.presentation.ui.nutrition
 
+import com.healthapp.presentation.ui.text.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -36,7 +43,6 @@ import com.healthapp.presentation.ui.theme.HealthPalette
 import com.healthapp.presentation.viewmodel.AIFoodScannerViewModel
 import java.io.File
 
-private val mealLabels = mapOf(MealType.BREAKFAST to "Sáng", MealType.LUNCH to "Trưa", MealType.DINNER to "Tối", MealType.SNACK to "Phụ")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +52,8 @@ fun FoodScannerScreen(navController: NavController, viewModel: AIFoodScannerView
     val orange = HealthPalette.Orange
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
 
-    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+    // System photo picker: no storage permission, and the user shares only the one photo they pick.
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
         uri?.let { viewModel.analyzeImage(it.toString()) }
     }
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
@@ -75,7 +82,7 @@ fun FoodScannerScreen(navController: NavController, viewModel: AIFoodScannerView
     Scaffold(
         containerColor = HealthPalette.Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = { BackTopBar("Quét món ăn") { navController.popBackStack() } }
+        topBar = { BackTopBar(stringResource(R.string.scan_food)) { navController.popBackStack() } }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
             // Photo
@@ -84,40 +91,40 @@ fun FoodScannerScreen(navController: NavController, viewModel: AIFoodScannerView
                 contentAlignment = Alignment.Center
             ) {
                 if (state.imageUri != null) {
-                    AsyncImage(model = state.imageUri, contentDescription = "Ảnh món ăn", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    AsyncImage(model = state.imageUri, contentDescription = stringResource(R.string.food_photo), modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     if (state.isAnalyzing) {
                         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f)), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 CircularProgressIndicator(color = Color.White)
-                                Text("Đang phân tích ảnh…", color = Color.White, style = MaterialTheme.typography.titleSmall)
+                                Text(stringResource(R.string.analyzing_photo), color = Color.White, style = MaterialTheme.typography.titleSmall)
                             }
                         }
                     }
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(24.dp)) {
                         IconBadge(Icons.Rounded.PhotoCamera, orange, size = 64.dp)
-                        Text("Chụp hoặc chọn ảnh bữa ăn", style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
-                        Text("Chụp từ trên xuống, đủ sáng, thấy cả đĩa/bát để ước lượng khẩu phần tốt hơn.", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Text(stringResource(R.string.take_or_pick), style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
+                        Text(stringResource(R.string.photo_tips), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PrimaryButton("Chụp ảnh", onCamera, Modifier.weight(1f), icon = Icons.Rounded.PhotoCamera, enabled = !state.isAnalyzing, color = orange.strong)
-                SoftButton("Thư viện", { galleryLauncher.launch("image/*") }, orange, Modifier.weight(1f).height(52.dp), icon = Icons.Rounded.PhotoLibrary, enabled = !state.isAnalyzing)
+                PrimaryButton(stringResource(R.string.take_photo), onCamera, Modifier.weight(1f), icon = Icons.Rounded.PhotoCamera, enabled = !state.isAnalyzing, color = orange.strong)
+                SoftButton(stringResource(R.string.gallery), { galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, orange, Modifier.weight(1f).height(52.dp), icon = Icons.Rounded.PhotoLibrary, enabled = !state.isAnalyzing)
             }
             Text(
-                "Ảnh được thu nhỏ, xóa thông tin vị trí và gửi qua máy chủ của ứng dụng đến nhà cung cấp AI để ước tính. Ảnh không được lưu trên máy chủ.",
+                stringResource(R.string.photo_privacy),
                 style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, modifier = Modifier.padding(top = 10.dp)
             )
 
             state.error?.let {
                 Spacer(Modifier.height(12.dp))
-                AppCard(Modifier.fillMaxWidth(), color = HealthPalette.Coral.soft) {
+                AppCard(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }, color = HealthPalette.Coral.soft) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.ErrorOutline, null, tint = HealthPalette.Coral.strong)
                         Spacer(Modifier.width(10.dp))
-                        Text(it, style = MaterialTheme.typography.bodyMedium, color = HealthPalette.Ink)
+                        Text(it.resolve(), style = MaterialTheme.typography.bodyMedium, color = HealthPalette.Ink)
                     }
                 }
             }
@@ -129,7 +136,7 @@ fun FoodScannerScreen(navController: NavController, viewModel: AIFoodScannerView
 
             if (!state.hasResult) {
                 Spacer(Modifier.height(14.dp))
-                TextButton(onClick = { navController.popBackStack() }, modifier = Modifier.fillMaxWidth()) { Text("Ghi món thủ công thay vì chụp ảnh") }
+                TextButton(onClick = { navController.popBackStack() }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.log_manually)) }
             }
             Spacer(Modifier.height(28.dp))
         }
@@ -149,21 +156,21 @@ private fun ResultSection(
             Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Science, null, tint = HealthPalette.Amber.strong)
                 Spacer(Modifier.width(10.dp))
-                Text("DỮ LIỆU GIẢ LẬP — máy chủ đang chạy chế độ thử, kết quả không dựa trên ảnh của bạn.", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Ink)
+                Text(stringResource(R.string.mock_banner), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Ink)
             }
         }
         Spacer(Modifier.height(10.dp))
     }
 
     GradientCard(HealthPalette.Orange.gradient, Modifier.fillMaxWidth()) {
-        Text("Ước tính cho bữa này", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .85f))
+        Text(stringResource(R.string.estimate_for_meal), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .85f))
         Row(verticalAlignment = Alignment.Bottom) {
             Text("${totals.calories}", style = MaterialTheme.typography.displaySmall, color = Color.White)
-            Text(" kcal", style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = .85f), modifier = Modifier.padding(bottom = 6.dp))
+            Text(stringResource(R.string.kcal_unit), style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = .85f), modifier = Modifier.padding(bottom = 6.dp))
         }
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Đạm" to totals.protein, "Tinh bột" to totals.carbs, "Chất béo" to totals.fat).forEach { (label, g) ->
+            listOf(stringResource(R.string.macro_protein) to totals.protein, stringResource(R.string.macro_carbs) to totals.carbs, stringResource(R.string.macro_fat) to totals.fat).forEach { (label, g) ->
                 Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = .2f)).padding(10.dp)) {
                     Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = .9f))
                     Text("${g.toInt()} g", style = MaterialTheme.typography.titleMedium, color = Color.White)
@@ -172,26 +179,26 @@ private fun ResultSection(
         }
     }
     notes?.let {
-        Text("💡 $it", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, modifier = Modifier.padding(top = 10.dp))
+        Text(stringResource(R.string.tip_prefix, it), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, modifier = Modifier.padding(top = 10.dp))
     }
 
-    SectionHeader("Kiểm tra từng món", modifier = Modifier.padding(top = 14.dp))
-    Text("Đây là ước tính. Sửa số gram cho đúng phần bạn ăn — dinh dưỡng tự tính lại.", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, modifier = Modifier.padding(bottom = 10.dp))
+    SectionHeader(stringResource(R.string.check_each_item), modifier = Modifier.padding(top = 14.dp))
+    Text(stringResource(R.string.check_each_sub), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, modifier = Modifier.padding(bottom = 10.dp))
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         items.forEachIndexed { index, item -> ScannedFoodRow(item, onGrams = { onGrams(index, it) }, onRemove = { onRemove(index) }) }
     }
 
-    SectionHeader("Bữa ăn", modifier = Modifier.padding(top = 14.dp))
+    SectionHeader(stringResource(R.string.meal), modifier = Modifier.padding(top = 14.dp))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         MealType.entries.forEach { t ->
             FilterChip(
-                selected = mealType == t, onClick = { onMealType(t) }, label = { Text(mealLabels[t].orEmpty()) }, shape = CircleShape,
+                selected = mealType == t, onClick = { onMealType(t) }, label = { Text(stringResource(t.shortRes())) }, shape = CircleShape,
                 colors = FilterChipDefaults.filterChipColors(selectedContainerColor = HealthPalette.Orange.strong, selectedLabelColor = Color.White)
             )
         }
     }
     Spacer(Modifier.height(14.dp))
-    PrimaryButton(if (saving) "Đang lưu…" else "Lưu vào nhật ký (${totals.calories} kcal)", onSave, enabled = !saving && items.isNotEmpty(), icon = Icons.Rounded.Check, color = HealthPalette.Orange.strong)
+    PrimaryButton(if (saving) stringResource(R.string.saving) else stringResource(R.string.save_to_diary, totals.calories), onSave, enabled = !saving && items.isNotEmpty(), icon = Icons.Rounded.Check, color = HealthPalette.Orange.strong)
 }
 
 @Composable
@@ -202,10 +209,10 @@ private fun ScannedFoodRow(item: ScannedFood, onGrams: (Int) -> Unit, onRemove: 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(item.name, style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
-                    Text("Đạm ${item.protein} · Tinh bột ${item.carbs} · Béo ${item.fat} g", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                    Text(stringResource(R.string.item_macros, oneDecimal(item.protein), oneDecimal(item.carbs), oneDecimal(item.fat)), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
                 }
                 Text("${item.calories} kcal", style = MaterialTheme.typography.titleSmall, color = HealthPalette.Orange.strong)
-                IconButton(onClick = onRemove) { Icon(Icons.Rounded.Close, "Bỏ ${item.name}", tint = HealthPalette.Subtle) }
+                IconButton(onClick = onRemove) { Icon(Icons.Rounded.Close, stringResource(R.string.remove_named, item.name), tint = HealthPalette.Subtle) }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -215,13 +222,13 @@ private fun ScannedFoodRow(item: ScannedFood, onGrams: (Int) -> Unit, onRemove: 
                         gramsText = digits
                         digits.toIntOrNull()?.takeIf { it > 0 }?.let(onGrams)
                     },
-                    label = { Text("Khẩu phần (g)") }, singleLine = true, modifier = Modifier.width(140.dp),
+                    label = { Text(stringResource(R.string.portion_g)) }, singleLine = true, modifier = Modifier.width(140.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = MaterialTheme.shapes.medium
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Pill("Độ tin cậy ${(item.confidence * 100).toInt()}%", if (item.lowConfidence) HealthPalette.Amber else HealthPalette.Emerald)
-                    Pill(if (item.fromTable) "Calo theo bảng dinh dưỡng" else "Calo do AI ước tính", if (item.fromTable) HealthPalette.Indigo else HealthPalette.Orange)
-                    if (item.energyMismatch) Pill("Calo lệch với thành phần — kiểm tra lại", HealthPalette.Coral)
+                    Pill(stringResource(R.string.confidence_pct, (item.confidence * 100).toInt()), if (item.lowConfidence) HealthPalette.Amber else HealthPalette.Emerald)
+                    Pill(stringResource(if (item.fromTable) R.string.kcal_from_table else R.string.kcal_from_ai), if (item.fromTable) HealthPalette.Indigo else HealthPalette.Orange)
+                    if (item.energyMismatch) Pill(stringResource(R.string.kcal_mismatch), HealthPalette.Coral)
                 }
             }
         }

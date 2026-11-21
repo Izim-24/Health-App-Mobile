@@ -1,5 +1,11 @@
 package com.healthapp.presentation.ui.reports
 
+import com.healthapp.presentation.ui.text.*
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -36,20 +42,20 @@ fun ReportsScreen(navController: NavController, viewModel: ReportsViewModel = hi
     Scaffold(
         containerColor = HealthPalette.Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = { BackTopBar("Báo cáo sức khỏe") { navController.popBackStack() } }
+        topBar = { BackTopBar(stringResource(R.string.link_reports)) { navController.popBackStack() } }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-            Text("Tổng hợp từ dữ liệu bạn đã ghi trên thiết bị.", style = MaterialTheme.typography.bodyMedium, color = HealthPalette.Muted)
+            Text(stringResource(R.string.reports_sub), style = MaterialTheme.typography.bodyMedium, color = HealthPalette.Muted)
             Spacer(Modifier.height(14.dp))
-            Row(Modifier.fillMaxWidth().clip(CircleShape).background(HealthPalette.SurfaceAlt).padding(4.dp)) {
+            Row(Modifier.fillMaxWidth().clip(CircleShape).background(HealthPalette.SurfaceAlt).padding(4.dp).selectableGroup()) {
                 ReportPeriod.entries.forEach { period ->
                     val selected = state.period == period
                     Box(
                         Modifier.weight(1f).clip(CircleShape).background(if (selected) HealthPalette.Indigo.strong else Color.Transparent)
-                            .clickable { viewModel.select(period) }.padding(vertical = 10.dp),
+                            .heightIn(min = 48.dp).selectable(selected = selected, role = Role.RadioButton, onClick = { viewModel.select(period) }),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(period.label, style = MaterialTheme.typography.labelLarge, color = if (selected) Color.White else HealthPalette.Muted)
+                        Text(stringResource(period.label), style = MaterialTheme.typography.labelLarge, color = if (selected) Color.White else HealthPalette.Muted)
                     }
                 }
             }
@@ -57,32 +63,32 @@ fun ReportsScreen(navController: NavController, viewModel: ReportsViewModel = hi
             Spacer(Modifier.height(14.dp))
             when {
                 state.loading -> LinearProgressIndicator(Modifier.fillMaxWidth(), color = HealthPalette.Indigo.strong)
-                state.error != null -> Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                state.error != null -> Text(state.error!!.resolve(), color = MaterialTheme.colorScheme.error)
                 else -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ReportCard(Icons.Rounded.LocalFireDepartment, HealthPalette.Orange, "Dinh dưỡng",
-                        if (state.nutritionDays == 0) "Chưa ghi bữa ăn trong khoảng này." else "Trung bình ${state.nutritionDays} ngày có ghi") {
+                    ReportCard(Icons.Rounded.LocalFireDepartment, HealthPalette.Orange, stringResource(R.string.section_nutrition),
+                        if (state.nutritionDays == 0) stringResource(R.string.no_meals_period) else stringResource(R.string.avg_over_days, state.nutritionDays)) {
                         if (state.nutritionDays > 0) {
-                            ReportItem("Năng lượng", "${state.avgCalories} kcal/ngày")
-                            ReportItem("Đạm", "${state.avgProtein} g/ngày")
-                            ReportItem("Tinh bột", "${state.avgCarbs} g/ngày")
-                            ReportItem("Chất béo", "${state.avgFat} g/ngày")
+                            ReportItem(stringResource(R.string.energy), stringResource(R.string.kcal_per_day_v, state.avgCalories))
+                            ReportItem(stringResource(R.string.macro_protein), stringResource(R.string.g_per_day_v, state.avgProtein.toString()))
+                            ReportItem(stringResource(R.string.macro_carbs), stringResource(R.string.g_per_day_v, state.avgCarbs.toString()))
+                            ReportItem(stringResource(R.string.macro_fat), stringResource(R.string.g_per_day_v, state.avgFat.toString()))
                         }
                     }
-                    ReportCard(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Coral, "Vận động",
-                        if (state.activityDays == 0) "Chưa ghi vận động trong khoảng này." else "Trung bình ${state.activityDays} ngày có ghi") {
+                    ReportCard(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Coral, stringResource(R.string.area_activity),
+                        if (state.activityDays == 0) stringResource(R.string.no_activity_period) else stringResource(R.string.avg_over_days, state.activityDays)) {
                         if (state.activityDays > 0) {
-                            ReportItem("Số bước", "${state.avgSteps} bước/ngày")
-                            ReportItem("Tổng thời gian", "${state.totalExerciseMinutes} phút")
-                            ReportItem("Năng lượng ghi nhận", "${state.totalCaloriesBurned} kcal")
+                            ReportItem(stringResource(R.string.stat_steps), stringResource(R.string.steps_per_day_v, grouped(state.avgSteps)))
+                            ReportItem(stringResource(R.string.total_time), stringResource(R.string.minutes_v, state.totalExerciseMinutes))
+                            ReportItem(stringResource(R.string.energy_recorded), stringResource(R.string.kcal_v, state.totalCaloriesBurned))
                         }
                     }
-                    ReportCard(Icons.Rounded.WaterDrop, HealthPalette.Sky, "Nước uống",
-                        if (state.waterDays == 0) "Chưa ghi nước uống trong khoảng này." else "Trung bình ${state.waterDays} ngày có ghi") {
-                        if (state.waterDays > 0) ReportItem("Lượng nước", "${state.avgWaterMl} ml/ngày")
+                    ReportCard(Icons.Rounded.WaterDrop, HealthPalette.Sky, stringResource(R.string.stat_water),
+                        if (state.waterDays == 0) stringResource(R.string.no_water_period) else stringResource(R.string.avg_over_days, state.waterDays)) {
+                        if (state.waterDays > 0) ReportItem(stringResource(R.string.water_amount), stringResource(R.string.ml_per_day_v, state.avgWaterMl))
                     }
-                    ReportCard(Icons.Rounded.CheckCircle, HealthPalette.Violet, "Thói quen",
-                        if (state.activeHabits == 0) "Chưa tạo thói quen." else "Đang theo dõi ${state.activeHabits} thói quen") {
-                        if (state.activeHabits > 0) ReportItem("Lượt hoàn thành", "${state.completedHabits}")
+                    ReportCard(Icons.Rounded.CheckCircle, HealthPalette.Violet, stringResource(R.string.section_habits),
+                        if (state.activeHabits == 0) stringResource(R.string.no_habits_created) else stringResource(R.string.tracking_habits, state.activeHabits)) {
+                        if (state.activeHabits > 0) ReportItem(stringResource(R.string.completions), "${state.completedHabits}")
                     }
                 }
             }

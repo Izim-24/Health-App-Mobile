@@ -79,9 +79,11 @@ class ScoreHistoryTest {
         )
         val weeks = ScoreHistory.weekly(data, now, 2)
         val insights = ScoreHistory.insights(weeks[1], weeks[0])
-        assertTrue(insights.first().text.startsWith("Điểm tăng"))
-        assertEquals(ScoreInsight.Trend.UP, insights.first().trend)
-        val sleep = insights.first { it.text.startsWith("Ngủ nhiều hơn") }
+        val change = insights.first() as ScoreInsight.ScoreChange
+        assertTrue(change.diff >= 3)
+        assertEquals(ScoreInsight.Trend.UP, change.trend)
+        val sleep = insights.filterIsInstance<ScoreInsight.SleepChange>().single()
+        assertEquals(2.0, sleep.deltaHours, 0.01)
         assertEquals(ScoreInsight.Trend.UP, sleep.trend)
     }
 
@@ -89,7 +91,8 @@ class ScoreHistoryTest {
     fun `sleeping more than 9 hours is not reported as an improvement`() {
         val data = ScoreData(sleepMinutesByDate = days(0, 6, 660) + days(7, 13, 480))
         val weeks = ScoreHistory.weekly(data, now, 2)
-        val sleep = ScoreHistory.insights(weeks[1], weeks[0]).first { it.text.startsWith("Ngủ nhiều hơn") }
+        val sleep = ScoreHistory.insights(weeks[1], weeks[0]).filterIsInstance<ScoreInsight.SleepChange>().single()
+        assertTrue(sleep.deltaHours > 0)
         assertEquals(ScoreInsight.Trend.DOWN, sleep.trend)
     }
 
@@ -99,6 +102,6 @@ class ScoreHistoryTest {
         val current = ScoreHistory.weekly(data, LocalDateTime.of(today, LocalTime.NOON), 1).single()
         val insights = ScoreHistory.insights(current, null)
         assertEquals(1, insights.size)
-        assertTrue(insights.single().text.contains("Giấc ngủ") && insights.single().text.contains("Vận động"))
+        assertEquals(ScoreInsight.Focus(ScoreArea.SLEEP, 100, ScoreArea.ACTIVITY, 33), insights.single())
     }
 }

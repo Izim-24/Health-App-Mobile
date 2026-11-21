@@ -1,5 +1,6 @@
 package com.healthapp.data.remote
 
+import com.healthapp.R
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -21,15 +22,15 @@ object ImageEncoder {
         val resolver = context.contentResolver
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         // With inJustDecodeBounds, decodeStream() always returns null and only fills `bounds`.
-        val stream = resolver.openInputStream(uri) ?: throw IllegalArgumentException("Không mở được ảnh.")
+        val stream = resolver.openInputStream(uri) ?: throw IllegalArgumentException(com.healthapp.core.AppLocale.localized(context).getString(R.string.err_image_open))
         stream.use { BitmapFactory.decodeStream(it, null, bounds) }
-        require(bounds.outWidth > 0 && bounds.outHeight > 0) { "Tệp đã chọn không phải ảnh hợp lệ." }
+        require(bounds.outWidth > 0 && bounds.outHeight > 0) { com.healthapp.core.AppLocale.localized(context).getString(R.string.err_image_invalid) }
 
         var sample = 1
         while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxSide) sample *= 2
         val decoded = resolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
-        } ?: throw IllegalArgumentException("Không đọc được ảnh.")
+        } ?: throw IllegalArgumentException(com.healthapp.core.AppLocale.localized(context).getString(R.string.err_image_read))
 
         val rotation = runCatching {
             resolver.openInputStream(uri)?.use { ExifInterface(it).rotationDegrees() } ?: 0

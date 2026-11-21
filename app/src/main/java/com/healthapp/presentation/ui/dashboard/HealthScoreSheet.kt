@@ -1,5 +1,9 @@
 package com.healthapp.presentation.ui.dashboard
 
+import com.healthapp.presentation.ui.text.*
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,11 +36,12 @@ private fun ScoreArea.route() = when (this) {
     ScoreArea.HABITS -> "habits"
 }
 
+@Composable
 private fun ScoreArea.howToAdd() = when (this) {
-    ScoreArea.SLEEP -> "Ghi giấc ngủ hoặc kết nối Health Connect"
-    ScoreArea.ACTIVITY -> "Ghi số bước hoặc kết nối Health Connect"
-    ScoreArea.BLOOD_PRESSURE -> "Ghi một lần đo huyết áp (trong 30 ngày)"
-    ScoreArea.BMI -> "Nhập chiều cao và cân nặng trong Hồ sơ"
+    ScoreArea.SLEEP -> stringResource(R.string.how_add_sleep)
+    ScoreArea.ACTIVITY -> stringResource(R.string.how_add_activity)
+    ScoreArea.BLOOD_PRESSURE -> stringResource(R.string.how_add_bp)
+    ScoreArea.BMI -> stringResource(R.string.how_add_bmi)
     ScoreArea.MEDICATION, ScoreArea.HABITS -> ""
 }
 
@@ -62,15 +67,15 @@ fun HealthScoreSheet(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Điểm sức khỏe", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = HealthPalette.Ink)
+            Text(stringResource(R.string.health_score), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = HealthPalette.Ink)
             if (result?.score != null) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text("${result.score}", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = scoreColor(result.score))
-                    Text(" /100 · ${result.grade}", style = MaterialTheme.typography.titleMedium, color = HealthPalette.Muted, modifier = Modifier.padding(bottom = 6.dp))
+                    Text(stringResource(R.string.score_of_100_grade, result.grade!!.title()), style = MaterialTheme.typography.titleMedium, color = HealthPalette.Muted, modifier = Modifier.padding(bottom = 6.dp))
                 }
             } else {
                 Text(
-                    "Cần ít nhất ${HealthScore.MIN_AREAS} chỉ số để tính điểm" + (result?.let { " (hiện có ${it.components.size})." } ?: "."),
+                    result?.let { stringResource(R.string.score_min_areas_have, HealthScore.MIN_AREAS, it.components.size) } ?: stringResource(R.string.score_min_areas, HealthScore.MIN_AREAS),
                     color = HealthPalette.Muted
                 )
             }
@@ -81,24 +86,22 @@ fun HealthScoreSheet(
             result?.components?.forEach { ComponentRow(it, onClick = { onOpen(it.area.route()) }) }
 
             if (!result?.missing.isNullOrEmpty()) {
-                Text("Chưa có dữ liệu", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = HealthPalette.Ink)
+                Text(stringResource(R.string.no_data_yet), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = HealthPalette.Ink)
                 result!!.missing.forEach { area ->
                     Card(onClick = { onOpen(area.route()) }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = HealthPalette.Surface), border = androidx.compose.foundation.BorderStroke(1.dp, HealthPalette.Line)) {
                         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text(area.label, fontWeight = FontWeight.SemiBold, color = HealthPalette.Muted)
+                                Text(area.title(), fontWeight = FontWeight.SemiBold, color = HealthPalette.Muted)
                                 Text(area.howToAdd(), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
                             }
-                            Text("›", color = HealthPalette.Muted)
+                            Text("›", color = HealthPalette.Muted, modifier = Modifier.clearAndSetSemantics { })
                         }
                     }
                 }
             }
 
             Text(
-                "Cách tính: mỗi chỉ số được chấm 0–100 theo khuyến nghị công khai — ngủ 7–9 giờ/đêm; khoảng 8.000 bước/ngày; " +
-                    "huyết áp theo phân loại ACC/AHA 2017; BMI theo chuẩn châu Á–Thái Bình Dương của WHO (bình thường 18,5–22,9); tỷ lệ uống thuốc và hoàn thành thói quen trong 7 ngày — " +
-                    "rồi lấy trung bình có trọng số các chỉ số đang có dữ liệu. Đây là điểm theo dõi thói quen, không phải chẩn đoán y khoa.",
+                stringResource(R.string.score_method, bmiNormalRange()),
                 style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted
             )
         }
@@ -110,7 +113,7 @@ private fun ComponentRow(c: ScoreComponent, onClick: () -> Unit) {
     Card(onClick = onClick, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = HealthPalette.Surface), border = androidx.compose.foundation.BorderStroke(1.dp, HealthPalette.Line)) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(c.area.label, fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink, modifier = Modifier.weight(1f))
+                Text(c.area.title(), fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink, modifier = Modifier.weight(1f))
                 Text("${c.score}", fontWeight = FontWeight.Bold, color = scoreColor(c.score))
             }
             LinearProgressIndicator(
@@ -119,8 +122,8 @@ private fun ComponentRow(c: ScoreComponent, onClick: () -> Unit) {
                 color = scoreColor(c.score),
                 trackColor = HealthPalette.SurfaceAlt
             )
-            Text(c.detail, style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
-            c.tip?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = HealthPalette.Ink) }
+            Text(c.detail.text(), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+            c.tip?.let { Text(it.text(), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Ink) }
         }
     }
 }
@@ -132,15 +135,17 @@ private val weekLabel = DateTimeFormatter.ofPattern("d/M")
 private fun ScoreHistoryCard(history: List<WeekScore>) {
     Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = HealthPalette.Surface), border = BorderStroke(1.dp, HealthPalette.Line)) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("${history.size} tuần gần đây", fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
+            Text(stringResource(R.string.weeks_recent, history.size), fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
             Row(Modifier.fillMaxWidth().height(140.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
                 history.forEachIndexed { i, week ->
                     val score = week.score
-                    val label = if (i == history.lastIndex) "Nay" else week.weekEnd.format(weekLabel)
+                    val label = if (i == history.lastIndex) stringResource(R.string.week_now) else week.weekEnd.format(weekLabel)
+                    val barDescription = stringResource(
+                        R.string.week_bar_cd, label,
+                        score?.let { stringResource(R.string.points_value, it) } ?: stringResource(R.string.not_enough_data)
+                    )
                     Column(
-                        Modifier.weight(1f).fillMaxHeight().semantics {
-                            contentDescription = "Tuần đến $label: ${score?.let { "$it điểm" } ?: "chưa đủ dữ liệu"}"
-                        },
+                        Modifier.weight(1f).fillMaxHeight().clearAndSetSemantics { contentDescription = barDescription },
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Bottom
                     ) {
@@ -159,7 +164,7 @@ private fun ScoreHistoryCard(history: List<WeekScore>) {
                     }
                 }
             }
-            Text("Mỗi cột là điểm của 7 ngày kết thúc vào ngày ghi bên dưới, tính cùng cách với điểm hôm nay.",
+            Text(stringResource(R.string.weeks_explainer),
                 style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
         }
     }
@@ -169,16 +174,23 @@ private fun ScoreHistoryCard(history: List<WeekScore>) {
 private fun InsightsCard(insights: List<ScoreInsight>) {
     Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = HealthPalette.Surface), border = BorderStroke(1.dp, HealthPalette.Line)) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Nhận xét tuần này", fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
+            Text(stringResource(R.string.insights_title), fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
             insights.forEach { insight ->
                 val (symbol, color) = when (insight.trend) {
                     ScoreInsight.Trend.UP -> "▲" to HealthPalette.Emerald.strong
                     ScoreInsight.Trend.DOWN -> "▼" to HealthPalette.Coral.strong
                     ScoreInsight.Trend.INFO -> "•" to HealthPalette.Indigo.strong
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(symbol, color = color, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.width(16.dp))
-                    Text(insight.text, style = MaterialTheme.typography.bodyMedium, color = HealthPalette.Ink)
+                val trendLabel = when (insight.trend) {
+                    ScoreInsight.Trend.UP -> stringResource(R.string.trend_up)
+                    ScoreInsight.Trend.DOWN -> stringResource(R.string.trend_down)
+                    ScoreInsight.Trend.INFO -> null
+                }
+                Row(Modifier.semantics(mergeDescendants = true) { }, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // TalkBack says "Up"/"Down" instead of the triangle's character name; the bullet is skipped.
+                    Text(symbol, color = color, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
+                        modifier = Modifier.width(16.dp).clearAndSetSemantics { trendLabel?.let { contentDescription = it } })
+                    Text(insight.text(), style = MaterialTheme.typography.bodyMedium, color = HealthPalette.Ink)
                 }
             }
         }

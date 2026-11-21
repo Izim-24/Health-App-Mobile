@@ -1,5 +1,7 @@
 package com.healthapp.presentation.viewmodel
 
+import com.healthapp.presentation.ui.text.UiText
+import com.healthapp.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.repository.AccountSession
@@ -28,7 +30,7 @@ import javax.inject.Inject
 
 data class HealthTrackingUiState(
     val isLoading: Boolean = true,
-    val error: String? = null,
+    val error: UiText? = null,
     val vitals: List<VitalMeasurement> = emptyList(),
     val weights: List<WeightRecord> = emptyList(),
     val sleeps: List<SleepRecord> = emptyList(),
@@ -65,7 +67,7 @@ class HealthTrackingViewModel @Inject constructor(
                     activityRepository.observeActivities(id).collect { values -> _uiState.update { it.copy(activities = values) } }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message) }
+                _uiState.update { it.copy(isLoading = false, error = e.message?.let(UiText::Raw)) }
             }
         }
     }
@@ -74,7 +76,7 @@ class HealthTrackingViewModel @Inject constructor(
         viewModelScope.launch {
             val id = accountManager.getCurrentAccountId()
             val result = vitalRepository.record(VitalMeasurement(UUID.randomUUID().toString(), id, type, first, second, unit, "MANUAL", LocalDateTime.now()))
-            result.onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+            result.onFailure { e -> _uiState.update { it.copy(error = e.message?.let(UiText::Raw)) } }
         }
     }
 
@@ -83,7 +85,7 @@ class HealthTrackingViewModel @Inject constructor(
             val now = LocalDateTime.now()
             val id = accountManager.getCurrentAccountId()
             weightRepository.recordWeight(id, WeightRecord(UUID.randomUUID().toString(), weightKg, now, now.toLocalDate().toString()))
-                .onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+                .onFailure { e -> _uiState.update { it.copy(error = e.message?.let(UiText::Raw)) } }
         }
     }
 
@@ -97,12 +99,12 @@ class HealthTrackingViewModel @Inject constructor(
                 val bedtimeAt = LocalDateTime.of(bedtimeDate, bedtime)
                 val wakeupAt = LocalDateTime.of(sleepDate, wakeup)
                 val duration = java.time.Duration.between(bedtimeAt, wakeupAt).toMinutes().toInt()
-                require(duration in 1..(24 * 60)) { "Vui lòng kiểm tra giờ ngủ và giờ thức dậy." }
+                require(duration in 1..(24 * 60))
                 val id = accountManager.getCurrentAccountId()
                 val record = SleepRecord(UUID.randomUUID().toString(), bedtimeAt, wakeupAt, duration, quality, "Nhập thủ công", sleepDate.toString())
-                sleepRepository.recordSleep(id, record).onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+                sleepRepository.recordSleep(id, record).onFailure { e -> _uiState.update { it.copy(error = e.message?.let(UiText::Raw)) } }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message ?: "Vui lòng nhập giờ theo định dạng HH:mm.") }
+                _uiState.update { it.copy(error = UiText.Res(R.string.err_sleep_times)) }
             }
         }
     }
@@ -112,7 +114,7 @@ class HealthTrackingViewModel @Inject constructor(
             val now = LocalDateTime.now()
             val id = accountManager.getCurrentAccountId()
             val activity = ActivityRecord(UUID.randomUUID().toString(), ActivityType.WALKING, durationMinutes, steps, 0.0, 0, ActivityIntensity.MODERATE, now, now.toLocalDate().toString())
-            activityRepository.recordActivity(id, activity).onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+            activityRepository.recordActivity(id, activity).onFailure { e -> _uiState.update { it.copy(error = e.message?.let(UiText::Raw)) } }
         }
     }
 

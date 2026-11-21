@@ -1,5 +1,7 @@
 package com.healthapp.presentation.viewmodel
 
+import com.healthapp.presentation.ui.text.UiText
+import com.healthapp.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.repository.AccountSession
@@ -20,7 +22,7 @@ import javax.inject.Inject
 
 data class WaterTrackingUiState(
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val error: UiText? = null,
     val waterLogs: List<WaterIntake> = emptyList(),
     val totalWaterToday: Int = 0,
     val waterGoal: Int = 0,
@@ -75,14 +77,14 @@ class WaterTrackingViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(isLoading = false, error = e.message) }
+                _uiState.update { it.copy(isLoading = false, error = e.message?.let(UiText::Raw)) }
             }
         }
     }
 
     fun addWaterIntake(amountMl: Int) {
         if (amountMl !in 1..5000) {
-            _uiState.update { it.copy(error = "Lượng nước cần từ 1 đến 5000 ml.") }
+            _uiState.update { it.copy(error = UiText.Res(R.string.err_water_amount)) }
             return
         }
         viewModelScope.launch {
@@ -90,7 +92,7 @@ class WaterTrackingViewModel @Inject constructor(
                 val accountId = accountManager.getCurrentAccountId()
                 waterRepository.addWaterIntake(accountId, amountMl).getOrThrow()
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+                _uiState.update { it.copy(error = e.message?.let(UiText::Raw)) }
             }
         }
     }
@@ -108,7 +110,7 @@ class WaterTrackingViewModel @Inject constructor(
             try {
                 waterRepository.deleteWaterLog(logId).getOrThrow()
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+                _uiState.update { it.copy(error = e.message?.let(UiText::Raw)) }
             }
         }
     }
@@ -119,7 +121,7 @@ class WaterTrackingViewModel @Inject constructor(
 
     fun setGoal(ml: Int) {
         if (ml !in 100..10000) {
-            _uiState.update { it.copy(error = "Mục tiêu cần từ 100 đến 10000 ml.") }
+            _uiState.update { it.copy(error = UiText.Res(R.string.err_water_goal)) }
             return
         }
         viewModelScope.launch {

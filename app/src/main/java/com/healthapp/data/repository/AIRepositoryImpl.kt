@@ -1,5 +1,6 @@
 package com.healthapp.data.repository
 
+import com.healthapp.R
 import android.content.Context
 import com.healthapp.data.remote.AiBackendApi
 import com.healthapp.data.remote.ChatMessageDto
@@ -24,11 +25,11 @@ class AIRepositoryImpl @Inject constructor(
             com.healthapp.data.remote.ImageEncoder.encode(context, android.net.Uri.parse(imageUri))
         }
         val response = try {
-            aiBackendApi.analyzeFood(com.healthapp.data.remote.FoodImageRequestDto(encoded.base64, encoded.mimeType))
+            aiBackendApi.analyzeFood(com.healthapp.data.remote.FoodImageRequestDto(encoded.base64, encoded.mimeType, lang()))
         } catch (e: retrofit2.HttpException) {
             throw IllegalStateException(backendError(e))
         } catch (e: java.io.IOException) {
-            throw IllegalStateException("Không kết nối được máy chủ AI. Kiểm tra backend trong thư mục server đã chạy chưa.", e)
+            throw IllegalStateException(str(R.string.err_ai_unreachable), e)
         }
         val foods = response.foods.orEmpty().mapNotNull { dto ->
             val name = dto.name?.trim().orEmpty()
@@ -47,7 +48,7 @@ class AIRepositoryImpl @Inject constructor(
             )
         }
         if (response.isFood == false || foods.isEmpty()) {
-            throw IllegalStateException("Không nhận ra món ăn trong ảnh. Thử chụp rõ hơn, từ trên xuống, đủ sáng.")
+            throw IllegalStateException(str(R.string.err_ai_no_food))
         }
         AIFoodAnalysis(
             recognizedFoods = foods,
@@ -61,25 +62,50 @@ class AIRepositoryImpl @Inject constructor(
         )
     }
 
+    private fun str(id: Int, vararg args: Any) = com.healthapp.core.AppLocale.localized(context).getString(id, *args)
+
+    /** "vi" or "en": the language the app is showing, so the AI answers in it. */
+    private fun lang() = str(R.string.lang_code)
+
+    /**
+     * The backend sends a stable `code` with each error; map it to text in the app's language.
+     * Unknown codes fall back to the server's own message.
+     */
     private fun backendError(e: retrofit2.HttpException): String {
-        val serverMessage = runCatching {
-            com.google.gson.JsonParser().parse(e.response()?.errorBody()?.string()).asJsonObject.get("error").asString
-        }.getOrNull()
-        return serverMessage ?: when (e.code()) {
-            413 -> "Ảnh quá lớn."
-            429 -> "Bạn gửi quá nhiều ảnh, thử lại sau một phút."
-            503 -> "Máy chủ AI chưa được cấu hình khóa API."
-            else -> "Máy chủ AI lỗi (${e.code()})."
+        val body = runCatching { @Suppress("DEPRECATION") com.google.gson.JsonParser().parse(e.response()?.errorBody()?.string()).asJsonObject }.getOrNull()
+        val code = runCatching { body?.get("code")?.asString }.getOrNull()
+        val res = when (code) {
+            "rate_limited" -> R.string.err_ai_rate_limited
+            "not_configured" -> R.string.err_ai_not_configured
+            "upstream_auth" -> R.string.err_ai_auth
+            "upstream_quota" -> R.string.err_ai_quota
+            "upstream_error", "unreachable" -> R.string.err_ai_upstream
+            "bad_output" -> R.string.err_ai_bad_output
+            "bad_image" -> R.string.err_ai_bad_image
+            "too_large" -> R.string.err_ai_too_large
+            else -> when (e.code()) {
+                413 -> R.string.err_ai_too_large
+                429 -> R.string.err_ai_rate_limited
+                503 -> R.string.err_ai_not_configured
+                else -> null
+            }
         }
+        return res?.let { str(it) }
+            ?: runCatching { body?.get("error")?.asString }.getOrNull()
+            ?: str(R.string.err_ai_http, e.code())
     }
 
 
     override suspend fun chatWithAssistant(userId: String, query: String): Result<String> = runCatching {
-        require(query.isNotBlank() && query.length <= 2000) { "Câu hỏi cần từ 1 đến 2000 ký tự." }
+        require(query.isNotBlank() && query.length <= 2000) { str(R.string.err_question_length) }
         val history = conversations[userId].orEmpty().takeLast(10)
         val next = history + ChatMessageDto("user", query.trim())
-        val response = aiBackendApi.chat(ChatRequestDto(next))
-        require(response.answer.isNotBlank()) { "Trợ lý chưa trả về câu trả lời." }
+        val response = try {
+            aiBackendApi.chat(ChatRequestDto(next, lang()))
+        } catch (e: retrofit2.HttpException) {
+            throw IllegalStateException(backendError(e))
+        }
+        require(response.answer.isNotBlank()) { str(R.string.err_ai_empty_answer) }
         conversations[userId] = (next + ChatMessageDto("assistant", response.answer)).takeLast(10)
         response.answer
     }

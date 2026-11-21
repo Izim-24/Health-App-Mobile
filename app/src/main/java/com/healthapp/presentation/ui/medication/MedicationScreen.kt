@@ -1,5 +1,11 @@
 package com.healthapp.presentation.ui.medication
 
+import com.healthapp.presentation.ui.text.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.app.AlarmManager
 import android.content.Context
@@ -44,7 +50,6 @@ import com.healthapp.domain.model.Medication
 import com.healthapp.domain.model.ScheduledDose
 import com.healthapp.domain.usecase.Adherence
 import com.healthapp.domain.usecase.MedicationSchedule
-import com.healthapp.presentation.ui.reminders.dayLabels
 import com.healthapp.presentation.ui.theme.HealthPalette
 import com.healthapp.presentation.ui.components.*
 import com.healthapp.presentation.viewmodel.MedicationDraft
@@ -82,7 +87,7 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
         containerColor = HealthPalette.Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            BackTopBar("Lịch uống thuốc") { navController.popBackStack() }
+            BackTopBar(stringResource(R.string.link_meds)) { navController.popBackStack() }
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -91,7 +96,7 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
                 contentColor = Color.White,
                 shape = androidx.compose.foundation.shape.CircleShape,
                 icon = { Icon(Icons.Default.Add, null) },
-                text = { Text("Thêm thuốc") }
+                text = { Text(stringResource(R.string.add_med)) }
             )
         }
     ) { padding ->
@@ -102,7 +107,8 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
         ) {
             state.error?.let { err ->
                 item {
-                    Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(err.resolve(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     LaunchedEffect(err) { kotlinx.coroutines.delay(4000); viewModel.clearError() }
                 }
             }
@@ -120,16 +126,16 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
 
             item { AdherenceCard(state.todayDoses, state.todayAdherence, state.weekAdherence) }
 
-            item { SectionTitle("Hôm nay") }
+            item { SectionTitle(stringResource(R.string.today)) }
             if (state.todayDoses.isEmpty()) {
-                item { Text("Không có liều nào theo lịch hôm nay.", color = HealthPalette.Muted) }
+                item { Text(stringResource(R.string.no_doses_today), color = HealthPalette.Muted) }
             } else {
                 items(state.todayDoses, key = { "${it.medication.id}|${it.time}" }) { dose ->
                     DoseRow(dose, onTaken = { viewModel.mark(dose, DoseStatus.TAKEN) }, onSkipped = { viewModel.mark(dose, DoseStatus.SKIPPED) })
                 }
             }
 
-            item { SectionTitle("Thuốc của bạn") }
+            item { SectionTitle(stringResource(R.string.your_meds)) }
             items(state.medications, key = { it.id }) { med ->
                 MedicationRow(
                     med,
@@ -140,7 +146,7 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
             }
             item {
                 Text(
-                    "Ứng dụng chỉ nhắc theo lịch bạn nhập, không thay thế chỉ định của bác sĩ hoặc dược sĩ. Không tự ý đổi liều.",
+                    stringResource(R.string.med_disclaimer),
                     style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted
                 )
             }
@@ -158,12 +164,12 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
     pendingDelete?.let { med ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("Xóa ${med.name}?") },
-            text = { Text("Lịch nhắc và lịch sử uống thuốc này sẽ bị xóa. Nếu chỉ tạm ngừng, hãy tắt công tắc thay vì xóa.") },
+            title = { Text(stringResource(R.string.delete_named_q, med.name)) },
+            text = { Text(stringResource(R.string.med_delete_body)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.delete(med); pendingDelete = null }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Xóa") }
+                TextButton(onClick = { viewModel.delete(med); pendingDelete = null }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text(stringResource(R.string.action_delete)) }
             },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Hủy") } }
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 }
@@ -177,8 +183,8 @@ private fun EmptyState() {
     AppCard(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             IconBadge(Icons.Default.Medication, HealthPalette.Indigo, size = 64.dp)
-            Text("Chưa có thuốc nào", fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
-            Text("Thêm thuốc với giờ uống để nhận thông báo và đánh dấu từng liều đã uống.", color = HealthPalette.Muted, style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.no_meds), fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
+            Text(stringResource(R.string.no_meds_sub), color = HealthPalette.Muted, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -188,8 +194,8 @@ private fun AdherenceCard(doses: List<ScheduledDose>, today: Adherence, week: Ad
     val takenToday = doses.count { it.status == DoseStatus.TAKEN }
     GradientCard(HealthPalette.Indigo.gradient, Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("TIẾN ĐỘ HÔM NAY", color = Color.White.copy(alpha = .85f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-            Text("$takenToday / ${doses.size} liều", color = HealthPalette.Surface, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.today_progress_caps), color = Color.White.copy(alpha = .85f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+            Text(stringResource(R.string.doses_of_total, takenToday, doses.size), color = HealthPalette.Surface, fontSize = 30.sp, fontWeight = FontWeight.Bold)
             LinearProgressIndicator(
                 progress = { if (doses.isEmpty()) 0f else takenToday.toFloat() / doses.size },
                 modifier = Modifier.fillMaxWidth().height(8.dp),
@@ -198,11 +204,15 @@ private fun AdherenceCard(doses: List<ScheduledDose>, today: Adherence, week: Ad
             )
             val now = LocalDateTime.now()
             val missed = doses.count { it.status == null && !it.date.atTime(it.time).isAfter(now) && !it.date.atTime(it.time).isBefore(it.medication.createdAt) }
+            val last7 = stringResource(R.string.last_7_days)
+            val noneDue = stringResource(R.string.no_doses_due)
+            val takenRateFmt = stringResource(R.string.doses_taken_rate)
+            val unmarkedFmt = stringResource(R.string.doses_unmarked_today)
             Text(
                 buildString {
-                    append("7 ngày qua: ")
-                    append(week.rate?.let { "${(it * 100).toInt()}% liều đã uống (${week.taken}/${week.scheduled})" } ?: "chưa có liều đến hạn")
-                    if (missed > 0) append(" · $missed liều hôm nay chưa đánh dấu")
+                    append(last7)
+                    append(week.rate?.let { String.format(takenRateFmt, (it * 100).toInt(), week.taken, week.scheduled) } ?: noneDue)
+                    if (missed > 0) append(String.format(unmarkedFmt, missed))
                 },
                 color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall
             )
@@ -223,12 +233,17 @@ private fun DoseRow(dose: ScheduledDose, onTaken: () -> Unit, onSkipped: () -> U
                     textDecoration = if (dose.status == DoseStatus.SKIPPED) TextDecoration.LineThrough else null
                 )
                 val sub = listOfNotNull(dose.medication.dosage.ifBlank { null }, dose.medication.instructions,
-                    when (dose.status) { DoseStatus.TAKEN -> "đã uống"; DoseStatus.SKIPPED -> "đã bỏ qua"; null -> if (overdue) "chưa đánh dấu" else null })
+                    when (dose.status) {
+                        DoseStatus.TAKEN -> stringResource(R.string.dose_taken)
+                        DoseStatus.SKIPPED -> stringResource(R.string.dose_skipped)
+                        null -> if (overdue) stringResource(R.string.dose_unmarked) else null
+                    })
                 if (sub.isNotEmpty()) Text(sub.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             }
-            StatusButton(Icons.Default.Close, "Bỏ qua", selected = dose.status == DoseStatus.SKIPPED, selectedColor = HealthPalette.Muted, onClick = onSkipped)
+            val timeText = MedicationSchedule.formatTime(dose.time)
+            StatusButton(Icons.Default.Close, stringResource(R.string.dose_action_cd, stringResource(R.string.action_skip_dose), dose.medication.name, timeText), selected = dose.status == DoseStatus.SKIPPED, selectedColor = HealthPalette.Muted, onClick = onSkipped)
             Spacer(Modifier.width(6.dp))
-            StatusButton(Icons.Default.Check, "Đã uống", selected = dose.status == DoseStatus.TAKEN, selectedColor = HealthPalette.Primary, onClick = onTaken)
+            StatusButton(Icons.Default.Check, stringResource(R.string.dose_action_cd, stringResource(R.string.action_taken), dose.medication.name, timeText), selected = dose.status == DoseStatus.TAKEN, selectedColor = HealthPalette.Primary, onClick = onTaken)
         }
     }
 }
@@ -253,11 +268,12 @@ private fun MedicationRow(med: Medication, onEdit: () -> Unit, onToggle: (Boolea
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(listOf(med.name, med.dosage).filter { it.isNotBlank() }.joinToString(" · "), fontWeight = FontWeight.SemiBold, color = if (med.isActive) HealthPalette.Ink else HealthPalette.Muted)
                 Text(med.times.joinToString("  ") { MedicationSchedule.formatTime(it) }, color = HealthPalette.Indigo.strong, style = MaterialTheme.typography.bodyMedium)
-                val days = med.daysOfWeek?.joinToString(" ") { dayLabels[it].orEmpty() } ?: "Hằng ngày"
-                val course = med.endDate?.let { "đến ${it.format(fmt)}" } ?: "dài hạn"
-                Text("$days · $course${if (!med.isActive) " · tạm ngừng" else ""}", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                val names = dayNames()
+                val days = med.daysOfWeek?.joinToString(" ") { names[it].orEmpty() } ?: stringResource(R.string.every_day)
+                val course = med.endDate?.let { stringResource(R.string.until_date, it.format(fmt)) } ?: stringResource(R.string.long_term)
+                Text("$days · $course${if (!med.isActive) stringResource(R.string.paused_suffix) else ""}", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             }
-            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Xóa ${med.name}", tint = HealthPalette.Muted) }
+            IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, stringResource(R.string.delete_item, med.name), tint = HealthPalette.Muted) }
             Switch(checked = med.isActive, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedTrackColor = HealthPalette.Indigo.strong))
         }
     }
@@ -265,39 +281,40 @@ private fun MedicationRow(med: Medication, onEdit: () -> Unit, onToggle: (Boolea
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MedicationEditorDialog(initial: MedicationDraft, onDismiss: () -> Unit, onSave: (MedicationDraft) -> String?) {
+private fun MedicationEditorDialog(initial: MedicationDraft, onDismiss: () -> Unit, onSave: (MedicationDraft) -> UiText?) {
     var d by remember { mutableStateOf(initial) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<UiText?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial.id == null) "Thêm thuốc" else "Sửa thuốc") },
+        title = { Text(stringResource(if (initial.id == null) R.string.add_med else R.string.edit_med)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(d.name, { d = d.copy(name = it) }, label = { Text("Tên thuốc") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(d.dosage, { d = d.copy(dosage = it) }, label = { Text("Liều (vd: 500 mg, 1 viên)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(d.times, { d = d.copy(times = it) }, label = { Text("Giờ uống (vd: 08:00, 20:00)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(d.name, { d = d.copy(name = it) }, label = { Text(stringResource(R.string.med_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(d.dosage, { d = d.copy(dosage = it) }, label = { Text(stringResource(R.string.med_dosage)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(d.times, { d = d.copy(times = it) }, label = { Text(stringResource(R.string.med_times)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("1 lần" to "08:00", "2 lần" to "08:00, 20:00", "3 lần" to "07:00, 12:00, 19:00").forEach { (label, preset) ->
-                        AssistChip(onClick = { d = d.copy(times = preset) }, label = { Text(label) })
+                    listOf(R.string.times_1 to "08:00", R.string.times_2 to "08:00, 20:00", R.string.times_3 to "07:00, 12:00, 19:00").forEach { (label, preset) ->
+                        AssistChip(onClick = { d = d.copy(times = preset) }, label = { Text(stringResource(label)) })
                     }
                 }
-                OutlinedTextField(d.instructions, { d = d.copy(instructions = it) }, label = { Text("Ghi chú (vd: sau ăn)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Text("Ngày dùng", style = MaterialTheme.typography.labelLarge)
+                OutlinedTextField(d.instructions, { d = d.copy(instructions = it) }, label = { Text(stringResource(R.string.med_notes)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Text(stringResource(R.string.days_of_use), style = MaterialTheme.typography.labelLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val names = dayNames()
                     DayOfWeek.entries.forEach { day ->
-                        FilterChip(selected = day in d.days, onClick = { d = d.copy(days = if (day in d.days) d.days - day else d.days + day) }, label = { Text(dayLabels[day].orEmpty()) })
+                        FilterChip(selected = day in d.days, onClick = { d = d.copy(days = if (day in d.days) d.days - day else d.days + day) }, label = { Text(names[day].orEmpty()) })
                     }
                 }
                 OutlinedTextField(
                     d.durationDays, { d = d.copy(durationDays = it.filter(Char::isDigit).take(4)) },
-                    label = { Text("Số ngày dùng (trống = dài hạn)") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.duration_days)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                error?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
             }
         },
-        confirmButton = { TextButton(onClick = { error = onSave(d) }) { Text("Lưu") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
+        confirmButton = { TextButton(onClick = { error = onSave(d) }) { Text(stringResource(R.string.action_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
@@ -316,13 +333,13 @@ private fun ExactAlarmBanner(onAllow: () -> Unit) {
     AppCard {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f)) {
-                Text("Nhắc đúng giờ", fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
+                Text(stringResource(R.string.exact_title), fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
                 Text(
-                    "Cho phép \"Báo thức và lời nhắc\" để nhắc uống thuốc đúng phút, kể cả khi máy đang tiết kiệm pin.",
+                    stringResource(R.string.exact_body),
                     style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted
                 )
             }
-            SoftButton("Cho phép", onClick = onAllow, accent = HealthPalette.Amber)
+            SoftButton(stringResource(R.string.action_allow), onClick = onAllow, accent = HealthPalette.Amber)
         }
     }
 }

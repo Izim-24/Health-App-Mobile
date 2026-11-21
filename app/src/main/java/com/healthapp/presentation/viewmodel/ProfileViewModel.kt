@@ -1,5 +1,7 @@
 package com.healthapp.presentation.viewmodel
 
+import com.healthapp.presentation.ui.text.UiText
+import com.healthapp.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.model.HealthProfile
@@ -30,8 +32,8 @@ data class ProfileUiState(
     val proteinGoal: Double = 0.0,
     val carbsGoal: Double = 0.0,
     val fatGoal: Double = 0.0,
-    val suggestion: String? = null,
-    val error: String? = null,
+    val suggestion: UiText? = null,
+    val error: UiText? = null,
     val saved: Boolean = false
 )
 
@@ -58,7 +60,7 @@ class ProfileViewModel @Inject constructor(private val accountManager: AccountSe
                     carbsGoal = profile?.targetCarbs ?: 0.0,
                     fatGoal = profile?.targetFat ?: 0.0
                 )
-            }.onFailure { mutable.value = mutable.value.copy(loading = false, error = it.message) }
+            }.onFailure { mutable.value = mutable.value.copy(loading = false, error = it.message?.let { m -> UiText.Raw(m) }) }
     }
 
     fun update(name: String, birthDate: String, heightCm: String, weightKg: String, calorieGoal: String) {
@@ -76,12 +78,12 @@ class ProfileViewModel @Inject constructor(private val accountManager: AccountSe
         val height = s.heightCm.toIntOrNull()
         val weight = s.weightKg.replace(',', '.').toDoubleOrNull()
         if (age == null || height == null || weight == null || s.gender == null || s.activityLevel == null) {
-            mutable.update { it.copy(error = "Cần ngày sinh, chiều cao, cân nặng, giới tính và mức vận động để tính mục tiêu.") }
+            mutable.update { it.copy(error = UiText.Res(R.string.err_targets_need)) }
             return
         }
         val targets = HealthCalculations.energyTargets(s.gender, weight, height, age, s.activityLevel)
         if (targets == null) {
-            mutable.update { it.copy(error = "Thông tin nằm ngoài khoảng tính toán được (tuổi 15–110, cao 100–250 cm).") }
+            mutable.update { it.copy(error = UiText.Res(R.string.err_targets_range)) }
             return
         }
         mutable.update {
@@ -90,7 +92,7 @@ class ProfileViewModel @Inject constructor(private val accountManager: AccountSe
                 proteinGoal = targets.proteinGrams,
                 carbsGoal = targets.carbsGrams,
                 fatGoal = targets.fatGrams,
-                suggestion = "BMR ${targets.bmr} kcal · duy trì ${targets.tdee} kcal/ngày · P ${targets.proteinGrams.toInt()}g · C ${targets.carbsGrams.toInt()}g · F ${targets.fatGrams.toInt()}g. Ước tính theo công thức, không thay thế tư vấn chuyên môn.",
+                suggestion = UiText.Res(R.string.targets_suggestion, listOf(targets.bmr, targets.tdee, targets.proteinGrams.toInt(), targets.carbsGrams.toInt(), targets.fatGrams.toInt())),
                 error = null,
                 saved = false
             )
@@ -104,7 +106,7 @@ class ProfileViewModel @Inject constructor(private val accountManager: AccountSe
         val calories = input.calorieGoal.toIntOrNull() ?: 0
         val birthValid = input.birthDate.isBlank() || runCatching { LocalDate.parse(input.birthDate.trim()).isBefore(LocalDate.now().plusDays(1)) }.getOrDefault(false)
         if (!birthValid || (input.heightCm.isNotBlank() && height !in 50..250) || (input.weightKg.isNotBlank() && weight !in 2.0..500.0) || (input.calorieGoal.isNotBlank() && calories !in 500..10000)) {
-            mutable.value = input.copy(error = "Kiểm tra ngày sinh (YYYY-MM-DD), chiều cao, cân nặng và mục tiêu calo.")
+            mutable.value = input.copy(error = UiText.Res(R.string.err_profile_check))
             return
         }
         viewModelScope.launch {
@@ -118,7 +120,7 @@ class ProfileViewModel @Inject constructor(private val accountManager: AccountSe
                     )
                 )
             }.onSuccess { mutable.update { it.copy(saved = true, error = null) } }
-                .onFailure { e -> mutable.update { it.copy(error = e.message ?: "Không thể lưu hồ sơ") } }
+                .onFailure { e -> mutable.update { it.copy(error = e.message?.let { UiText.Raw(it) } ?: UiText.Res(R.string.err_save_profile)) } }
         }
     }
 }

@@ -1,5 +1,11 @@
 package com.healthapp.presentation.ui.nutrition
 
+import com.healthapp.presentation.ui.text.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,13 +47,13 @@ fun NutritionScreen(navController: NavController, viewModel: NutritionViewModel 
     var showCustomDialog by remember { mutableStateOf(false) }
     var preselectedFood by remember { mutableStateOf<Food?>(null) }
     Column(Modifier.fillMaxSize().background(HealthPalette.Background).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-        ScreenHeader("Dinh dưỡng", "Nhật ký ăn uống", subtitle = "Ghi món ăn và khẩu phần để theo dõi năng lượng.", accent = HealthPalette.Orange)
+        ScreenHeader(stringResource(R.string.section_nutrition), stringResource(R.string.nutrition_header), subtitle = stringResource(R.string.nutrition_header_sub), accent = HealthPalette.Orange)
 
         GradientCard(HealthPalette.Orange.gradient, Modifier.fillMaxWidth(), onClick = { navController.navigate("food_scanner") }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Chụp ảnh món ăn", style = MaterialTheme.typography.titleLarge, color = Color.White)
-                    Text("AI ước tính món và calo — bạn kiểm tra trước khi lưu", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .9f))
+                    Text(stringResource(R.string.scan_card_title), style = MaterialTheme.typography.titleLarge, color = Color.White)
+                    Text(stringResource(R.string.scan_card_sub), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .9f))
                     Spacer(Modifier.height(4.dp))
                     Row(
                         Modifier.clip(CircleShape).background(Color.White).padding(horizontal = 14.dp, vertical = 8.dp),
@@ -55,26 +61,26 @@ fun NutritionScreen(navController: NavController, viewModel: NutritionViewModel 
                     ) {
                         Icon(Icons.Rounded.PhotoCamera, null, tint = HealthPalette.Orange.strong, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Quét món ăn", style = MaterialTheme.typography.labelLarge, color = HealthPalette.Orange.strong)
+                        Text(stringResource(R.string.scan_food), style = MaterialTheme.typography.labelLarge, color = HealthPalette.Orange.strong)
                     }
                 }
                 WellnessArtwork(ArtworkKind.FOOD, Modifier.size(96.dp))
             }
         }
 
-        SectionHeader("Hôm nay", modifier = Modifier.padding(top = 14.dp))
+        SectionHeader(stringResource(R.string.today), modifier = Modifier.padding(top = 14.dp))
         when {
             state.isLoading -> Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = HealthPalette.Orange.strong) }
             state.summary != null -> NutritionSummaryCard(state.summary!!)
-            else -> EmptyCard("Chưa có dữ liệu dinh dưỡng hôm nay.")
+            else -> EmptyCard(stringResource(R.string.dash_no_nutrition))
         }
 
         Row(Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Các bữa ăn", style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink, modifier = Modifier.weight(1f))
-            SoftButton("Thêm món", { preselectedFood = null; showAddDialog = true }, HealthPalette.Orange, icon = Icons.Rounded.Add)
+            Text(stringResource(R.string.meals), style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink, modifier = Modifier.weight(1f))
+            SoftButton(stringResource(R.string.add_food), { preselectedFood = null; showAddDialog = true }, HealthPalette.Orange, icon = Icons.Rounded.Add)
         }
         if (state.meals.isEmpty()) {
-            EmptyCard("Chưa ghi món ăn nào hôm nay. Chạm “Thêm món” hoặc chọn từ thư viện bên dưới.")
+            EmptyCard(stringResource(R.string.no_meals_today))
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 MealType.entries.forEach { type ->
@@ -84,10 +90,10 @@ fun NutritionScreen(navController: NavController, viewModel: NutritionViewModel 
                 }
             }
         }
-        state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
+        state.error?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp).semantics { liveRegion = LiveRegionMode.Polite }) }
 
-        SectionHeader("Thư viện thực phẩm", modifier = Modifier.padding(top = 18.dp), action = "Tự nhập") { showCustomDialog = true }
-        Text("Tra cứu trực tuyến calo và thành phần; kiểm tra nhãn sản phẩm khi cần.", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, modifier = Modifier.padding(bottom = 10.dp))
+        SectionHeader(stringResource(R.string.food_library), modifier = Modifier.padding(top = 18.dp), action = stringResource(R.string.enter_own)) { showCustomDialog = true }
+        Text(stringResource(R.string.food_library_sub), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, modifier = Modifier.padding(bottom = 10.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             state.foods.take(6).forEach { food ->
                 AppCard(Modifier.fillMaxWidth(), onClick = { preselectedFood = food; showAddDialog = true }) {
@@ -96,10 +102,10 @@ fun NutritionScreen(navController: NavController, viewModel: NutritionViewModel 
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(food.name, style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
-                            Text("${food.calories} kcal · ${food.servingSize} g · ${food.sourceLabel()}", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            Text(stringResource(R.string.food_line, food.calories, food.servingSize, food.sourceLabel()), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
                         Box(Modifier.size(34.dp).clip(CircleShape).background(HealthPalette.Orange.soft), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Add, "Thêm ${food.name}", tint = HealthPalette.Orange.strong, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Rounded.Add, stringResource(R.string.add_named, food.name), tint = HealthPalette.Orange.strong, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
@@ -135,17 +141,17 @@ private fun CustomFoodDialog(onDismiss: () -> Unit, onSave: (String, Int, Double
     val valid = name.isNotBlank() && (calories.toIntOrNull() ?: -1) in 0..2000 && listOf(protein, carbs, fat).all { (number(it) ?: -1.0) in 0.0..100.0 }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Thực phẩm do bạn nhập") },
+        title = { Text(stringResource(R.string.custom_food_title)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Nhập giá trị trên 100 g từ nhãn sản phẩm hoặc nguồn bạn tin cậy.", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
-            OutlinedTextField(name, { name = it }, label = { Text("Tên thực phẩm") }, singleLine = true)
-            OutlinedTextField(calories, { calories = it.filter(Char::isDigit) }, label = { Text("Năng lượng (kcal/100 g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
-            OutlinedTextField(protein, { protein = it }, label = { Text("Đạm (g/100 g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
-            OutlinedTextField(carbs, { carbs = it }, label = { Text("Tinh bột (g/100 g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
-            OutlinedTextField(fat, { fat = it }, label = { Text("Chất béo (g/100 g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+            Text(stringResource(R.string.custom_food_sub), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+            OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.food_name)) }, singleLine = true)
+            OutlinedTextField(calories, { calories = it.filter(Char::isDigit) }, label = { Text(stringResource(R.string.kcal_per_100)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+            OutlinedTextField(protein, { protein = it }, label = { Text(stringResource(R.string.protein_per_100)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+            OutlinedTextField(carbs, { carbs = it }, label = { Text(stringResource(R.string.carbs_per_100)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+            OutlinedTextField(fat, { fat = it }, label = { Text(stringResource(R.string.fat_per_100)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
         } },
-        confirmButton = { TextButton(onClick = { onSave(name, calories.toInt(), number(protein)!!, number(carbs)!!, number(fat)!!) }, enabled = valid) { Text("Lưu thực phẩm") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
+        confirmButton = { TextButton(onClick = { onSave(name, calories.toInt(), number(protein)!!, number(carbs)!!, number(fat)!!) }, enabled = valid) { Text(stringResource(R.string.save_food)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
@@ -172,15 +178,15 @@ private fun MealCard(meal: Meal, onDelete: () -> Unit) {
             IconBadge(meal.mealType.icon(), accent, size = 44.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("Bữa ${meal.mealType.displayName().lowercase()}", style = MaterialTheme.typography.labelMedium, color = accent.strong)
-                Text(meal.items.joinToString { it.food.name }.ifBlank { "Bữa ăn" }, style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                Text("${meal.items.sumOf { it.portionGrams }} g · Đạm ${meal.totalProtein.toInt()} · Tinh bột ${meal.totalCarbs.toInt()} · Béo ${meal.totalFat.toInt()}", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                Text(stringResource(meal.mealType.longRes()), style = MaterialTheme.typography.labelMedium, color = accent.strong)
+                Text(meal.items.joinToString { it.food.name }.ifBlank { stringResource(R.string.meal_fallback) }, style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(stringResource(R.string.meal_macros, meal.items.sumOf { it.portionGrams }, meal.totalProtein.toInt(), meal.totalCarbs.toInt(), meal.totalFat.toInt()), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("${meal.totalCalories}", style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
                 Text("kcal", style = MaterialTheme.typography.labelSmall, color = HealthPalette.Muted)
             }
-            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, contentDescription = "Xóa món", tint = HealthPalette.Subtle) }
+            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, contentDescription = stringResource(R.string.delete_meal), tint = HealthPalette.Subtle) }
         }
     }
 }
@@ -193,7 +199,7 @@ private fun FoodAddDialog(foods: List<Food>, isSearching: Boolean, initialFood: 
     var mealType by remember { mutableStateOf(MealType.SNACK) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (selectedFood == null) "Chọn thực phẩm" else "Thêm khẩu phần") },
+        title = { Text(stringResource(if (selectedFood == null) R.string.choose_food else R.string.add_portion)) },
         text = {
             Column(Modifier.fillMaxWidth()) {
                 if (selectedFood == null) {
@@ -201,28 +207,28 @@ private fun FoodAddDialog(foods: List<Food>, isSearching: Boolean, initialFood: 
                         value = query,
                         onValueChange = { query = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Tên thực phẩm hoặc sản phẩm") },
-                        placeholder = { Text("Ví dụ: sữa chua, yến mạch") },
+                        label = { Text(stringResource(R.string.food_or_product)) },
+                        placeholder = { Text(stringResource(R.string.food_search_example)) },
                         trailingIcon = {
                             IconButton(onClick = { onSearch(query) }, enabled = query.trim().length >= 2) {
-                                Icon(Icons.Rounded.Search, contentDescription = "Tra cứu thực phẩm")
+                                Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search_food))
                             }
                         },
                         singleLine = true
                     )
-                    Text("Nhấn kính lúp để tra thư viện trực tuyến. Dữ liệu sản phẩm do cộng đồng đóng góp; hãy đối chiếu nhãn bao bì.", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                    Text(stringResource(R.string.search_hint), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
                     Spacer(Modifier.height(8.dp))
                     if (isSearching) {
                         LinearProgressIndicator(Modifier.fillMaxWidth())
                     } else if (foods.isEmpty()) {
-                        Text("Không tìm thấy món phù hợp. Thử từ khóa khác hoặc kiểm tra kết nối.", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                        Text(stringResource(R.string.search_none), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
                     } else {
                         LazyColumn(Modifier.heightIn(max = 280.dp)) {
                             items(foods.take(25), key = { it.id }) { food ->
                                 TextButton(onClick = { selectedFood = food; grams = food.servingSize.toString() }, modifier = Modifier.fillMaxWidth()) {
                                     Column(Modifier.fillMaxWidth()) {
                                         Text(food.name, color = HealthPalette.Ink)
-                                        Text("${food.calories} kcal / ${food.servingSize} g · ${food.sourceLabel()}", style = MaterialTheme.typography.labelSmall, color = HealthPalette.Muted)
+                                        Text(stringResource(R.string.food_line_per, food.calories, food.servingSize, food.sourceLabel()), style = MaterialTheme.typography.labelSmall, color = HealthPalette.Muted)
                                     }
                                 }
                             }
@@ -230,21 +236,21 @@ private fun FoodAddDialog(foods: List<Food>, isSearching: Boolean, initialFood: 
                     }
                 } else {
                     Text(selectedFood!!.name, style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink, fontWeight = FontWeight.Bold)
-                    Text("Bước 1: nhập lượng bạn đã ăn. Giá trị bên dưới được tính theo ${selectedFood!!.servingSize} g.", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                    Text(stringResource(R.string.portion_step1, selectedFood!!.servingSize), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(value = grams, onValueChange = { value -> if (value.all(Char::isDigit)) grams = value }, label = { Text("Khẩu phần (gram)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                    OutlinedTextField(value = grams, onValueChange = { value -> if (value.all(Char::isDigit)) grams = value }, label = { Text(stringResource(R.string.portion_grams)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        MealType.entries.forEach { type -> FilterChip(selected = mealType == type, onClick = { mealType = type }, label = { Text(type.displayName()) }) }
+                        MealType.entries.forEach { type -> FilterChip(selected = mealType == type, onClick = { mealType = type }, label = { Text(stringResource(type.shortRes())) }) }
                     }
-                    Text("Bước 2: chọn bữa ăn rồi lưu. Dinh dưỡng sẽ được nhân theo số gram bạn nhập. Nguồn: ${selectedFood!!.sourceLabel()}.", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                    Text(stringResource(R.string.portion_step2, selectedFood!!.sourceLabel()), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
                 }
             }
         },
         confirmButton = {
-            if (selectedFood != null) TextButton(onClick = { onAdd(selectedFood!!, grams.toIntOrNull() ?: 0, mealType) }, enabled = (grams.toIntOrNull() ?: 0) > 0) { Text("Lưu bữa ăn") }
+            if (selectedFood != null) TextButton(onClick = { onAdd(selectedFood!!, grams.toIntOrNull() ?: 0, mealType) }, enabled = (grams.toIntOrNull() ?: 0) > 0) { Text(stringResource(R.string.save_meal)) }
         },
-        dismissButton = { TextButton(onClick = { if (selectedFood == null) onDismiss() else selectedFood = null }) { Text(if (selectedFood == null) "Đóng" else "Quay lại") } }
+        dismissButton = { TextButton(onClick = { if (selectedFood == null) onDismiss() else selectedFood = null }) { Text(stringResource(if (selectedFood == null) R.string.action_close else R.string.action_back)) } }
     )
 }
 
@@ -255,15 +261,9 @@ private fun EmptyCard(message: String) {
     }
 }
 
-private fun MealType.displayName(): String = when (this) {
-    MealType.BREAKFAST -> "Sáng"
-    MealType.LUNCH -> "Trưa"
-    MealType.DINNER -> "Tối"
-    MealType.SNACK -> "Phụ"
-}
-
+@Composable
 private fun Food.sourceLabel(): String = when (source) {
-    "OPEN_FOOD_FACTS" -> "Open Food Facts · dữ liệu cộng đồng"
-    "USER_CREATED" -> "Do bạn nhập"
-    else -> "Thư viện tích hợp"
+    "OPEN_FOOD_FACTS" -> stringResource(R.string.source_off)
+    "USER_CREATED" -> stringResource(R.string.source_user)
+    else -> stringResource(R.string.source_builtin)
 }

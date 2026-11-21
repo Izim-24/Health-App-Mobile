@@ -1,5 +1,7 @@
 package com.healthapp.presentation.ui.components
 
+import com.healthapp.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -155,7 +157,7 @@ fun BackTopBar(title: String, onBack: () -> Unit) {
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Box(Modifier.size(40.dp).clip(CircleShape).background(HealthPalette.Surface), contentAlignment = Alignment.Center) {
-                    Icon(androidx.compose.material.icons.Icons.AutoMirrored.Rounded.ArrowBack, "Quay lại", tint = HealthPalette.Ink)
+                    Icon(androidx.compose.material.icons.Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back), tint = HealthPalette.Ink)
                 }
             }
         },

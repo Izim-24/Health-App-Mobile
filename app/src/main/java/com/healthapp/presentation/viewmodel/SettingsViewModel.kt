@@ -1,5 +1,7 @@
 package com.healthapp.presentation.viewmodel
 
+import com.healthapp.presentation.ui.text.UiText
+import com.healthapp.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.repository.DataManagementRepository
@@ -18,7 +20,7 @@ import javax.inject.Inject
 data class SettingsUiState(
     val busy: Boolean = false,
     val exportFile: File? = null,
-    val message: String? = null,
+    val message: UiText? = null,
     val hasDemoData: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
@@ -48,8 +50,8 @@ class SettingsViewModel @Inject constructor(
         mutable.update { it.copy(busy = true, message = null) }
         viewModelScope.launch {
             demo.seed()
-                .onSuccess { days -> mutable.update { it.copy(busy = false, hasDemoData = true, message = "Đã nạp dữ liệu mẫu cho $days ngày gần nhất.") } }
-                .onFailure { e -> mutable.update { it.copy(busy = false, message = "Không nạp được dữ liệu mẫu: ${e.message}") } }
+                .onSuccess { days -> mutable.update { it.copy(busy = false, hasDemoData = true, message = UiText.Res(R.string.msg_demo_loaded, listOf(days))) } }
+                .onFailure { e -> mutable.update { it.copy(busy = false, message = UiText.Res(R.string.msg_demo_load_failed, listOf(e.message.orEmpty()))) } }
         }
     }
 
@@ -57,8 +59,8 @@ class SettingsViewModel @Inject constructor(
         mutable.update { it.copy(busy = true, message = null) }
         viewModelScope.launch {
             demo.clear()
-                .onSuccess { mutable.update { it.copy(busy = false, hasDemoData = false, message = "Đã xóa dữ liệu mẫu. Dữ liệu của bạn được giữ nguyên.") } }
-                .onFailure { e -> mutable.update { it.copy(busy = false, message = "Không xóa được dữ liệu mẫu: ${e.message}") } }
+                .onSuccess { mutable.update { it.copy(busy = false, hasDemoData = false, message = UiText.Res(R.string.msg_demo_cleared)) } }
+                .onFailure { e -> mutable.update { it.copy(busy = false, message = UiText.Res(R.string.msg_demo_clear_failed, listOf(e.message.orEmpty()))) } }
         }
     }
 
@@ -67,7 +69,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             repository.exportToFile()
                 .onSuccess { file -> mutable.update { it.copy(busy = false, exportFile = file) } }
-                .onFailure { e -> mutable.update { it.copy(busy = false, message = "Xuất dữ liệu thất bại: ${e.message}") } }
+                .onFailure { e -> mutable.update { it.copy(busy = false, message = UiText.Res(R.string.msg_export_failed, listOf(e.message.orEmpty()))) } }
         }
     }
 
@@ -77,8 +79,8 @@ class SettingsViewModel @Inject constructor(
         mutable.update { it.copy(busy = true, message = null) }
         viewModelScope.launch {
             repository.deleteAllData()
-                .onSuccess { mutable.update { it.copy(busy = false, message = "Đã xóa toàn bộ dữ liệu trên thiết bị.") } }
-                .onFailure { e -> mutable.update { it.copy(busy = false, message = "Không thể xóa dữ liệu: ${e.message}") } }
+                .onSuccess { mutable.update { it.copy(busy = false, message = UiText.Res(R.string.msg_deleted_all)) } }
+                .onFailure { e -> mutable.update { it.copy(busy = false, message = UiText.Res(R.string.msg_delete_failed, listOf(e.message.orEmpty()))) } }
         }
     }
 }
