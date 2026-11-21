@@ -42,7 +42,8 @@ class AIRepositoryImpl @Inject constructor(
                 carbohydrates = dto.carbsG ?: 0.0,
                 fat = dto.fatG ?: 0.0,
                 estimatedWeightGrams = grams.toInt(),
-                confidence = (dto.confidence ?: 0.0).toFloat()
+                confidence = (dto.confidence ?: 0.0).toFloat(),
+                caloriesFromTable = dto.source == "table"
             )
         }
         if (response.isFood == false || foods.isEmpty()) {

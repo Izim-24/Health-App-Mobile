@@ -10,6 +10,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.LayersClear
 import androidx.compose.material.icons.filled.Sync
@@ -62,6 +66,7 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = 
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            ThemeSelector(state.themeMode, viewModel::setThemeMode)
             SettingRow(Icons.Default.Notifications, HealthPalette.Amber, "Nhắc nhở", "Uống nước, vận động, bữa ăn, giấc ngủ") { navController.navigate("reminders") }
             SettingRow(Icons.Default.Sync, HealthPalette.Sky, "Health Connect", "Nhập bước chân, giấc ngủ, nhịp tim… từ đồng hồ và ứng dụng khác") { navController.navigate("health_connect") }
             SettingRow(Icons.Default.Medication, HealthPalette.Indigo, "Lịch uống thuốc", "Giờ uống, số ngày dùng, lịch sử liều") { navController.navigate("medications") }
@@ -110,6 +115,42 @@ private fun SettingRow(icon: ImageVector, accent: com.healthapp.presentation.ui.
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             }
             Text("›", style = MaterialTheme.typography.titleLarge, color = HealthPalette.Subtle)
+        }
+    }
+}
+
+/** Giao diện: follow the system, or force light/dark. */
+@Composable
+private fun ThemeSelector(mode: com.healthapp.domain.model.ThemeMode, onSelect: (com.healthapp.domain.model.ThemeMode) -> Unit) {
+    AppCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconBadge(Icons.Default.DarkMode, HealthPalette.Violet)
+                Spacer(Modifier.width(14.dp))
+                Column {
+                    Text("Giao diện", style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
+                    Text("Sáng, tối hoặc theo cài đặt của máy", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.CircleShape).background(HealthPalette.SurfaceAlt).padding(4.dp)
+            ) {
+                listOf(
+                    com.healthapp.domain.model.ThemeMode.SYSTEM to "Theo máy",
+                    com.healthapp.domain.model.ThemeMode.LIGHT to "Sáng",
+                    com.healthapp.domain.model.ThemeMode.DARK to "Tối"
+                ).forEach { (m, label) ->
+                    val selected = m == mode
+                    Box(
+                        Modifier.weight(1f).clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(if (selected) HealthPalette.Violet.strong else androidx.compose.ui.graphics.Color.Transparent)
+                            .clickable { onSelect(m) }.padding(vertical = 9.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(label, style = MaterialTheme.typography.labelLarge, color = if (selected) androidx.compose.ui.graphics.Color.White else HealthPalette.Muted)
+                    }
+                }
+            }
         }
     }
 }

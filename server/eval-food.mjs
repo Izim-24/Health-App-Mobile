@@ -62,32 +62,42 @@ for (const [n, c] of cases.entries()) {
     console.log(`✖ ${c.label || c.file}: ${rows.at(-1).error}`);
     continue;
   }
-  const t = r.food.foods.reduce((a, f) => ({ kcal: a.kcal + f.calories, p: a.p + f.protein_g, c: a.c + f.carbs_g, f: a.f + f.fat_g, g: a.g + f.estimated_grams }), { kcal: 0, p: 0, c: 0, f: 0, g: 0 });
+  const t = r.food.foods.reduce((a, f) => ({ kcal: a.kcal + f.calories, ai: a.ai + (f.ai_calories ?? f.calories), p: a.p + f.protein_g, c: a.c + f.carbs_g, f: a.f + f.fat_g, g: a.g + f.estimated_grams }), { kcal: 0, ai: 0, p: 0, c: 0, f: 0, g: 0 });
+  const matched = r.food.foods.filter((f) => f.source === 'table').length;
   const row = {
-    ...c, ms, predicted: { calories: t.kcal, protein: +t.p.toFixed(1), carbs: +t.c.toFixed(1), fat: +t.f.toFixed(1), grams: t.g },
-    items: r.food.foods.map((f) => `${f.name} ${f.estimated_grams}g ${f.calories}kcal (${Math.round(f.confidence * 100)}%)`),
-    calErrPct: pct(t.kcal, c.calories), gramsErrPct: c.grams ? pct(t.g, c.grams) : null, notes: r.food.notes
+    ...c, ms, predicted: { calories: t.kcal, aiCalories: t.ai, protein: +t.p.toFixed(1), carbs: +t.c.toFixed(1), fat: +t.f.toFixed(1), grams: t.g },
+    items: r.food.foods.map((f) => `${f.name} ${f.estimated_grams}g ${f.calories}kcal${f.source === 'table' ? ` [${f.table_key}; AI ${f.ai_calories}]` : ' [AI]'} (${Math.round(f.confidence * 100)}%)`),
+    itemsMatched: matched, itemsTotal: r.food.foods.length,
+    calErrPct: pct(t.kcal, c.calories), aiCalErrPct: pct(t.ai, c.calories), gramsErrPct: c.grams ? pct(t.g, c.grams) : null, notes: r.food.notes
   };
   rows.push(row);
-  console.log(`${Math.abs(row.calErrPct) <= 20 ? '✔' : Math.abs(row.calErrPct) <= 35 ? '~' : '✖'} ${c.label || c.file}: ref ${c.calories} kcal, AI ${t.kcal} kcal (${row.calErrPct >= 0 ? '+' : ''}${row.calErrPct.toFixed(0)}%) · ${row.items.join('; ')}`);
+  const sign = (x) => `${x >= 0 ? '+' : ''}${x.toFixed(0)}%`;
+  console.log(`${Math.abs(row.calErrPct) <= 20 ? '✔' : Math.abs(row.calErrPct) <= 35 ? '~' : '✖'} ${c.label || c.file}: ref ${c.calories} kcal, table ${t.kcal} (${sign(row.calErrPct)}), AI-only ${t.ai} (${sign(row.aiCalErrPct)}), grams ${t.g}/${c.grams ?? '?'} · ${row.items.join('; ')}`);
 }
 
 const ok = rows.filter((r) => r.calErrPct != null);
-const abs = ok.map((r) => Math.abs(r.calErrPct)).sort((a, b) => a - b);
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / (xs.length || 1);
-const summary = {
-  model, cases: rows.length, failed: rows.length - ok.length,
-  calories: ok.length ? {
+const stats = (key) => {
+  const abs = ok.map((r) => Math.abs(r[key])).sort((a, b) => a - b);
+  return ok.length ? {
     meanAbsErrorPct: +mean(abs).toFixed(1),
     medianAbsErrorPct: +abs[Math.floor(abs.length / 2)].toFixed(1),
-    meanBiasPct: +mean(ok.map((r) => r.calErrPct)).toFixed(1), // + = AI overestimates on average
-    within20Pct: ok.filter((r) => Math.abs(r.calErrPct) <= 20).length,
-    within35Pct: ok.filter((r) => Math.abs(r.calErrPct) <= 35).length,
-    worst: ok.slice().sort((a, b) => Math.abs(b.calErrPct) - Math.abs(a.calErrPct)).slice(0, 3).map((r) => `${r.label || r.file} ${r.calErrPct.toFixed(0)}%`)
-  } : null,
+    meanBiasPct: +mean(ok.map((r) => r[key])).toFixed(1), // + = overestimates on average
+    within20Pct: ok.filter((r) => Math.abs(r[key]) <= 20).length,
+    within35Pct: ok.filter((r) => Math.abs(r[key]) <= 35).length,
+    worst: ok.slice().sort((a, b) => Math.abs(b[key]) - Math.abs(a[key])).slice(0, 3).map((r) => `${r.label || r.file} ${r[key].toFixed(0)}%`)
+  } : null;
+};
+const gramsOk = ok.filter((r) => r.gramsErrPct != null);
+const summary = {
+  model, cases: rows.length, failed: rows.length - ok.length,
+  calories: stats('calErrPct'),              // what the app shows: table where matched, else AI
+  aiOnlyCalories: stats('aiCalErrPct'),      // the model's own calorie numbers, same responses
+  grams: gramsOk.length ? { meanAbsErrorPct: +mean(gramsOk.map((r) => Math.abs(r.gramsErrPct))).toFixed(1), meanBiasPct: +mean(gramsOk.map((r) => r.gramsErrPct)).toFixed(1) } : null,
+  itemsMatchedToTable: `${ok.reduce((a, r) => a + r.itemsMatched, 0)}/${ok.reduce((a, r) => a + r.itemsTotal, 0)}`,
   avgSeconds: +(mean(rows.map((r) => r.ms)) / 1000).toFixed(1)
 };
 console.log('\nSummary:', JSON.stringify(summary, null, 2));
-const out = path.join(path.dirname(casesPath), `results-${path.basename(casesPath, '.json')}-${provider.model}-${promptArg || 'default'}.json`);
+const out = path.join(path.dirname(casesPath), `results-${path.basename(casesPath, '.json')}-${provider.model}-${promptArg || 'default'}-table.json`);
 await writeFile(out, JSON.stringify({ summary, rows }, null, 2));
 console.log(`Details written to ${out}`);

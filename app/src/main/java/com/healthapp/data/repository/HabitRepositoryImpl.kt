@@ -1,5 +1,7 @@
 package com.healthapp.data.repository
 
+import kotlinx.coroutines.flow.first
+
 import com.healthapp.data.local.dao.HabitDao
 import com.healthapp.data.local.dao.HabitLogDao
 import com.healthapp.data.local.entity.HabitEntity
@@ -116,6 +118,10 @@ class HabitRepositoryImpl @Inject constructor(
         Result.success(streak)
     } catch (e: Exception) {
         Result.failure(e)
+    }
+
+    override suspend fun getCompletionDates(habitId: String): Result<Set<String>> = runCatching {
+        habitLogDao.observeHabitLogsByHabitId(habitId).first().filter { it.status }.map { it.completionDate }.toSet()
     }
 
     override suspend fun getHabitCompletionRate(habitId: String, days: Int): Result<Double> = try {

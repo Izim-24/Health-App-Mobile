@@ -1,5 +1,18 @@
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+
+/**
+ * Food-composition table (per 100 g as served), built by eval/build-food-table.mjs. The model names the
+ * food and estimates grams; calories and macros then come from this table instead of the model's memory.
+ */
+export const FOOD_TABLE = new Map(
+  JSON.parse(readFileSync(new URL('./data/food-table.json', import.meta.url), 'utf8')).foods.map((f) => [f.key, f])
+);
+const tableKeyList = [...FOOD_TABLE.keys()].join('; ');
+const tableInstructions = `
+- table_key: the entry from the reference list below that best matches the item as served (same food AND preparation, e.g. "scrambled eggs", not "eggs" raw). Copy it exactly. Use "" if nothing fits well — never force a poor match.
+Reference list: ${tableKeyList}`;
 
 const instructions = `Bạn là trợ lý cung cấp thông tin sức khỏe bằng tiếng Việt. Trả lời ngắn gọn, rõ ràng và thừa nhận khi không chắc chắn. Không tự chẩn đoán, kê đơn hoặc thay đổi liều thuốc. Không khẳng định đã xem hồ sơ, chỉ số hay kết quả xét nghiệm nếu người dùng chưa gửi trong cuộc trò chuyện. Với dấu hiệu có thể khẩn cấp, hướng dẫn người dùng tìm trợ giúp y tế tại địa phương ngay. Nhắc rằng thông tin chỉ mang tính tham khảo khi phù hợp.`;
 
@@ -45,9 +58,10 @@ const foodSchema = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['name', 'estimated_grams', 'calories', 'protein_g', 'carbs_g', 'fat_g', 'confidence'],
+        required: ['name', 'table_key', 'estimated_grams', 'calories', 'protein_g', 'carbs_g', 'fat_g', 'confidence'],
         properties: {
           name: { type: 'string' },
+          table_key: { type: 'string' },
           estimated_grams: { type: 'number' },
           calories: { type: 'number' },
           protein_g: { type: 'number' },
@@ -114,6 +128,7 @@ export function sanitizeFood(parsed) {
     if (!name || grams === null || calories === null) return [];
     return [{
       name,
+      table_key: typeof f.table_key === 'string' ? f.table_key.trim().toLowerCase().slice(0, 80) : '',
       estimated_grams: Math.round(grams),
       calories: Math.round(calories),
       protein_g: num(f.protein_g, 0, 500) ?? 0,
@@ -123,6 +138,29 @@ export function sanitizeFood(parsed) {
     }];
   });
   return { is_food: Boolean(parsed.is_food) && foods.length > 0, foods, notes: typeof parsed.notes === 'string' ? parsed.notes.slice(0, 300) : '' };
+}
+
+const r1 = (x) => Math.round(x * 10) / 10;
+
+/**
+ * Replaces the model's calories/macros with table values (per 100 g × estimated grams) for items whose
+ * table_key is in [FOOD_TABLE]. Items without a match keep the model's numbers. Every item says which
+ * it is (`source`), and `ai_calories` keeps the model's own figure for transparency and evaluation.
+ */
+export function applyFoodTable(food, table = FOOD_TABLE) {
+  return {
+    ...food,
+    foods: food.foods.map(({ table_key: key, ...f }) => {
+      const row = key ? table.get(key) : undefined;
+      if (!row) return { ...f, ai_calories: f.calories, source: 'ai' };
+      const k = f.estimated_grams / 100;
+      return {
+        ...f,
+        calories: Math.round(row.kcal * k), protein_g: r1(row.protein * k), carbs_g: r1(row.carbs * k), fat_g: r1(row.fat * k),
+        ai_calories: f.calories, source: 'table', table_key: key
+      };
+    })
+  };
 }
 
 /**
@@ -190,8 +228,8 @@ export async function chatWithProvider({ provider, messages, fetchImpl = fetch }
  * The single model call behind /api/food-image. Exported so the accuracy harness
  * (eval-food.mjs) measures exactly what the app gets. Returns { food } or { error, status? }.
  */
-export async function estimateFood({ provider, fetchImpl = fetch, image, mimeType, prompt = DEFAULT_FOOD_PROMPT }) {
-  const foodInstructions = FOOD_PROMPTS[prompt] ?? FOOD_PROMPTS[DEFAULT_FOOD_PROMPT];
+export async function estimateFood({ provider, fetchImpl = fetch, image, mimeType, prompt = DEFAULT_FOOD_PROMPT, useTable = true }) {
+  const foodInstructions = (FOOD_PROMPTS[prompt] ?? FOOD_PROMPTS[DEFAULT_FOOD_PROMPT]) + tableInstructions;
   let text;
   if (provider.name === 'gemini') {
     const r = await postJson(fetchImpl, geminiUrl(provider.model), { 'x-goog-api-key': provider.apiKey }, {
@@ -220,7 +258,8 @@ export async function estimateFood({ provider, fetchImpl = fetch, image, mimeTyp
   let parsed;
   try { parsed = JSON.parse(text || 'null'); } catch { parsed = null; }
   const food = sanitizeFood(parsed);
-  return food ? { food } : { error: 'AI trả về dữ liệu không đúng định dạng.' };
+  if (!food) return { error: 'AI trả về dữ liệu không đúng định dạng.' };
+  return { food: useTable ? applyFoodTable(food) : { ...food, foods: food.foods.map(({ table_key, ...f }) => ({ ...f, ai_calories: f.calories, source: 'ai' })) } };
 }
 
 const RETRYABLE = new Set([429, 500, 503]);

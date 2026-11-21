@@ -28,7 +28,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private data class MoodOption(val label: String, val emoji: String, val accent: Accent)
-private val moodOptions = listOf(
+private val moodOptions: List<MoodOption> @Composable get() = listOf(
     MoodOption("Vui", "😊", HealthPalette.Amber),
     MoodOption("Bình yên", "😌", HealthPalette.Emerald),
     MoodOption("Mệt", "😴", HealthPalette.Violet),

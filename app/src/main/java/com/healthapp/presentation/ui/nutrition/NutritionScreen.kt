@@ -149,6 +149,7 @@ private fun CustomFoodDialog(onDismiss: () -> Unit, onSave: (String, Int, Double
     )
 }
 
+@Composable
 private fun MealType.accent() = when (this) {
     MealType.BREAKFAST -> HealthPalette.Amber
     MealType.LUNCH -> HealthPalette.Orange

@@ -76,3 +76,10 @@ interface DemoDataRepository {
     suspend fun clear(): Result<Unit>
     suspend fun hasDemoData(): Boolean
 }
+
+/** Small app-level preferences (DataStore). */
+interface AppSettingsRepository {
+    val settings: Flow<com.healthapp.domain.model.AppSettings>
+    suspend fun setOnboardingDone(done: Boolean)
+    suspend fun setThemeMode(mode: com.healthapp.domain.model.ThemeMode)
+}

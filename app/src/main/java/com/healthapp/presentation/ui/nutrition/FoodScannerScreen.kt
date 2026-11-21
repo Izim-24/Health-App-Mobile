@@ -220,6 +220,7 @@ private fun ScannedFoodRow(item: ScannedFood, onGrams: (Int) -> Unit, onRemove: 
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Pill("Độ tin cậy ${(item.confidence * 100).toInt()}%", if (item.lowConfidence) HealthPalette.Amber else HealthPalette.Emerald)
+                    Pill(if (item.fromTable) "Calo theo bảng dinh dưỡng" else "Calo do AI ước tính", if (item.fromTable) HealthPalette.Indigo else HealthPalette.Orange)
                     if (item.energyMismatch) Pill("Calo lệch với thành phần — kiểm tra lại", HealthPalette.Coral)
                 }
             }

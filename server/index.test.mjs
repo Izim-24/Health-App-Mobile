@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { createServer, sanitizeFood, MOCK_FOOD, resolveProvider, toGeminiSchema } from './index.mjs';
+import { createServer, sanitizeFood, MOCK_FOOD, resolveProvider, toGeminiSchema, applyFoodTable, FOOD_TABLE } from './index.mjs';
 
 const IMAGE = 'A'.repeat(400); // valid base64 shape; content is irrelevant with a fake upstream
 let server;
@@ -43,7 +43,8 @@ test('food image: sends image with strict JSON schema and returns sanitized item
   const response = await post('/api/food-image', { image: IMAGE, mimeType: 'image/jpeg' });
   assert.equal(response.status, 200);
   const body = await response.json();
-  assert.deepEqual(body.foods, [{ name: 'Phở bò', estimated_grams: 550, calories: 453, protein_g: 28, carbs_g: 55, fat_g: 12, confidence: 0.85 }]);
+  // no table_key → the model's own numbers are kept and labelled as such
+  assert.deepEqual(body.foods, [{ name: 'Phở bò', estimated_grams: 550, calories: 453, protein_g: 28, carbs_g: 55, fat_g: 12, confidence: 0.85, ai_calories: 453, source: 'ai' }]);
   assert.equal(body.is_food, true);
   assert.equal(body.mock, false);
 
@@ -174,4 +175,50 @@ test('fallback is not used for non-retryable errors', async () => {
   gemini.close();
   assert.equal(res.status, 502);
   assert.equal(calls.length, 1);
+});
+
+test('food table: matched items get table calories × grams, unmatched keep AI values', async () => {
+  let sent;
+  const answer = { is_food: true, notes: '', foods: [
+    { name: 'Cơm trắng', table_key: 'White Rice ', estimated_grams: 200, calories: 300, protein_g: 6, carbs_g: 60, fat_g: 1, confidence: 0.9 },
+    { name: 'Món lạ', table_key: 'not in table', estimated_grams: 100, calories: 222, protein_g: 5, carbs_g: 20, fat_g: 10, confidence: 0.4 }
+  ] };
+  // Own server instance: the shared one has used up its per-minute request budget by now.
+  const srv = createServer({ apiKey: 'k', mock: false, fetchImpl: async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return new Response(JSON.stringify({ output: [{ content: [{ type: 'output_text', text: JSON.stringify(answer) }] }] }), { status: 200 });
+  } });
+  await new Promise((resolve) => srv.listen(0, '127.0.0.1', resolve));
+  const res = await fetch(`http://127.0.0.1:${srv.address().port}/api/food-image`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: IMAGE, mimeType: 'image/jpeg' }) });
+  srv.close();
+  const body = await res.json();
+  const rice = FOOD_TABLE.get('white rice');
+  const r1 = (x) => Math.round(x * 10) / 10;
+  assert.deepEqual(body.foods[0], {
+    name: 'Cơm trắng', estimated_grams: 200, calories: Math.round(rice.kcal * 2), protein_g: r1(rice.protein * 2), carbs_g: r1(rice.carbs * 2),
+    fat_g: r1(rice.fat * 2), confidence: 0.9, ai_calories: 300, source: 'table', table_key: 'white rice'
+  });
+  assert.deepEqual(body.foods[1], { name: 'Món lạ', estimated_grams: 100, calories: 222, protein_g: 5, carbs_g: 20, fat_g: 10, confidence: 0.4, ai_calories: 222, source: 'ai' });
+  // the prompt lists the table keys and the schema requires table_key
+  assert.match(sent.instructions, /Reference list: .*white rice/);
+  assert.ok(sent.text.format.schema.properties.foods.items.required.includes('table_key'));
+});
+
+test('food table: applyFoodTable scales per-100 g values and rounds', () => {
+  const table = new Map([['almonds', { key: 'almonds', kcal: 578, protein: 21.2, carbs: 21.6, fat: 49.9 }]]);
+  const out = applyFoodTable({ is_food: true, notes: '', foods: [{ name: 'Hạnh nhân', table_key: 'almonds', estimated_grams: 28, calories: 100, protein_g: 1, carbs_g: 1, fat_g: 1, confidence: 0.8 }] }, table);
+  assert.deepEqual(out.foods[0], { name: 'Hạnh nhân', estimated_grams: 28, calories: 162, protein_g: 5.9, carbs_g: 6, fat_g: 14, confidence: 0.8, ai_calories: 100, source: 'table', table_key: 'almonds' });
+});
+
+test('food table: every entry has plausible per-100 g values', () => {
+  assert.ok(FOOD_TABLE.size > 100);
+  // Copied unchanged from the source; their macros disagree with their kcal in Nutrition5k itself.
+  const sourceQuirks = new Set(['fish', 'country rice']);
+  for (const f of FOOD_TABLE.values()) {
+    if (sourceQuirks.has(f.key)) continue;
+    assert.ok(f.kcal >= 0 && f.kcal <= 900, f.key);
+    const fromMacros = 4 * f.protein + 4 * f.carbs + 9 * f.fat;
+    // macros must roughly explain the calories (fibre, alcohol and rounding allow some slack)
+    if (f.kcal > 40) assert.ok(Math.abs(fromMacros - f.kcal) / f.kcal < 0.3, `${f.key}: ${f.kcal} vs ${fromMacros.toFixed(0)}`);
+  }
 });

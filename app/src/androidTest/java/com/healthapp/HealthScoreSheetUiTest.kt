@@ -8,6 +8,9 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.healthapp.domain.usecase.HealthScore
 import com.healthapp.domain.usecase.HealthScoreInput
+import com.healthapp.domain.usecase.ScoreData
+import com.healthapp.domain.usecase.ScoreHistory
+import androidx.compose.ui.test.onNodeWithContentDescription
 import com.healthapp.presentation.ui.dashboard.HealthScoreSheet
 import com.healthapp.presentation.ui.theme.HealthAppTheme
 import org.junit.Assert.assertEquals
@@ -33,6 +36,24 @@ class HealthScoreSheetUiTest {
         compose.onNodeWithText("Huyết áp").performScrollTo().performClick() // the one missing area
         compose.waitForIdle()
         assertEquals("health", opened)
+    }
+
+    @Test fun showsWeeklyHistoryAndInsights() {
+        val today = java.time.LocalDate.of(2026, 11, 22)
+        val days = { from: Long, to: Long, v: Int -> (from..to).associate { today.minusDays(it) to v } }
+        val data = ScoreData(
+            sleepMinutesByDate = days(0, 6, 450) + days(7, 13, 330),
+            stepsByDate = days(0, 13, 8000), heightCm = 165, profileWeightKg = 58.0
+        )
+        val weeks = ScoreHistory.weekly(data, today.atTime(21, 0), 4)
+        val insights = ScoreHistory.insights(weeks.last(), weeks[weeks.size - 2])
+        compose.setContent {
+            HealthAppTheme { HealthScoreSheet(weeks.last().result, onDismiss = {}, onOpen = {}, history = weeks, insights = insights) }
+        }
+        compose.onNodeWithText("4 tuần gần đây").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Tuần đến Nay", substring = true).assertIsDisplayed()
+        // The sheet opens half-expanded, so the insight row is composed but may sit below the fold.
+        compose.onNodeWithText("Điểm tăng", substring = true).assertExists()
     }
 
     @Test fun notEnoughData_explainsWhatIsNeeded() {

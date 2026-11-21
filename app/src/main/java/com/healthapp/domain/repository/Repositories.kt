@@ -16,6 +16,8 @@ interface HabitRepository {
     suspend fun getHabitCompletionRate(habitId: String, days: Int = 30): Result<Double>
     suspend fun getCompletedHabitsForDate(userId: String, date: String): Result<Int>
     suspend fun getTotalActiveHabits(userId: String): Result<Int>
+    /** Dates (YYYY-MM-DD) on which the habit was completed. */
+    suspend fun getCompletionDates(habitId: String): Result<Set<String>>
 }
 
 interface NutritionRepository {

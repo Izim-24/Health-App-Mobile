@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthapp.domain.repository.DataManagementRepository
 import com.healthapp.domain.repository.DemoDataRepository
+import com.healthapp.domain.repository.AppSettingsRepository
+import com.healthapp.domain.model.ThemeMode
+import kotlinx.coroutines.flow.first
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,18 +19,29 @@ data class SettingsUiState(
     val busy: Boolean = false,
     val exportFile: File? = null,
     val message: String? = null,
-    val hasDemoData: Boolean = false
+    val hasDemoData: Boolean = false,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: DataManagementRepository,
-    private val demo: DemoDataRepository
+    private val demo: DemoDataRepository,
+    private val appSettings: AppSettingsRepository
 ) : ViewModel() {
     private val mutable = MutableStateFlow(SettingsUiState())
     val state = mutable.asStateFlow()
 
-    init { viewModelScope.launch { mutable.update { it.copy(hasDemoData = demo.hasDemoData()) } } }
+    init {
+        viewModelScope.launch {
+            mutable.update { it.copy(hasDemoData = demo.hasDemoData(), themeMode = appSettings.settings.first().themeMode) }
+        }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        mutable.update { it.copy(themeMode = mode) }
+        viewModelScope.launch { appSettings.setThemeMode(mode) }
+    }
 
     /** Debug builds only (the button is hidden in release): fills 14 days of clearly labelled sample data. */
     fun seedDemoData() {

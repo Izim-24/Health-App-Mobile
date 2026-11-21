@@ -27,6 +27,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import com.healthapp.domain.usecase.BpReading
+import com.healthapp.domain.usecase.HabitHistory
+import com.healthapp.domain.usecase.ScoreData
+import com.healthapp.domain.usecase.ScoreHistory
+import com.healthapp.domain.usecase.WeekScore
+import com.healthapp.domain.usecase.WeightReading
+import java.time.LocalDateTime
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -57,8 +64,13 @@ data class DashboardUiState(
     val glucoseUnit: String? = null,
     val reminders: List<Reminder> = emptyList(),
     val scoreDetails: com.healthapp.domain.usecase.HealthScoreResult? = null,
+    /** Weekly scores, oldest first (last = current 7 days), and what changed since last week. */
+    val scoreHistory: List<com.healthapp.domain.usecase.WeekScore> = emptyList(),
+    val scoreInsights: List<com.healthapp.domain.usecase.ScoreInsight> = emptyList(),
     val loadedOnce: Boolean = false
 )
+
+private const val HISTORY_WEEKS = 8
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
@@ -127,13 +139,17 @@ class DashboardViewModel @Inject constructor(
                 val height = profile?.heightCm?.takeIf { it > 0 }
                 val bmi = if (weight != null && height != null) weight / ((height / 100.0) * (height / 100.0)) else null
 
-                val scoreDetails = runCatching { computeScore(accountId, bmi, latestBloodPressure) }.getOrNull()
+                val history = runCatching { computeHistory(accountId, profile?.weightKg, height) }.getOrNull().orEmpty()
+                val scoreDetails = history.lastOrNull()?.result
+                val insights = history.lastOrNull()?.let { ScoreHistory.insights(it, history.getOrNull(history.size - 2)) }.orEmpty()
 
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
                         loadedOnce = true,
                         scoreDetails = scoreDetails,
+                        scoreHistory = history,
+                        scoreInsights = insights,
                         nutrition = nutritionResult.getOrNull(),
                         totalSteps = steps,
                         totalActivityMinutes = durationResult.getOrDefault(0),
@@ -163,58 +179,37 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    /** Summarises the last 7 days into [HealthScoreInput]. See HealthScore for the method. */
-    private suspend fun computeScore(
-        accountId: String,
-        bmi: Double?,
-        latestBp: com.healthapp.domain.model.VitalMeasurement?
-    ): com.healthapp.domain.usecase.HealthScoreResult {
-        val today = LocalDate.now()
-        val weekStart = today.minusDays(6)
+    /**
+     * Loads the raw records once and scores the current 7 days plus the 7 weeks before, all with the
+     * same rules (see [ScoreHistory] / HealthScore), so the history is comparable with today's score.
+     */
+    private suspend fun computeHistory(accountId: String, profileWeightKg: Double?, heightCm: Int?): List<WeekScore> {
+        val now = LocalDateTime.now()
+        val today = now.toLocalDate()
+        fun date(s: String) = runCatching { LocalDate.parse(s) }.getOrNull()
 
-        // Sleep: nights whose wake-up date is in the last 7 days.
-        val nights = sleepRepository.observeSleepRecords(accountId).first()
-            .filter { r -> runCatching { LocalDate.parse(r.date) }.getOrNull()?.let { !it.isBefore(weekStart) && !it.isAfter(today) } == true }
-            .groupBy { it.date }.mapValues { (_, v) -> v.sumOf { it.durationMinutes } }
-
-        // Steps: full days (yesterday back 7 days); today only if it's the only data, since it's partial.
-        val stepsByDay = activityRepository.observeActivities(accountId).first()
-            .groupBy { it.date }.mapValues { (_, v) -> v.sumOf { it.steps } }.filterValues { it > 0 }
-        val fullDays = (1L..7L).mapNotNull { stepsByDay[today.minusDays(it).toString()] }
-        val stepDays = fullDays.ifEmpty { listOfNotNull(stepsByDay[today.toString()]) }
-
-        // Blood pressure: only a reading from the last 30 days counts.
-        val bp = latestBp?.takeIf { it.recordedAt.toLocalDate().isAfter(today.minusDays(30)) }
-
-        // Habits: count only days each habit existed; today counts only once completed.
-        var habitDone = 0
-        var habitPossible = 0
-        val completedToday = habitRepository.getCompletedHabitIdsForDate(accountId, today.toString()).getOrDefault(emptySet())
-        habitRepository.observeHabits(accountId).first().filter { it.isEnabled }.forEach { habit ->
-            val age = java.time.temporal.ChronoUnit.DAYS.between(habit.createdAt.toLocalDate(), today).toInt() + 1
-            val window = age.coerceIn(1, 7)
-            val done = ((habitRepository.getHabitCompletionRate(habit.id, 7).getOrDefault(0.0)) * 7).toInt().coerceAtMost(window)
-            val doneToday = habit.id in completedToday
-            habitDone += done
-            habitPossible += if (doneToday) window else window - 1
-        }
-
-        // Medication: 7-day adherence, excluding doses not yet due.
-        val meds = medicationRepository.observeMedications().first()
-        val adherence = if (meds.isEmpty()) null else com.healthapp.domain.usecase.MedicationSchedule.adherence(
-            meds, medicationRepository.observeLogs(weekStart, today).first(), weekStart, today, java.time.LocalDateTime.now()
-        )
-
-        return com.healthapp.domain.usecase.HealthScore.calculate(
-            com.healthapp.domain.usecase.HealthScoreInput(
-                avgSleepMinutes = nights.values.takeIf { it.isNotEmpty() }?.average(), sleepNights = nights.size,
-                avgDailySteps = stepDays.takeIf { it.isNotEmpty() }?.average(), stepDays = stepDays.size,
-                bmi = bmi,
-                systolic = bp?.value?.toInt(), diastolic = bp?.secondaryValue?.toInt(),
-                habitCompletedDays = habitDone, habitPossibleDays = habitPossible,
-                medsTaken = adherence?.taken ?: 0, medsDue = adherence?.scheduled ?: 0
+        val sleep = sleepRepository.observeSleepRecords(accountId).first()
+            .mapNotNull { r -> date(r.date)?.let { it to r.durationMinutes } }
+            .groupBy({ it.first }, { it.second }).mapValues { it.value.sum() }
+        val steps = activityRepository.observeActivities(accountId).first()
+            .mapNotNull { r -> date(r.date)?.let { it to r.steps } }
+            .groupBy({ it.first }, { it.second }).mapValues { it.value.sum() }
+        val bp = vitalRepository.observeAll(accountId).first()
+            .filter { it.type == VitalType.BLOOD_PRESSURE && it.secondaryValue != null }
+            .map { BpReading(it.recordedAt, it.value.toInt(), it.secondaryValue!!.toInt()) }
+        val weights = weightRepository.observeWeightRecords(accountId).first().map { WeightReading(it.recordedAt, it.weight) }
+        val habits = habitRepository.observeHabits(accountId).first().filter { it.isEnabled }.map { habit ->
+            HabitHistory(
+                createdOn = habit.createdAt.toLocalDate(),
+                completedOn = habitRepository.getCompletionDates(habit.id).getOrDefault(emptySet()).mapNotNull { date(it) }.toSet()
             )
-        )
+        }
+        val meds = medicationRepository.observeMedications().first()
+        val logs = if (meds.isEmpty()) emptyList()
+        else medicationRepository.observeLogs(today.minusWeeks(HISTORY_WEEKS.toLong()), today).first()
+
+        val data = ScoreData(sleep, steps, bp, weights, profileWeightKg?.takeIf { it > 0 }, heightCm, habits, meds, logs)
+        return ScoreHistory.weekly(data, now, HISTORY_WEEKS)
     }
 
     fun clearError() {

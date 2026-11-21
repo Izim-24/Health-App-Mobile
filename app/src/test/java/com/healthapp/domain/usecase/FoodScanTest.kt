@@ -41,6 +41,13 @@ class FoodScanTest {
         assertFalse(FoodScan.fromRecognized(listOf(raw(grams = 10, kcal = 30, p = 0.0, c = 2.0, f = 0.0))).single().energyMismatch)
     }
 
+    @Test fun calorieSource_isKeptAndSurvivesPortionChange() {
+        val items = FoodScan.fromRecognized(listOf(raw().copy(caloriesFromTable = true), raw(name = "Món lạ")))
+        assertTrue(items[0].fromTable)
+        assertFalse(items[1].fromTable)
+        assertTrue(items[0].withGrams(100).fromTable)
+    }
+
     @Test fun totals_sumAllItems() {
         val items = FoodScan.fromRecognized(listOf(raw(), raw(name = "Trứng chiên", grams = 50, kcal = 90, p = 6.0, c = 0.5, f = 7.0)))
         val t = FoodScan.totals(items)

@@ -1,6 +1,11 @@
 package com.healthapp.presentation.ui.medication
 
 import android.Manifest
+import android.app.AlarmManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -56,6 +61,17 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
     var pendingDelete by remember { mutableStateOf<Medication?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    // Android 12+: exact alarms need the user's OK ("Alarms & reminders"). Re-check when returning from Settings.
+    var exactAllowed by remember { mutableStateOf(canScheduleExactAlarms(context)) }
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) exactAllowed = canScheduleExactAlarms(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     fun requestNotificationsIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -93,6 +109,9 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
             if (state.loading) {
                 item { Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
                 return@LazyColumn
+            }
+            if (!exactAllowed && state.medications.any { it.isActive }) {
+                item { ExactAlarmBanner(onAllow = { openExactAlarmSettings(context) }) }
             }
             if (state.medications.isEmpty()) {
                 item { EmptyState() }
@@ -280,4 +299,30 @@ private fun MedicationEditorDialog(initial: MedicationDraft, onDismiss: () -> Un
         confirmButton = { TextButton(onClick = { error = onSave(d) }) { Text("Lưu") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Hủy") } }
     )
+}
+
+private fun canScheduleExactAlarms(context: Context): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+        context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+
+private fun openExactAlarmSettings(context: Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
+    runCatching { context.startActivity(intent) }
+}
+
+@Composable
+private fun ExactAlarmBanner(onAllow: () -> Unit) {
+    AppCard {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("Nhắc đúng giờ", fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
+                Text(
+                    "Cho phép \"Báo thức và lời nhắc\" để nhắc uống thuốc đúng phút, kể cả khi máy đang tiết kiệm pin.",
+                    style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted
+                )
+            }
+            SoftButton("Cho phép", onClick = onAllow, accent = HealthPalette.Amber)
+        }
+    }
 }

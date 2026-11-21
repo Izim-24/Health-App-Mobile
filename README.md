@@ -9,7 +9,8 @@
 
 ## Đã hoạt động
 
-- Dashboard: chỉ số đã nhập, thói quen, dinh dưỡng và trạng thái trống khi chưa có dữ liệu. **Điểm sức khỏe** (0–100) chấm từng mặt theo khuyến nghị công khai — giấc ngủ 7–9 giờ (7 đêm gần nhất), ~8.000 bước/ngày (ngày trọn vẹn gần nhất), huyết áp theo ACC/AHA 2017 (đo trong 30 ngày), BMI theo chuẩn châu Á–Thái Bình Dương của WHO (bình thường 18,5–22,9; thừa cân từ 23, béo phì từ 25 — cũng dùng cho nhãn BMI trong Hồ sơ), tỷ lệ uống thuốc và hoàn thành thói quen 7 ngày — rồi lấy trung bình có trọng số; cần ít nhất 3 mặt có dữ liệu. Chạm vào để xem chi tiết từng phần và gợi ý. Không phải chẩn đoán y khoa.
+- Lần đầu mở: **onboarding** 4 bước (tên, ngày sinh, giới tính → chiều cao, cân nặng, mức vận động → gợi ý calo/macro, nước, BMI), có thể bỏ qua. Giao diện **sáng / tối / theo máy** trong Cài đặt.
+- Dashboard: chỉ số đã nhập, thói quen, dinh dưỡng và trạng thái trống khi chưa có dữ liệu. **Điểm sức khỏe** (0–100) chấm từng mặt theo khuyến nghị công khai — giấc ngủ 7–9 giờ (7 đêm gần nhất), ~8.000 bước/ngày (ngày trọn vẹn gần nhất), huyết áp theo ACC/AHA 2017 (đo trong 30 ngày), BMI theo chuẩn châu Á–Thái Bình Dương của WHO (bình thường 18,5–22,9; thừa cân từ 23, béo phì từ 25 — cũng dùng cho nhãn BMI trong Hồ sơ), tỷ lệ uống thuốc và hoàn thành thói quen 7 ngày — rồi lấy trung bình có trọng số; cần ít nhất 3 mặt có dữ liệu. Chạm vào để xem chi tiết từng phần, gợi ý, **biểu đồ điểm 8 tuần** và **nhận xét so với tuần trước** (ngủ, bước chân, uống thuốc, thói quen) — mỗi tuần tính cùng quy tắc với điểm hôm nay. Không phải chẩn đoán y khoa.
 - Theo dõi sức khỏe: nhập nhịp tim, huyết áp, đường huyết, cân nặng, giấc ngủ và hoạt động; xem lịch sử, biểu đồ theo ngày/tuần/tháng.
 - Thói quen: tạo và chỉnh mục tiêu, đánh dấu hoàn thành theo ngày. Sang ngày mới, trạng thái hoàn thành của ngày trước không còn áp dụng.
 - Nước uống: ghi và xóa lượt uống, tự đặt mục tiêu ml/ngày.
@@ -17,16 +18,16 @@
 - Sức khỏe tinh thần: check-in cảm xúc, mức căng thẳng, ghi chú riêng tư và bài tập thở ngắn.
 - Hồ sơ: nhập tên, ngày sinh, giới tính, chiều cao, cân nặng và mức vận động. Nút **Tính mục tiêu calo & macro** ước tính BMR/TDEE theo công thức Mifflin–St Jeor và chia macro (đạm 1,6 g/kg, chất béo 30%), có gợi ý lượng nước. BMI chỉ tính khi có dữ liệu do người dùng nhập.
 - Nhắc nhở: tạo nhắc uống nước, vận động, bữa ăn, giấc ngủ, thói quen theo giờ và ngày trong tuần; bật/tắt, sửa, xóa. Lên lịch bằng WorkManager (giữ sau khi khởi động lại máy), cần quyền thông báo trên Android 13+.
-- Lịch uống thuốc: thêm thuốc với liều, giờ uống (nhiều lần/ngày), ngày trong tuần và số ngày dùng; thông báo đúng giờ có nút **Đã uống** / **Bỏ qua** ngay trên thông báo; đánh dấu từng liều trong ngày và xem tỷ lệ tuân thủ 7 ngày. Có thể tạm ngừng hoặc xóa thuốc.
+- Lịch uống thuốc: thêm thuốc với liều, giờ uống (nhiều lần/ngày), ngày trong tuần và số ngày dùng; thông báo đúng giờ có nút **Đã uống** / **Bỏ qua** ngay trên thông báo; đánh dấu từng liều trong ngày và xem tỷ lệ tuân thủ 7 ngày. Có thể tạm ngừng hoặc xóa thuốc. Khi được phép **"Báo thức và lời nhắc"** (màn hình Thuốc có nút bật), nhắc thuốc dùng báo thức chính xác — đúng phút kể cả khi máy tiết kiệm pin — và tự đặt lại sau khi khởi động lại máy, cập nhật app hoặc đổi giờ; nếu không, dùng WorkManager (có thể trễ vài phút).
 - Health Connect (chỉ đọc): kết nối trong **Cài đặt → Health Connect** hoặc tab **Sức khỏe**; nhập số bước + năng lượng vận động (theo ngày), giấc ngủ, nhịp tim (trung bình mỗi giờ), cân nặng, huyết áp, đường huyết. Tự đồng bộ khi mở ứng dụng (tối đa 15 phút/lần), lần đầu lấy 30 ngày. Đồng bộ lại không tạo bản trùng; giá trị nhập ghi nguồn "Health Connect". Ngắt kết nối thu hồi quyền và có thể xóa dữ liệu đã nhập (giữ dữ liệu tự nhập). Không ghi ngược vào Health Connect, không gửi lên máy chủ.
-- Quét món ăn bằng ảnh (Dinh dưỡng → Quét món ăn): chụp ảnh hoặc chọn từ thư viện; ảnh được thu nhỏ ≤1024 px, xoay đúng chiều, xóa EXIF/GPS rồi gửi qua backend tới model thị giác. AI trả về từng món, khối lượng ước tính, calo và đạm/tinh bột/béo kèm độ tin cậy. Bạn sửa số gram (dinh dưỡng tự tính lại), bỏ món sai, chọn bữa rồi lưu. Ứng dụng cảnh báo món có độ tin cậy thấp hoặc calo không khớp với thành phần. Đây là **ước tính** — khẩu phần, dầu mỡ và nước sốt khó nhìn từ ảnh.
+- Quét món ăn bằng ảnh (Dinh dưỡng → Quét món ăn): chụp ảnh hoặc chọn từ thư viện; ảnh được thu nhỏ ≤1024 px, xoay đúng chiều, xóa EXIF/GPS rồi gửi qua backend tới model thị giác. AI nhận diện từng món và **ước tính số gram**; calo và đạm/tinh bột/béo được **tính từ bảng thành phần dinh dưỡng** (giá trị/100 g × gram) khi món có trong bảng, nếu không thì giữ ước tính của AI — mỗi món ghi rõ "Calo theo bảng dinh dưỡng" hay "Calo do AI ước tính". Bạn sửa số gram (dinh dưỡng tự tính lại), bỏ món sai, chọn bữa rồi lưu. Ứng dụng cảnh báo món có độ tin cậy thấp hoặc calo không khớp với thành phần. Đây là **ước tính** — khẩu phần, dầu mỡ và nước sốt khó nhìn từ ảnh.
 - Cài đặt & dữ liệu: xuất toàn bộ dữ liệu ra tệp JSON và chia sẻ qua bảng chia sẻ Android; xóa toàn bộ dữ liệu trên thiết bị (có xác nhận).
 - Báo cáo: tổng hợp ngày, tuần và tháng từ những ngày đã có nhật ký.
 - Trợ lý AI dạng chat trên Android Emulator khi chạy backend cục bộ và cấu hình khóa mới.
 
 ## Chưa hoàn thiện
 
-- Độ chính xác nhận diện ảnh mới được đánh giá trên 15 ảnh món Âu/Mỹ (Nutrition5k): sai số calo trung vị 16,5%. Chưa đánh giá trên món Việt.
+- Độ chính xác nhận diện ảnh mới được đánh giá trên 15 ảnh món Âu/Mỹ (Nutrition5k): sai số calo trung vị 16,5%. Chưa đánh giá trên món Việt. Tính calo theo bảng dinh dưỡng cho sai số tương đương AI tự đoán (trung vị ~20% trên bộ holdout); sai số chủ yếu do ước lượng gram. Giá trị món Việt trong bảng là xấp xỉ.
 - Không có đăng nhập (có chủ đích: ứng dụng một người dùng, offline). Đồng bộ nhiều thiết bị cần backend có xác thực.
 - Văn bản giao diện viết trực tiếp trong code, chưa đưa vào `strings.xml`.
 - Đồng bộ Health Connect chạy nền khi không mở ứng dụng, xuất PDF, nhập lại bản xuất JSON, sức khỏe gia đình và quản trị chưa có luồng đầy đủ.
@@ -42,13 +43,13 @@ Yêu cầu JDK 17 và Android SDK 35. Từ thư mục dự án:
 
 APK debug: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Kiểm thử (67 test):
+Kiểm thử (81 test):
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest          # 48 test JVM: domain, mapping, ViewModel
+.\gradlew.bat :app:testDebugUnitTest          # 58 test JVM: domain, mapping, ViewModel
 .\gradlew.bat :app:lintDebug                  # Android Lint: 0 lỗi
-.\gradlew.bat :app:connectedDebugAndroidTest  # 6 test trên emulator: migration Room, hồi quy, Compose UI
-cd server; npm test                          # 13 test backend
+.\gradlew.bat :app:connectedDebugAndroidTest  # 7 test trên emulator: migration Room, hồi quy, Compose UI
+cd server; npm test                          # 16 test backend
 ```
 
 Dữ liệu mẫu cho demo: **Hồ sơ → Cài đặt & dữ liệu → Nạp dữ liệu mẫu (demo)** (chỉ bản debug; dữ liệu gắn nhãn "Dữ liệu mẫu" và xóa riêng được).

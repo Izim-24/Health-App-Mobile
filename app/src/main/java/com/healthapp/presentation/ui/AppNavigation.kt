@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -50,7 +51,7 @@ import com.healthapp.presentation.ui.theme.HealthPalette
 private data class Tab(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val accent: com.healthapp.presentation.ui.theme.Accent)
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(startDestination: String = "dashboard") {
     val navController = rememberNavController()
     val tabs = listOf(
         Tab("dashboard", "Trang chủ", Icons.Rounded.Home, HealthPalette.Emerald),
@@ -61,7 +62,7 @@ fun AppNavigation() {
     )
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
-    val showNavigation = currentDestination?.route != "food_scanner"
+    val showNavigation = currentDestination?.route !in setOf("food_scanner", "onboarding", null)
 
     Surface(modifier = Modifier.fillMaxSize(), color = HealthPalette.Background) {
         Scaffold(
@@ -100,9 +101,14 @@ fun AppNavigation() {
         ) { paddingValues ->
             NavHost(
                 navController = navController,
-                startDestination = "dashboard",
+                startDestination = startDestination,
                 modifier = Modifier.padding(paddingValues)
             ) {
+                composable("onboarding") {
+                    com.healthapp.presentation.ui.onboarding.OnboardingScreen(onFinished = {
+                        navController.navigate("dashboard") { popUpTo("onboarding") { inclusive = true } }
+                    })
+                }
                 composable("dashboard") { DashboardScreen(navController) }
                 composable("nutrition") { NutritionScreen(navController) }
                 composable("health") { HealthTrackingScreen(navController) }
@@ -123,8 +129,10 @@ fun AppNavigation() {
 }
 
 @Composable
-fun HealthAppRoot() {
-    HealthAppTheme {
-        AppNavigation()
+fun HealthAppRoot(appViewModel: com.healthapp.presentation.viewmodel.AppViewModel = androidx.hilt.navigation.compose.hiltViewModel()) {
+    val app by appViewModel.state.collectAsState()
+    HealthAppTheme(themeMode = app.themeMode) {
+        if (app.ready) AppNavigation(app.startDestination)
+        else Surface(Modifier.fillMaxSize(), color = HealthPalette.Background) {}
     }
 }

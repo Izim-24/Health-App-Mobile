@@ -64,3 +64,12 @@ data class HcState(
 ) {
     val connected get() = enabled && granted.isNotEmpty()
 }
+
+// ---- App preferences ----
+
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
+data class AppSettings(
+    val onboardingDone: Boolean = false,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
+)

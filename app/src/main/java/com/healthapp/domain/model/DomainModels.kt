@@ -260,7 +260,9 @@ data class RecognizedFood(
     val sodium: Int = 0,
     val estimatedWeightGrams: Int? = null,
     val confidence: Float,
-    val recognizedImageRegion: String? = null
+    val recognizedImageRegion: String? = null,
+    /** True when calories/macros come from a food-composition table (AI only named the food and grams). */
+    val caloriesFromTable: Boolean = false
 )
 
 

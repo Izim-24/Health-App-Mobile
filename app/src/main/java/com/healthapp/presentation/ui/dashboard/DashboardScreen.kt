@@ -38,7 +38,10 @@ import java.util.Locale
 fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     var showScore by remember { mutableStateOf(false) }
-    if (showScore) HealthScoreSheet(uiState.scoreDetails, onDismiss = { showScore = false }, onOpen = { route -> showScore = false; navController.navigate(route) })
+    if (showScore) HealthScoreSheet(
+        uiState.scoreDetails, onDismiss = { showScore = false }, onOpen = { route -> showScore = false; navController.navigate(route) },
+        history = uiState.scoreHistory, insights = uiState.scoreInsights
+    )
 
     // Reload when returning from other screens, where data may have been added.
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
@@ -293,6 +296,6 @@ private fun MacroPill(label: String, value: Double, target: Double, accent: Acce
     Column(modifier.clip(RoundedCornerShape(16.dp)).background(accent.soft).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = accent.strong)
         Text("${value.toInt()} g", style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
-        if (target > 0) AccentProgress((value / target).toFloat(), accent, track = Color.White, height = 5.dp)
+        if (target > 0) AccentProgress((value / target).toFloat(), accent, track = HealthPalette.Surface, height = 5.dp)
     }
 }

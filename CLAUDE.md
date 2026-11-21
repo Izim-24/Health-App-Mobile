@@ -27,7 +27,7 @@ tests don't uninstall the app (which would wipe emulator data). Keep it.
 
 ```
 app/src/main/java/com/healthapp/
-├── domain/        Pure Kotlin: models, repository interfaces, use cases (HealthScore, FoodScan,
+├── domain/        Pure Kotlin: models, repository interfaces, use cases (HealthScore, ScoreHistory, FoodScan,
 │                  HealthCalculations, MedicationSchedule, ReminderSchedule). No Android imports.
 ├── data/          Room entities/DAOs, repository implementations, Retrofit APIs, WorkManager workers,
 │                  Health Connect import (HealthConnectManager implements HealthSyncRepository)
@@ -44,7 +44,8 @@ Rules:
 ## Tech Stack (actually used)
 
 Kotlin · Jetpack Compose + Material 3 · Hilt · Room (schemas exported to `app/schemas/`) · DataStore
-(account id) · Compose Navigation · WorkManager (reminders, medication doses) · Retrofit/OkHttp/Gson ·
+(account id; app settings: onboarding done, theme) · Compose Navigation · WorkManager (reminders; medication
+fallback) · AlarmManager exact alarms (medication doses, re-armed by `MedicationBootReceiver`) · Retrofit/OkHttp/Gson ·
 Coil · Health Connect client · system camera via `ActivityResultContracts.TakePicture` (not CameraX) ·
 charts drawn with Compose `Canvas` (no chart library).
 
@@ -61,7 +62,7 @@ activity_logs, weight_logs, vital_logs, reminders, medications, medication_logs,
 
 Bottom tabs: Trang chủ (dashboard) · Sức khỏe (vitals, Health Connect) · Ăn uống (nutrition) ·
 Thói quen (habits) · Tinh thần (mood). Pushed screens: profile, reports, water, reminders, medications,
-food_scanner, ai_chat, settings, health_connect.
+food_scanner, ai_chat, settings, health_connect. First launch starts at `onboarding` (skipped when a profile exists).
 
 There is no login: the app is single-user and offline (one local account). Authentication was descoped
 on purpose; do not add Firebase.
@@ -78,14 +79,23 @@ or `BuildConfig` — anything in the APK can be extracted. The app talks to the 
 - JVM: domain use cases, Health Connect mapping, ViewModels with in-memory fakes of domain interfaces.
 - Instrumented: Room migrations (`MigrationTestHelper`), DAO/repository regressions, Compose UI.
 - Backend: `node --test` with a fake upstream (no real key).
-- AI accuracy: `server/eval-food.mjs` on lab-weighed Nutrition5k photos; keep a separate holdout set.
+- AI accuracy: `server/eval-food.mjs` on lab-weighed Nutrition5k photos; keep a separate holdout set. It reports
+  table-based and AI-only calories from the same responses.
+
+## Food AI
+
+The model names each food, estimates grams and picks a `table_key`; the server replaces calories/macros
+with `server/data/food-table.json` (per 100 g) when the key matches and labels each item `source: table|ai`.
+Regenerate the table with `node eval/build-food-table.mjs` (Nutrition5k ingredients, eval dishes excluded, plus
+`data/vn-foods.json` approximate Vietnamese dishes) — never edit `food-table.json` by hand.
 
 ## Design
 
 Use the components in `presentation/ui/components` (`AppCard`, `GradientCard`, `IconBadge`,
 `ScreenHeader`, `StatTile`, `PrimaryButton`, `SoftButton`, `BackTopBar`) and `HealthPalette` accents
 (Emerald=brand/overall, Coral=heart, Pink=mind/BP, Orange=activity/food, Sky=water, Violet=sleep/habits,
-Indigo=meds/reports, Amber=reminders). Don't use green alone.
+Indigo=meds/reports, Amber=reminders). Don't use green alone. `HealthPalette` values are `@Composable` (light/dark),
+so read them in composition, not inside `Canvas` draw lambdas or top-level vals.
 
 ## Notes
 

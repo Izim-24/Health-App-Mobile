@@ -17,7 +17,9 @@ data class FoodItemDto(
     @SerializedName("protein_g") val proteinG: Double?,
     @SerializedName("carbs_g") val carbsG: Double?,
     @SerializedName("fat_g") val fatG: Double?,
-    val confidence: Double?
+    val confidence: Double?,
+    /** "table" = calories from the food-composition table × grams; "ai" = the model's own estimate. */
+    val source: String? = null
 )
 
 data class FoodImageResponseDto(

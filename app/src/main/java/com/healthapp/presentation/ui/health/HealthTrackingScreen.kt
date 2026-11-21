@@ -43,7 +43,7 @@ private enum class HealthEntryKind { HEART_RATE, BLOOD_PRESSURE, GLUCOSE, WEIGHT
 private enum class TrendMetric(val label: String) { WEIGHT("Cân nặng"), HEART_RATE("Nhịp tim"), GLUCOSE("Đường huyết"), SLEEP("Giấc ngủ"), STEPS("Bước chân") }
 private data class TrendPoint(val date: LocalDate, val value: Float)
 
-private val TrendMetric.accent: Accent get() = when (this) {
+private val TrendMetric.accent: Accent @Composable get() = when (this) {
     TrendMetric.WEIGHT -> HealthPalette.Emerald
     TrendMetric.HEART_RATE -> HealthPalette.Coral
     TrendMetric.GLUCOSE -> HealthPalette.Indigo
@@ -211,6 +211,8 @@ private fun TrendChart(metric: TrendMetric, points: List<TrendPoint>) {
                 }
             } else {
                 Text("%.1f".format(points.last().value), style = MaterialTheme.typography.headlineMedium, color = accent.strong, modifier = Modifier.padding(top = 6.dp))
+                val gridColor = HealthPalette.Line
+                val dotCenter = HealthPalette.Surface
                 Canvas(Modifier.fillMaxWidth().height(150.dp).padding(top = 8.dp, bottom = 8.dp)) {
                     val left = 8f
                     val right = size.width - 8f
@@ -225,7 +227,7 @@ private fun TrendChart(metric: TrendMetric, points: List<TrendPoint>) {
                     }
                     for (i in 0..3) {
                         val y = top + (bottom - top) * i / 3
-                        drawLine(HealthPalette.Line, Offset(left, y), Offset(right, y), strokeWidth = 2f)
+                        drawLine(gridColor, Offset(left, y), Offset(right, y), strokeWidth = 2f)
                     }
                     if (coords.size > 1) {
                         val line = Path().apply { coords.forEachIndexed { i, o -> if (i == 0) moveTo(o.x, o.y) else lineTo(o.x, o.y) } }
@@ -234,7 +236,7 @@ private fun TrendChart(metric: TrendMetric, points: List<TrendPoint>) {
                         drawPath(line, accent.strong, style = Stroke(width = 6f, cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
                     coords.forEach { o ->
-                        drawCircle(Color.White, radius = 9f, center = o)
+                        drawCircle(dotCenter, radius = 9f, center = o)
                         drawCircle(accent.strong, radius = 6f, center = o)
                     }
                 }

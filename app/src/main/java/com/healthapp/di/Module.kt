@@ -193,6 +193,7 @@ object RepositoryModule {
     @Provides fun provideMedicationRepository(impl: MedicationRepositoryImpl): MedicationRepository = impl
     @Provides fun provideMoodRepository(impl: MoodRepositoryImpl): MoodRepository = impl
     @Provides fun provideDemoDataRepository(impl: DemoDataRepositoryImpl): DemoDataRepository = impl
+    @Provides fun provideAppSettingsRepository(impl: AppSettingsRepositoryImpl): AppSettingsRepository = impl
     @Provides fun provideDataManagementRepository(impl: DataManagementRepositoryImpl): DataManagementRepository = impl
     @Provides fun provideHealthSyncRepository(impl: com.healthapp.data.healthconnect.HealthConnectManager): HealthSyncRepository = impl
 }

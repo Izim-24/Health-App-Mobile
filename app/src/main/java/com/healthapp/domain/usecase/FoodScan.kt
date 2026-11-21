@@ -17,7 +17,9 @@ data class ScannedFood(
     private val baseCalories: Int,
     private val baseProtein: Double,
     private val baseCarbs: Double,
-    private val baseFat: Double
+    private val baseFat: Double,
+    /** Calories from the food-composition table (true) or the model's own estimate (false). */
+    val fromTable: Boolean = false
 ) {
     private val factor get() = grams.toDouble() / baseGrams
     val calories: Int get() = (baseCalories * factor).roundToInt()
@@ -61,7 +63,8 @@ object FoodScan {
         if (listOf(f.protein, f.carbohydrates, f.fat).any { !it.isFinite() || it < 0 }) return@mapNotNull null
         ScannedFood(
             name = f.name.trim(), grams = grams, confidence = f.confidence.coerceIn(0f, 1f),
-            baseGrams = grams, baseCalories = f.calories, baseProtein = f.protein, baseCarbs = f.carbohydrates, baseFat = f.fat
+            baseGrams = grams, baseCalories = f.calories, baseProtein = f.protein, baseCarbs = f.carbohydrates, baseFat = f.fat,
+            fromTable = f.caloriesFromTable
         )
     }
 
