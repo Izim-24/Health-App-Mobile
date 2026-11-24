@@ -53,6 +53,8 @@ interface MoodRepository {
 interface DataManagementRepository {
     /** Writes all of the account's data to a JSON file (for sharing) and returns it. */
     suspend fun exportToFile(): Result<File>
+    /** Restores an export made by this app (merge: same ids are replaced). Returns the number of records restored. */
+    suspend fun importFromJson(json: String): Result<Int>
     suspend fun deleteAllData(): Result<Unit>
 }
 

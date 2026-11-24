@@ -1,5 +1,6 @@
 package com.healthapp.presentation.ui.medication
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
@@ -196,7 +197,7 @@ private fun AdherenceCard(doses: List<ScheduledDose>, today: Adherence, week: Ad
     GradientCard(HealthPalette.Indigo.gradient, Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.today_progress_caps), color = Color.White.copy(alpha = .85f), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-            Text(stringResource(R.string.doses_of_total, takenToday, doses.size), color = HealthPalette.Surface, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Text(pluralStringResource(R.plurals.doses_of_total, doses.size, takenToday, doses.size), color = HealthPalette.Surface, fontSize = 30.sp, fontWeight = FontWeight.Bold)
             LinearProgressIndicator(
                 progress = { if (doses.isEmpty()) 0f else takenToday.toFloat() / doses.size },
                 modifier = Modifier.fillMaxWidth().height(8.dp),
@@ -208,7 +209,7 @@ private fun AdherenceCard(doses: List<ScheduledDose>, today: Adherence, week: Ad
             val last7 = stringResource(R.string.last_7_days)
             val noneDue = stringResource(R.string.no_doses_due)
             val takenRateFmt = stringResource(R.string.doses_taken_rate)
-            val unmarkedFmt = stringResource(R.string.doses_unmarked_today)
+            val unmarkedFmt = pluralStringResource(R.plurals.doses_unmarked_today, missed) // pattern only; formatted below
             Text(
                 buildString {
                     append(last7)
@@ -275,7 +276,7 @@ private fun MedicationRow(med: Medication, onEdit: () -> Unit, onToggle: (Boolea
                 Text("$days · $course${if (!med.isActive) stringResource(R.string.paused_suffix) else ""}", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
                 MedicationSchedule.supply(med)?.let { s ->
                     Spacer(Modifier.height(4.dp))
-                    Pill(stringResource(R.string.supply_line, s.pillsLeft, s.daysLeft), if (s.low) HealthPalette.Coral else HealthPalette.Emerald)
+                    Pill(pluralStringResource(R.plurals.supply_line, s.daysLeft, s.pillsLeft, s.daysLeft), if (s.low) HealthPalette.Coral else HealthPalette.Emerald)
                     if (s.low && med.isActive) Text(stringResource(R.string.supply_low), style = MaterialTheme.typography.labelMedium, color = HealthPalette.Coral.strong)
                 }
             }

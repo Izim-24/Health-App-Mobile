@@ -156,7 +156,7 @@ class HabitRepositoryImpl @Inject constructor(
         name = this.name,
         description = this.description,
         frequency = this.frequency.name,
-        daysOfWeek = null, // TODO: Convert list to JSON
+        daysOfWeek = ReminderRepositoryImpl.encodeDays(this.daysOfWeek), // same "MONDAY,FRIDAY" format as reminders
         reminderTime = this.reminderTime,
         goalValue = this.goalValue,
         goalUnit = this.goalUnit,
@@ -171,7 +171,7 @@ class HabitRepositoryImpl @Inject constructor(
         name = this.name,
         description = this.description,
         frequency = HabitFrequency.valueOf(this.frequency),
-        daysOfWeek = null, // TODO: Parse from JSON
+        daysOfWeek = ReminderRepositoryImpl.decodeDays(this.daysOfWeek),
         reminderTime = this.reminderTime,
         isEnabled = this.isEnabled,
         streak = 0, // Calculated separately

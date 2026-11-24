@@ -1,5 +1,6 @@
 package com.healthapp.presentation.ui.dashboard
 
+import androidx.compose.ui.res.pluralStringResource
 import com.healthapp.domain.model.ScheduledDose
 import com.healthapp.domain.model.DoseStatus
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -229,7 +230,7 @@ private fun ScoreHero(score: Int?, details: com.healthapp.domain.usecase.HealthS
                     when {
                         details == null && calculating -> stringResource(R.string.score_calculating)
                         details?.score != null -> stringResource(R.string.score_grade_areas, details.grade!!.title(), details.components.size)
-                        details != null -> stringResource(R.string.score_need_more, (HealthScore.MIN_AREAS - details.components.size).coerceAtLeast(1))
+                        details != null -> pluralStringResource(R.plurals.score_need_more, (HealthScore.MIN_AREAS - details.components.size).coerceAtLeast(1), (HealthScore.MIN_AREAS - details.components.size).coerceAtLeast(1))
                         else -> stringResource(R.string.score_not_enough)
                     },
                     style = MaterialTheme.typography.bodyMedium, color = Color.White
@@ -399,7 +400,7 @@ private fun UpNextCard(dose: ScheduledDose?, done: Int, total: Int, onTaken: (Sc
                     Text(listOf(dose.medication.name, dose.medication.dosage).filter { it.isNotBlank() }.joinToString(" · "),
                         style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Text(stringResource(R.string.doses_progress, done, total), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                Text(pluralStringResource(R.plurals.doses_progress, total, done, total), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             }
             if (dose != null) {
                 Spacer(Modifier.width(8.dp))

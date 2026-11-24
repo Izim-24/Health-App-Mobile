@@ -64,6 +64,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /** Restores a backup the user picked; [json] is the file's text (read by the screen, which has the Uri). */
+    fun importBackup(json: String) {
+        mutable.update { it.copy(busy = true, message = null) }
+        viewModelScope.launch {
+            repository.importFromJson(json)
+                .onSuccess { n -> mutable.update { it.copy(busy = false, message = UiText.Plural(R.plurals.msg_imported, n, listOf(n))) } }
+                .onFailure { e -> mutable.update { it.copy(busy = false, message = UiText.Res(R.string.msg_import_failed, listOf(e.message.orEmpty()))) } }
+        }
+    }
+
+    fun showError(text: UiText) = mutable.update { it.copy(busy = false, message = text) }
+
     fun export() {
         mutable.update { it.copy(busy = true, message = null) }
         viewModelScope.launch {

@@ -42,7 +42,7 @@ data class HabitEntity(
     val name: String,
     val description: String?,
     val frequency: String, // "DAILY", "WEEKLY"
-    val daysOfWeek: String?, // JSON array for weekly habits
+    val daysOfWeek: String?, // "MONDAY,FRIDAY"; null = every day (ReminderRepositoryImpl.encodeDays)
     val reminderTime: String?,
     val goalValue: Double? = null,
     val goalUnit: String? = null,

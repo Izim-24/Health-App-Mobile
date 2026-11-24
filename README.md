@@ -5,6 +5,7 @@
 Ứng dụng Android (Kotlin, Jetpack Compose, Room, Hilt, Clean Architecture + MVVM) theo dõi sức khỏe, thói quen và dinh dưỡng, có ước tính dinh dưỡng từ ảnh món ăn bằng AI. Dữ liệu lưu cục bộ trên thiết bị.
 
 - 📄 **Báo cáo kỹ thuật** (kiến trúc, sơ đồ, đánh giá AI, kiểm thử): [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)
+- 🧮 **Thuật toán** (cách tính, lý do, test chứng minh): [ALGORITHMS.md](ALGORITHMS.md)
 - 🎬 **Kịch bản demo**: [DEMO.md](DEMO.md)
 
 ## Đã hoạt động
@@ -12,6 +13,8 @@
 - **Tiếng Việt và English**: toàn bộ giao diện nằm trong `strings.xml` (608 chuỗi mỗi ngôn ngữ); chọn ngôn ngữ trong **Cài đặt → Ngôn ngữ** (Theo máy / Tiếng Việt / English), Android 13+ cũng hiện trong Cài đặt hệ thống → Ứng dụng → Ngôn ngữ. Trợ lý AI và tên món từ ảnh trả lời theo ngôn ngữ đang chọn.
 - **Hình minh họa**: 13 hình vẽ vector tự thiết kế (onboarding, trạng thái trống, quét món, trợ lý AI, Health Connect), tự đổi màu theo giao diện sáng/tối; sinh từ `tools/illustrations/gen.py`.
 - **Trải nghiệm**: trang chủ có thẻ **liều thuốc tiếp theo** (bấm "Đã uống" ngay), tiến độ nước so với mục tiêu, khung tải thay cho vòng xoay, điểm số đếm lên, rung nhẹ khi hoàn thành thói quen, chạm biểu đồ để xem từng ngày; **hỏi xác nhận trước khi xóa** thói quen, bữa ăn, số đo, lượt uống nước, nhắc nhở.
+- **Nhắc uống nước thông minh**: chia đều mục tiêu trong ngày (07:00–22:00); đang đúng nhịp thì bỏ qua nhắc, chậm thì báo thiếu bao nhiêu ml.
+- **Sao lưu & khôi phục**: xuất toàn bộ dữ liệu ra JSON và **khôi phục từ tệp** (Cài đặt → Khôi phục từ bản xuất) — gộp theo mã nên khôi phục hai lần không bị trùng; dùng khi đổi điện thoại.
 - **Theo dõi số viên thuốc**: nhập số viên đang có, app đếm lùi khi bấm "Đã uống" và báo khi còn ≤ 5 ngày.
 - **Quét món ăn – chỉnh khẩu phần nhanh**: ½ · ¾ · AI · 1¼ · 1½ cho từng món và "ít hơn / như ảnh / nhiều hơn" cho cả bữa (AI thường ước lượng thấp ~10–15% gram).
 - **Trợ năng**: nhãn TalkBack cho nút biểu tượng (kèm tên mục, ví dụ "Xóa Vitamin D3"), vai trò radio/checkbox cho lựa chọn, thông báo lỗi tự đọc (live region), vùng chạm ≥ 48 dp, kiểm tra với cỡ chữ 130%.
@@ -35,8 +38,8 @@
 
 - Độ chính xác nhận diện ảnh mới được đánh giá trên 15 ảnh món Âu/Mỹ (Nutrition5k): sai số calo trung vị 16,5%. Chưa đánh giá trên món Việt. Tính calo theo bảng dinh dưỡng cho sai số tương đương AI tự đoán (trung vị ~20% trên bộ holdout); sai số chủ yếu do ước lượng gram. Giá trị món Việt trong bảng là xấp xỉ.
 - Không có đăng nhập (có chủ đích: ứng dụng một người dùng, offline). Đồng bộ nhiều thiết bị cần backend có xác thực.
-- Bản tiếng Anh chưa dùng `plurals` (ví dụ "1 nights" khi số là 1). Dữ liệu người dùng và dữ liệu mẫu giữ nguyên ngôn ngữ lúc nhập.
-- Đồng bộ Health Connect chạy nền khi không mở ứng dụng, xuất PDF, nhập lại bản xuất JSON, sức khỏe gia đình và quản trị chưa có luồng đầy đủ.
+- Dữ liệu người dùng và dữ liệu mẫu giữ nguyên ngôn ngữ lúc nhập (ví dụ tên món, ghi chú thuốc).
+- Đồng bộ Health Connect chạy nền khi không mở ứng dụng, xuất PDF, sức khỏe gia đình và quản trị chưa có luồng đầy đủ.
 - Dữ liệu cục bộ chưa mã hóa ở cấp ứng dụng. Sao lưu và chuyển dữ liệu ứng dụng đang tắt để tránh tự động sao chép thông tin sức khỏe.
 
 ## Build
@@ -49,10 +52,10 @@ Yêu cầu JDK 17 và Android SDK 35. Từ thư mục dự án:
 
 APK debug: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Kiểm thử (91 test):
+Kiểm thử (95 test):
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest          # 63 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
+.\gradlew.bat :app:testDebugUnitTest          # 67 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
 .\gradlew.bat :app:lintDebug                  # Android Lint: 0 lỗi
 .\gradlew.bat :app:connectedDebugAndroidTest  # 10 test trên emulator: migration Room (đến v6), hồi quy, Compose UI
 cd server; npm test                          # 18 test backend

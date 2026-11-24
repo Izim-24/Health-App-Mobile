@@ -29,7 +29,7 @@ tests don't uninstall the app (which would wipe emulator data). Keep it.
 ```
 app/src/main/java/com/healthapp/
 ├── domain/        Pure Kotlin: models, repository interfaces, use cases (HealthScore, ScoreHistory, FoodScan,
-│                  HealthCalculations, MedicationSchedule, ReminderSchedule). No Android imports.
+│                  HealthCalculations, MedicationSchedule, ReminderSchedule, WaterPace). No Android imports.
 ├── data/          Room entities/DAOs, repository implementations, Retrofit APIs, WorkManager workers,
 │                  Health Connect import (HealthConnectManager implements HealthSyncRepository)
 ├── presentation/  Compose screens + ViewModels. Depends on domain only — never import com.healthapp.data.
@@ -98,6 +98,8 @@ Regenerate the table with `node eval/build-food-table.mjs` (Nutrition5k ingredie
 
 - All UI text lives in `res/values/strings.xml` (Vietnamese, default) and `res/values-en/strings.xml`; keep keys
   and placeholders identical (`StringResourcesTest` enforces it). Never hard-code UI text in Kotlin.
+- Counts that read wrong at 1 in English use `<plurals>` (`pluralStringResource`, `UiText.Plural`,
+  `getQuantityString`); Vietnamese has only the `other` form.
 - Domain returns structured values (enums, `ScoreDetail`, `ScoreInsight`), never sentences; format them in
   `presentation/ui/text/DomainText.kt`. ViewModels expose `UiText` (resource id or already-final text).
 - Data-layer text (notifications, errors) uses `AppLocale.localized(context).getString(...)`.
@@ -126,3 +128,6 @@ so read them in composition, not inside `Canvas` draw lambdas or top-level vals.
 - Coroutines everywhere; no blocking database work on the main thread.
 - AI output is an estimate: always let the user review/edit before saving, and label mock data clearly.
 - Health data is sensitive: backups are disabled, exports warn the user, no analytics.
+- Export/restore: `DataManagementRepositoryImpl` writes `healthapp-export-v1` JSON; restore merges by id in one
+  transaction (`DataManagementDao.importAll`), moves rows to the current account, re-arms reminders/medications.
+- Algorithms are documented for the report in `ALGORITHMS.md` — update it when a rule in `domain/usecase` changes.

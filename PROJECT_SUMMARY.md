@@ -20,6 +20,8 @@ có ước tính dinh dưỡng từ ảnh món ăn bằng AI qua một backend n
 | Trợ năng | TalkBack, cỡ chữ lớn | Nhãn mô tả có tên mục, `Role` radio/checkbox, live region cho lỗi, vùng chạm ≥ 48 dp; chọn ảnh bằng Photo Picker hệ thống (không cần quyền bộ nhớ) |
 | Dữ liệu | Xuất JSON qua bảng chia sẻ, xóa toàn bộ, dữ liệu mẫu cho demo | FileProvider, id `demo_…` để xóa riêng |
 
+> Chi tiết từng thuật toán (công thức, lý do chọn, trường hợp biên, test): **[ALGORITHMS.md](ALGORITHMS.md)**.
+
 ## 2. Kiến trúc
 
 ```mermaid
@@ -123,7 +125,7 @@ và `server/data/vn-foods.json` (món Việt, giá trị xấp xỉ). Lưu ý: s
 
 | Loại | Số test | Nội dung |
 |---|---|---|
-| JVM unit | 63 | Điểm sức khỏe + **lịch sử tuần & nhận xét**, BMI châu Á, TDEE, lịch nhắc/thuốc, tuân thủ, quét ảnh (nguồn calo), Health Connect mapping, **ViewModel** (Profile, Mental, Reports) với fake repository |
+| JVM unit | 67 | Điểm sức khỏe + **lịch sử tuần & nhận xét**, BMI châu Á, TDEE, lịch nhắc/thuốc, tuân thủ, quét ảnh (nguồn calo), Health Connect mapping, **ViewModel** (Profile, Mental, Reports) với fake repository |
 | Instrumented (emulator) | 10 | Migration 4→5 + chuỗi 1→5, hồi quy bữa ăn (Room), nhập dữ liệu cảm xúc cũ, **Compose UI** (điểm sức khỏe, biểu đồ tuần) — chạy đạt ở cả tiếng Việt và tiếng Anh |
 | Backend | 18 | Endpoint, xác thực đầu vào, JSON schema, Gemini/OpenAI, model dự phòng, chế độ giả lập, **bảng dinh dưỡng** (khớp/không khớp, độ hợp lý từng dòng), ngôn ngữ trả lời, mã lỗi |
 | Lint | 0 lỗi | `./gradlew :app:lintDebug` |
@@ -144,5 +146,5 @@ Kiểm thử thủ công trên emulator (Android 17): báo thức thuốc kêu �
 - Không có đăng nhập (ứng dụng một người dùng, offline) — có chủ đích; đồng bộ nhiều thiết bị cần backend có xác thực.
 - Cơ sở dữ liệu trên máy chưa mã hóa (SQLCipher); backend chỉ chạy cục bộ (cần HTTPS khi triển khai thật).
 - Nhắc nhở thói quen/nước vẫn dùng WorkManager (có thể trễ khi Doze); chỉ lịch thuốc dùng báo thức chính xác.
-- Bản tiếng Anh chưa dùng `plurals` (Lint cảnh báo `PluralsCandidate`); thanh tab giữ cỡ chữ chuẩn khi phóng to chữ để không bị cắt.
+- Thanh tab giữ cỡ chữ chuẩn khi phóng to chữ để không bị cắt.
 - Bảng món Việt (`server/data/vn-foods.json`) là giá trị **xấp xỉ** theo công thức phổ biến, chưa đối chiếu từng món với Bảng thành phần thực phẩm Việt Nam; chưa có bộ ảnh món Việt được cân để đánh giá.

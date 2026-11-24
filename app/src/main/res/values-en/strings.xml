@@ -22,12 +22,8 @@
     <string name="bp_stage_1">stage 1 hypertension</string>
     <string name="bp_stage_2">stage 2 hypertension</string>
     <string name="bp_crisis">very high — see a doctor now</string>
-    <string name="detail_sleep">Average %1$s h/night (last %2$d nights)</string>
-    <string name="detail_activity">Average %1$s steps/day (%2$d days)</string>
     <string name="detail_bp">%1$d/%2$d mmHg — %3$s</string>
     <string name="detail_bmi">BMI %1$s — %2$s</string>
-    <string name="detail_medication">%1$d/%2$d doses taken in 7 days</string>
-    <string name="detail_habits">Completed %1$d/%2$d habit check-ins in 7 days</string>
     <string name="tip_sleep_more">Sleep more to reach 7–9 hours a night.</string>
     <string name="tip_sleep_less">Regularly sleeping over 9 hours — consider seeing a doctor if you always feel tired.</string>
     <string name="tip_more_steps">Aim for about 8,000 steps a day; add 1,000 steps each week.</string>
@@ -91,7 +87,6 @@
     <string name="dash_no_reminders">No reminders yet. Add one for water or bedtime.</string>
     <string name="health_score">Health score</string>
     <string name="score_grade_areas">%1$s · %2$d areas</string>
-    <string name="score_need_more">Add %1$d more area(s) to get a score</string>
     <string name="score_not_enough">Not enough data for a score yet</string>
     <string name="see_details">See details  →</string>
     <string name="score_hero_cd">Health score %1$s. Tap for details</string>
@@ -119,7 +114,6 @@
     <string name="weeks_recent">Last %1$d weeks</string>
     <string name="week_now">Now</string>
     <string name="week_bar_cd">Week ending %1$s: %2$s</string>
-    <string name="points_value">%1$d points</string>
     <string name="not_enough_data">not enough data</string>
     <string name="weeks_explainer">Each bar is the score for the 7 days ending on the date below, calculated the same way as today\'s score.</string>
     <string name="insights_title">This week</string>
@@ -269,7 +263,6 @@
     <string name="period_day">Day</string>
     <string name="period_week">Week</string>
     <string name="period_month">Month</string>
-    <string name="entries_count">%1$d entries</string>
     <string name="no_data_in_range">No data in this period</string>
     <string name="action_log">Log</string>
     <string name="delete_item">Delete %1$s</string>
@@ -364,11 +357,9 @@
     <string name="no_meds">No medications yet</string>
     <string name="no_meds_sub">Add a medication with its dose times to get notifications and mark each dose.</string>
     <string name="today_progress_caps">TODAY\'S PROGRESS</string>
-    <string name="doses_of_total">%1$d / %2$d doses</string>
     <string name="last_7_days">Last 7 days:\u0020</string>
     <string name="doses_taken_rate">%1$d%% of doses taken (%2$d/%3$d)</string>
     <string name="no_doses_due">no doses due yet</string>
-    <string name="doses_unmarked_today">\u0020· %1$d dose(s) today not marked</string>
     <string name="dose_taken">taken</string>
     <string name="dose_skipped">skipped</string>
     <string name="dose_unmarked">not marked</string>
@@ -492,7 +483,6 @@
     <string name="err_save_meal">Couldn\'t save the meal.</string>
     <string name="reports_sub">A summary of the data you\'ve logged on this device.</string>
     <string name="no_meals_period">No meals logged in this period.</string>
-    <string name="avg_over_days">Average over %1$d logged days</string>
     <string name="energy">Energy</string>
     <string name="kcal_per_day_v">%1$d kcal/day</string>
     <string name="g_per_day_v">%1$s g/day</string>
@@ -506,12 +496,10 @@
     <string name="water_amount">Water intake</string>
     <string name="ml_per_day_v">%1$d ml/day</string>
     <string name="no_habits_created">No habits created yet.</string>
-    <string name="tracking_habits">Tracking %1$d habit(s)</string>
     <string name="completions">Completions</string>
     <string name="err_load_report">Couldn\'t load the report</string>
     <string name="habits_header">Better every day</string>
     <string name="habits_header_sub">Small steps, every day.</string>
-    <string name="habits_of_total">%1$d / %2$d habits</string>
     <string name="habits_all_done">All done — great! 🎉</string>
     <string name="habits_left">%1$d to go</string>
     <string name="err_load_habits">Couldn\'t load habits</string>
@@ -615,7 +603,6 @@
     <string name="loading_dashboard">Loading your dashboard</string>
     <string name="chart_point">%1$s · %2$s</string>
     <string name="chart_hint">Tap the chart to see each day</string>
-    <string name="chart_cd">%1$s chart, %2$d entries, latest %3$s</string>
     <string name="portion_quick">Portion compared with the AI estimate</string>
     <string name="portion_ai">AI</string>
     <string name="portion_factor_cd">Portion %1$s times the AI estimate</string>
@@ -626,10 +613,8 @@
     <string name="portion_more">More</string>
     <string name="photo_tip_reference">Tip: put a spoon or chopsticks next to the plate so the AI has something to compare sizes with.</string>
     <string name="notif_low_title">Running low on %1$s</string>
-    <string name="notif_low_body">%1$d left (about %2$d days). Time to refill.</string>
     <string name="pills_left_field">Pills on hand (optional)</string>
     <string name="pills_per_dose_field">Pills per dose</string>
-    <string name="supply_line">%1$d left · about %2$d days</string>
     <string name="supply_low">Running low — refill soon</string>
     <string name="err_pills">Invalid pill count (0–9999, 1–20 per dose).</string>
     <string name="refill_hint">Enter the pill count so the app counts down as you mark doses taken and warns you before you run out.</string>
@@ -643,7 +628,83 @@
     <string name="up_next">Up next</string>
     <string name="up_next_overdue">Overdue · %1$s</string>
     <string name="up_next_at">At %1$s</string>
-    <string name="doses_progress">%1$d/%2$d doses today</string>
     <string name="all_doses_done">All of today\'s doses done</string>
     <string name="water_of_goal">of %1$d ml</string>
+    <string name="notif_water_behind">You\'ve had %1$d of %2$d ml — about %3$d ml behind today\'s pace.</string>
+    <string name="err_not_backup">This file isn\'t a backup made by this app.</string>
+    <string name="set_import">Restore from export (JSON)</string>
+    <string name="set_import_sub">Bring back data from an export file — e.g. on a new phone</string>
+    <string name="import_title">Restore data?</string>
+    <string name="import_body">The file\'s data will be added to the app. Records with the same id are replaced by the file\'s version; your other data stays.</string>
+    <string name="import_confirm">Restore</string>
+    <string name="msg_import_failed">Couldn\'t restore: %1$s</string>
+    <string name="err_file_too_large">The file is too large.</string>
+    <plurals name="detail_sleep">
+        <item quantity="one">Average %1$s h/night (last %2$d night)</item>
+        <item quantity="other">Average %1$s h/night (last %2$d nights)</item>
+    </plurals>
+    <plurals name="detail_activity">
+        <item quantity="one">Average %1$s steps/day (%2$d day)</item>
+        <item quantity="other">Average %1$s steps/day (%2$d days)</item>
+    </plurals>
+    <plurals name="detail_medication">
+        <item quantity="one">%1$d/%2$d dose taken in 7 days</item>
+        <item quantity="other">%1$d/%2$d doses taken in 7 days</item>
+    </plurals>
+    <plurals name="detail_habits">
+        <item quantity="one">Completed %1$d/%2$d habit check-in over 7 days</item>
+        <item quantity="other">Completed %1$d/%2$d habit check-ins over 7 days</item>
+    </plurals>
+    <plurals name="score_need_more">
+        <item quantity="one">Add %1$d more area to get a score</item>
+        <item quantity="other">Add %1$d more areas to get a score</item>
+    </plurals>
+    <plurals name="points_value">
+        <item quantity="one">%1$d point</item>
+        <item quantity="other">%1$d points</item>
+    </plurals>
+    <plurals name="entries_count">
+        <item quantity="one">%1$d entry</item>
+        <item quantity="other">%1$d entries</item>
+    </plurals>
+    <plurals name="doses_of_total">
+        <item quantity="one">%1$d / %2$d dose</item>
+        <item quantity="other">%1$d / %2$d doses</item>
+    </plurals>
+    <plurals name="doses_unmarked_today">
+        <item quantity="one">\u0020· %1$d dose today not marked</item>
+        <item quantity="other">\u0020· %1$d doses today not marked</item>
+    </plurals>
+    <plurals name="avg_over_days">
+        <item quantity="one">Average over %1$d logged day</item>
+        <item quantity="other">Average over %1$d logged days</item>
+    </plurals>
+    <plurals name="tracking_habits">
+        <item quantity="one">Tracking %1$d habit</item>
+        <item quantity="other">Tracking %1$d habits</item>
+    </plurals>
+    <plurals name="habits_of_total">
+        <item quantity="one">%1$d / %2$d habit</item>
+        <item quantity="other">%1$d / %2$d habits</item>
+    </plurals>
+    <plurals name="chart_cd">
+        <item quantity="one">%1$s chart, %2$d entry, latest %3$s</item>
+        <item quantity="other">%1$s chart, %2$d entries, latest %3$s</item>
+    </plurals>
+    <plurals name="notif_low_body">
+        <item quantity="one">%1$d left (about %2$d day). Time to refill.</item>
+        <item quantity="other">%1$d left (about %2$d days). Time to refill.</item>
+    </plurals>
+    <plurals name="supply_line">
+        <item quantity="one">%1$d left · about %2$d day</item>
+        <item quantity="other">%1$d left · about %2$d days</item>
+    </plurals>
+    <plurals name="doses_progress">
+        <item quantity="one">%1$d/%2$d dose today</item>
+        <item quantity="other">%1$d/%2$d doses today</item>
+    </plurals>
+    <plurals name="msg_imported">
+        <item quantity="one">Restored %1$d record.</item>
+        <item quantity="other">Restored %1$d records.</item>
+    </plurals>
 </resources>

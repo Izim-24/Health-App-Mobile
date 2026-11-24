@@ -1,5 +1,6 @@
 package com.healthapp.presentation.ui.reports
 
+import androidx.compose.ui.res.pluralStringResource
 import com.healthapp.presentation.ui.text.*
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.selectableGroup
@@ -66,7 +67,7 @@ fun ReportsScreen(navController: NavController, viewModel: ReportsViewModel = hi
                 state.error != null -> Text(state.error!!.resolve(), color = MaterialTheme.colorScheme.error)
                 else -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     ReportCard(Icons.Rounded.LocalFireDepartment, HealthPalette.Orange, stringResource(R.string.section_nutrition),
-                        if (state.nutritionDays == 0) stringResource(R.string.no_meals_period) else stringResource(R.string.avg_over_days, state.nutritionDays)) {
+                        if (state.nutritionDays == 0) stringResource(R.string.no_meals_period) else pluralStringResource(R.plurals.avg_over_days, state.nutritionDays, state.nutritionDays)) {
                         if (state.nutritionDays > 0) {
                             ReportItem(stringResource(R.string.energy), stringResource(R.string.kcal_per_day_v, state.avgCalories))
                             ReportItem(stringResource(R.string.macro_protein), stringResource(R.string.g_per_day_v, state.avgProtein.toString()))
@@ -75,7 +76,7 @@ fun ReportsScreen(navController: NavController, viewModel: ReportsViewModel = hi
                         }
                     }
                     ReportCard(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Coral, stringResource(R.string.area_activity),
-                        if (state.activityDays == 0) stringResource(R.string.no_activity_period) else stringResource(R.string.avg_over_days, state.activityDays)) {
+                        if (state.activityDays == 0) stringResource(R.string.no_activity_period) else pluralStringResource(R.plurals.avg_over_days, state.activityDays, state.activityDays)) {
                         if (state.activityDays > 0) {
                             ReportItem(stringResource(R.string.stat_steps), stringResource(R.string.steps_per_day_v, grouped(state.avgSteps)))
                             ReportItem(stringResource(R.string.total_time), stringResource(R.string.minutes_v, state.totalExerciseMinutes))
@@ -83,11 +84,11 @@ fun ReportsScreen(navController: NavController, viewModel: ReportsViewModel = hi
                         }
                     }
                     ReportCard(Icons.Rounded.WaterDrop, HealthPalette.Sky, stringResource(R.string.stat_water),
-                        if (state.waterDays == 0) stringResource(R.string.no_water_period) else stringResource(R.string.avg_over_days, state.waterDays)) {
+                        if (state.waterDays == 0) stringResource(R.string.no_water_period) else pluralStringResource(R.plurals.avg_over_days, state.waterDays, state.waterDays)) {
                         if (state.waterDays > 0) ReportItem(stringResource(R.string.water_amount), stringResource(R.string.ml_per_day_v, state.avgWaterMl))
                     }
                     ReportCard(Icons.Rounded.CheckCircle, HealthPalette.Violet, stringResource(R.string.section_habits),
-                        if (state.activeHabits == 0) stringResource(R.string.no_habits_created) else stringResource(R.string.tracking_habits, state.activeHabits)) {
+                        if (state.activeHabits == 0) stringResource(R.string.no_habits_created) else pluralStringResource(R.plurals.tracking_habits, state.activeHabits, state.activeHabits)) {
                         if (state.activeHabits > 0) ReportItem(stringResource(R.string.completions), "${state.completedHabits}")
                     }
                 }

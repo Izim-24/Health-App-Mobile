@@ -1,5 +1,6 @@
 package com.healthapp.presentation.ui.dashboard
 
+import androidx.compose.ui.res.pluralStringResource
 import com.healthapp.presentation.ui.text.*
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.healthapp.R
@@ -144,7 +145,7 @@ private fun ScoreHistoryCard(history: List<WeekScore>) {
                     val label = if (i == history.lastIndex) stringResource(R.string.week_now) else week.weekEnd.format(weekLabel)
                     val barDescription = stringResource(
                         R.string.week_bar_cd, label,
-                        score?.let { stringResource(R.string.points_value, it) } ?: stringResource(R.string.not_enough_data)
+                        score?.let { pluralStringResource(R.plurals.points_value, it, it) } ?: stringResource(R.string.not_enough_data)
                     )
                     Column(
                         Modifier.weight(1f).fillMaxHeight().clearAndSetSemantics { contentDescription = barDescription },

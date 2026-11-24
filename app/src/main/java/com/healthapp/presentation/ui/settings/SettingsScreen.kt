@@ -1,5 +1,13 @@
 package com.healthapp.presentation.ui.settings
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import com.healthapp.presentation.ui.text.UiText
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material.icons.filled.FileUpload
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import com.healthapp.presentation.ui.text.*
 import com.healthapp.core.AppLocale
 import androidx.compose.ui.semantics.semantics
@@ -53,6 +61,35 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = 
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     var confirmDelete by remember { mutableStateOf(false) }
+    // Restore: pick a file (system picker, no storage permission), confirm, then read it off the main thread.
+    var pickedBackup by remember { mutableStateOf<android.net.Uri?>(null) }
+    val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> pickedBackup = uri }
+    val scope = rememberCoroutineScope()
+    val tooLarge = UiText.Res(R.string.err_file_too_large)
+    pickedBackup?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pickedBackup = null },
+            title = { Text(stringResource(R.string.import_title)) },
+            text = { Text(stringResource(R.string.import_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    pickedBackup = null
+                    scope.launch {
+                        val text = withContext(Dispatchers.IO) {
+                            runCatching {
+                                context.contentResolver.openInputStream(uri)?.use { input ->
+                                    val bytes = input.readBytes()
+                                    if (bytes.size > MAX_BACKUP_BYTES) null else String(bytes, Charsets.UTF_8)
+                                }
+                            }.getOrNull()
+                        }
+                        if (text == null) viewModel.showError(tooLarge) else viewModel.importBackup(text)
+                    }
+                }) { Text(stringResource(R.string.import_confirm)) }
+            },
+            dismissButton = { TextButton(onClick = { pickedBackup = null }) { Text(stringResource(R.string.action_cancel)) } }
+        )
+    }
 
     LaunchedEffect(state.exportFile) {
         val file = state.exportFile ?: return@LaunchedEffect
@@ -84,6 +121,9 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = 
             SettingRow(Icons.Default.Sync, HealthPalette.Sky, "Health Connect", stringResource(R.string.set_hc_sub)) { navController.navigate("health_connect") }
             SettingRow(Icons.Default.Medication, HealthPalette.Indigo, stringResource(R.string.link_meds), stringResource(R.string.set_meds_sub)) { navController.navigate("medications") }
             SettingRow(Icons.Default.FileDownload, HealthPalette.Emerald, stringResource(R.string.set_export), stringResource(R.string.set_export_sub)) { if (!state.busy) viewModel.export() }
+            SettingRow(Icons.Default.FileUpload, HealthPalette.Sky, stringResource(R.string.set_import), stringResource(R.string.set_import_sub)) {
+                if (!state.busy) pickBackup.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+            }
             if (com.healthapp.BuildConfig.DEMO_TOOLS) {
                 SettingRow(Icons.Default.Science, HealthPalette.Violet, stringResource(R.string.set_demo), stringResource(R.string.set_demo_sub)) { if (!state.busy) viewModel.seedDemoData() }
                 if (state.hasDemoData) SettingRow(Icons.Default.LayersClear, HealthPalette.Amber, stringResource(R.string.set_demo_clear), stringResource(R.string.set_demo_clear_sub)) { if (!state.busy) viewModel.clearDemoData() }
@@ -200,3 +240,6 @@ private fun <T> SegmentedSetting(
         }
     }
 }
+
+/** Exports are a few hundred KB; refuse anything far larger rather than loading it into memory. */
+private const val MAX_BACKUP_BYTES = 20 * 1024 * 1024

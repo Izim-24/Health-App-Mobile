@@ -1,5 +1,6 @@
 package com.healthapp.presentation.ui.habits
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.remember
@@ -101,7 +102,7 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(stringResource(R.string.today), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .85f))
-                                Text(stringResource(R.string.habits_of_total, done, total), style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                                Text(pluralStringResource(R.plurals.habits_of_total, total, done, total), style = MaterialTheme.typography.headlineSmall, color = Color.White)
                                 Text(if (done == total) stringResource(R.string.habits_all_done) else stringResource(R.string.habits_left, total - done), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = .9f))
                             }
                             Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {

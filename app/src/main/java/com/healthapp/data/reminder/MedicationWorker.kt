@@ -108,7 +108,7 @@ internal fun MedicationWorker.Companion.notifyLowSupply(context: Context, med: M
     val notification = NotificationCompat.Builder(context, ReminderWorker.CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_launcher_foreground)
         .setContentTitle(res.getString(R.string.notif_low_title, med.name))
-        .setContentText(res.getString(R.string.notif_low_body, pills, days))
+        .setContentText(res.resources.getQuantityString(R.plurals.notif_low_body, days, pills, days))
         .setContentIntent(open)
         .setAutoCancel(true)
         .setCategory(NotificationCompat.CATEGORY_REMINDER)

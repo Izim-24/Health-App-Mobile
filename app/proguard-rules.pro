@@ -70,3 +70,6 @@
 -keepclassmembers,allowobfuscation class * {
     @com.google.gson.annotations.SerializedName <fields>;
 }
+
+# Backup restore reads this class with Gson (field names must survive R8).
+-keep class com.healthapp.data.repository.BackupFile { *; }

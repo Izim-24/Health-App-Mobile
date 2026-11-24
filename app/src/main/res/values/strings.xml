@@ -23,12 +23,8 @@
     <string name="bp_stage_1">tăng huyết áp độ 1</string>
     <string name="bp_stage_2">tăng huyết áp độ 2</string>
     <string name="bp_crisis">rất cao — cần đi khám ngay</string>
-    <string name="detail_sleep">Trung bình %1$s giờ/đêm (%2$d đêm gần nhất)</string>
-    <string name="detail_activity">Trung bình %1$s bước/ngày (%2$d ngày)</string>
     <string name="detail_bp">%1$d/%2$d mmHg — %3$s</string>
     <string name="detail_bmi">BMI %1$s — %2$s</string>
-    <string name="detail_medication">%1$d/%2$d liều đã uống trong 7 ngày</string>
-    <string name="detail_habits">Hoàn thành %1$d/%2$d lượt thói quen trong 7 ngày</string>
     <string name="tip_sleep_more">Ngủ thêm để đạt 7–9 giờ mỗi đêm.</string>
     <string name="tip_sleep_less">Ngủ quá 9 giờ thường xuyên — cân nhắc hỏi bác sĩ nếu luôn mệt.</string>
     <string name="tip_more_steps">Đặt mục tiêu khoảng 8.000 bước/ngày; thêm 1.000 bước mỗi tuần.</string>
@@ -92,7 +88,6 @@
     <string name="dash_no_reminders">Chưa có lời nhắc nào. Thêm nhắc uống nước hoặc đi ngủ.</string>
     <string name="health_score">Điểm sức khỏe</string>
     <string name="score_grade_areas">%1$s · %2$d chỉ số</string>
-    <string name="score_need_more">Cần thêm %1$d chỉ số để tính điểm</string>
     <string name="score_not_enough">Chưa đủ dữ liệu để tính điểm</string>
     <string name="see_details">Xem chi tiết  →</string>
     <string name="score_hero_cd">Điểm sức khỏe %1$s. Chạm để xem chi tiết</string>
@@ -120,7 +115,6 @@
     <string name="weeks_recent">%1$d tuần gần đây</string>
     <string name="week_now">Nay</string>
     <string name="week_bar_cd">Tuần đến %1$s: %2$s</string>
-    <string name="points_value">%1$d điểm</string>
     <string name="not_enough_data">chưa đủ dữ liệu</string>
     <string name="weeks_explainer">Mỗi cột là điểm của 7 ngày kết thúc vào ngày ghi bên dưới, tính cùng cách với điểm hôm nay.</string>
     <string name="insights_title">Nhận xét tuần này</string>
@@ -270,7 +264,6 @@
     <string name="period_day">Ngày</string>
     <string name="period_week">Tuần</string>
     <string name="period_month">Tháng</string>
-    <string name="entries_count">%1$d lần ghi</string>
     <string name="no_data_in_range">Chưa có dữ liệu trong khoảng này</string>
     <string name="action_log">Ghi</string>
     <string name="delete_item">Xóa %1$s</string>
@@ -365,11 +358,9 @@
     <string name="no_meds">Chưa có thuốc nào</string>
     <string name="no_meds_sub">Thêm thuốc với giờ uống để nhận thông báo và đánh dấu từng liều đã uống.</string>
     <string name="today_progress_caps">TIẾN ĐỘ HÔM NAY</string>
-    <string name="doses_of_total">%1$d / %2$d liều</string>
     <string name="last_7_days">7 ngày qua:\u0020</string>
     <string name="doses_taken_rate">%1$d%% liều đã uống (%2$d/%3$d)</string>
     <string name="no_doses_due">chưa có liều đến hạn</string>
-    <string name="doses_unmarked_today">\u0020· %1$d liều hôm nay chưa đánh dấu</string>
     <string name="dose_taken">đã uống</string>
     <string name="dose_skipped">đã bỏ qua</string>
     <string name="dose_unmarked">chưa đánh dấu</string>
@@ -493,7 +484,6 @@
     <string name="err_save_meal">Không lưu được bữa ăn.</string>
     <string name="reports_sub">Tổng hợp từ dữ liệu bạn đã ghi trên thiết bị.</string>
     <string name="no_meals_period">Chưa ghi bữa ăn trong khoảng này.</string>
-    <string name="avg_over_days">Trung bình %1$d ngày có ghi</string>
     <string name="energy">Năng lượng</string>
     <string name="kcal_per_day_v">%1$d kcal/ngày</string>
     <string name="g_per_day_v">%1$s g/ngày</string>
@@ -507,12 +497,10 @@
     <string name="water_amount">Lượng nước</string>
     <string name="ml_per_day_v">%1$d ml/ngày</string>
     <string name="no_habits_created">Chưa tạo thói quen.</string>
-    <string name="tracking_habits">Đang theo dõi %1$d thói quen</string>
     <string name="completions">Lượt hoàn thành</string>
     <string name="err_load_report">Không tải được báo cáo</string>
     <string name="habits_header">Tiến bộ mỗi ngày</string>
     <string name="habits_header_sub">Từng bước nhỏ, đều đặn mỗi ngày.</string>
-    <string name="habits_of_total">%1$d / %2$d thói quen</string>
     <string name="habits_all_done">Hoàn thành tất cả — tuyệt vời! 🎉</string>
     <string name="habits_left">Còn %1$d việc nữa</string>
     <string name="err_load_habits">Không tải được thói quen</string>
@@ -616,7 +604,6 @@
     <string name="loading_dashboard">Đang tải bảng điều khiển</string>
     <string name="chart_point">%1$s · %2$s</string>
     <string name="chart_hint">Chạm vào biểu đồ để xem từng ngày</string>
-    <string name="chart_cd">Biểu đồ %1$s, %2$d lần ghi, gần nhất %3$s</string>
     <string name="portion_quick">Khẩu phần so với ước tính AI</string>
     <string name="portion_ai">AI</string>
     <string name="portion_factor_cd">Khẩu phần %1$s lần ước tính AI</string>
@@ -627,10 +614,8 @@
     <string name="portion_more">Nhiều hơn</string>
     <string name="photo_tip_reference">Mẹo: đặt thìa hoặc đôi đũa cạnh đĩa để AI có vật so sánh kích thước.</string>
     <string name="notif_low_title">Sắp hết %1$s</string>
-    <string name="notif_low_body">Còn %1$d viên (khoảng %2$d ngày). Nhớ mua thêm.</string>
     <string name="pills_left_field">Số viên đang có (tùy chọn)</string>
     <string name="pills_per_dose_field">Số viên mỗi liều</string>
-    <string name="supply_line">Còn %1$d viên · khoảng %2$d ngày</string>
     <string name="supply_low">Sắp hết — nên mua thêm</string>
     <string name="err_pills">Số viên không hợp lệ (0–9999, mỗi liều 1–20).</string>
     <string name="refill_hint">Nhập số viên để app đếm lùi khi bạn đánh dấu \"Đã uống\" và nhắc khi sắp hết.</string>
@@ -644,7 +629,66 @@
     <string name="up_next">Liều tiếp theo</string>
     <string name="up_next_overdue">Quá giờ · %1$s</string>
     <string name="up_next_at">Lúc %1$s</string>
-    <string name="doses_progress">%1$d/%2$d liều hôm nay</string>
     <string name="all_doses_done">Đã xong thuốc hôm nay</string>
     <string name="water_of_goal">/ %1$d ml</string>
+    <string name="notif_water_behind">Bạn đã uống %1$d/%2$d ml — chậm khoảng %3$d ml so với nhịp trong ngày.</string>
+    <string name="err_not_backup">Tệp này không phải bản xuất của ứng dụng.</string>
+    <string name="set_import">Khôi phục từ bản xuất (JSON)</string>
+    <string name="set_import_sub">Nhập lại dữ liệu từ tệp đã xuất — dùng khi đổi điện thoại</string>
+    <string name="import_title">Khôi phục dữ liệu?</string>
+    <string name="import_body">Dữ liệu trong tệp sẽ được thêm vào ứng dụng. Mục trùng mã sẽ được thay bằng bản trong tệp; dữ liệu khác của bạn được giữ nguyên.</string>
+    <string name="import_confirm">Khôi phục</string>
+    <string name="msg_import_failed">Không khôi phục được: %1$s</string>
+    <string name="err_file_too_large">Tệp quá lớn.</string>
+    <plurals name="detail_sleep">
+        <item quantity="other">Trung bình %1$s giờ/đêm (%2$d đêm gần nhất)</item>
+    </plurals>
+    <plurals name="detail_activity">
+        <item quantity="other">Trung bình %1$s bước/ngày (%2$d ngày)</item>
+    </plurals>
+    <plurals name="detail_medication">
+        <item quantity="other">%1$d/%2$d liều đã uống trong 7 ngày</item>
+    </plurals>
+    <plurals name="detail_habits">
+        <item quantity="other">Hoàn thành %1$d/%2$d lượt thói quen trong 7 ngày</item>
+    </plurals>
+    <plurals name="score_need_more">
+        <item quantity="other">Cần thêm %1$d chỉ số để tính điểm</item>
+    </plurals>
+    <plurals name="points_value">
+        <item quantity="other">%1$d điểm</item>
+    </plurals>
+    <plurals name="entries_count">
+        <item quantity="other">%1$d lần ghi</item>
+    </plurals>
+    <plurals name="doses_of_total">
+        <item quantity="other">%1$d / %2$d liều</item>
+    </plurals>
+    <plurals name="doses_unmarked_today">
+        <item quantity="other">\u0020· %1$d liều hôm nay chưa đánh dấu</item>
+    </plurals>
+    <plurals name="avg_over_days">
+        <item quantity="other">Trung bình %1$d ngày có ghi</item>
+    </plurals>
+    <plurals name="tracking_habits">
+        <item quantity="other">Đang theo dõi %1$d thói quen</item>
+    </plurals>
+    <plurals name="habits_of_total">
+        <item quantity="other">%1$d / %2$d thói quen</item>
+    </plurals>
+    <plurals name="chart_cd">
+        <item quantity="other">Biểu đồ %1$s, %2$d lần ghi, gần nhất %3$s</item>
+    </plurals>
+    <plurals name="notif_low_body">
+        <item quantity="other">Còn %1$d viên (khoảng %2$d ngày). Nhớ mua thêm.</item>
+    </plurals>
+    <plurals name="supply_line">
+        <item quantity="other">Còn %1$d viên · khoảng %2$d ngày</item>
+    </plurals>
+    <plurals name="doses_progress">
+        <item quantity="other">%1$d/%2$d liều hôm nay</item>
+    </plurals>
+    <plurals name="msg_imported">
+        <item quantity="other">Đã khôi phục %1$d mục.</item>
+    </plurals>
 </resources>

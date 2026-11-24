@@ -1,5 +1,7 @@
 package com.healthapp.data.reminder
 
+import kotlinx.coroutines.flow.first
+import com.healthapp.domain.usecase.WaterPace
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -31,6 +33,7 @@ class ReminderWorker(appContext: Context, params: WorkerParameters) : CoroutineW
     interface Deps {
         fun database(): HealthDatabase
         fun scheduler(): ReminderScheduler
+        fun waterRepository(): com.healthapp.domain.repository.WaterRepository
     }
 
     override suspend fun doWork(): Result {
@@ -48,7 +51,24 @@ class ReminderWorker(appContext: Context, params: WorkerParameters) : CoroutineW
             daysOfWeek = ReminderRepositoryImpl.decodeDays(entity.daysOfWeek),
             createdAt = entity.createdAt
         )
-        notify(applicationContext, reminder)
+        // Smart water reminders: skip when on pace for the daily goal, otherwise say how far behind.
+        var body: String? = null
+        if (reminder.reminderType == ReminderType.WATER) {
+            val water = deps.waterRepository()
+            val goal = runCatching { water.getDailyGoal(entity.accountId) }.getOrDefault(0)
+            val intake = runCatching {
+                water.observeWaterLogsForDate(entity.accountId, java.time.LocalDate.now().toString()).first().sumOf { it.amountMl }
+            }.getOrDefault(0)
+            val now = java.time.LocalTime.now()
+            if (!WaterPace.shouldRemind(intake, goal, now)) {
+                deps.scheduler().schedule(reminder, java.time.LocalDateTime.now().plusMinutes(1))
+                return Result.success()
+            }
+            WaterPace.behindBy(intake, goal, now)?.let { behind ->
+                body = com.healthapp.core.AppLocale.localized(applicationContext).getString(R.string.notif_water_behind, intake, goal, behind)
+            }
+        }
+        notify(applicationContext, reminder, body)
         // Queue the next occurrence (+1 minute guard so we never re-fire the same slot).
         deps.scheduler().schedule(reminder, java.time.LocalDateTime.now().plusMinutes(1))
         return Result.success()
@@ -80,7 +100,7 @@ class ReminderWorker(appContext: Context, params: WorkerParameters) : CoroutineW
             }
         )
 
-        fun notify(context: Context, reminder: Reminder) {
+        fun notify(context: Context, reminder: Reminder, body: String? = null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
             ) return
@@ -90,7 +110,7 @@ class ReminderWorker(appContext: Context, params: WorkerParameters) : CoroutineW
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(reminder.title)
-                .setContentText(bodyFor(context, reminder.reminderType))
+                .setContentText(body ?: bodyFor(context, reminder.reminderType))
                 .setContentIntent(pending)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)

@@ -1,6 +1,8 @@
 package com.healthapp.presentation.ui.text
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.annotation.StringRes
+import androidx.annotation.PluralsRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.platform.LocalConfiguration
@@ -24,12 +26,15 @@ import kotlin.math.abs
 sealed interface UiText {
     data class Res(@StringRes val id: Int, val args: List<Any> = emptyList()) : UiText
     data class Raw(val text: String) : UiText
+    /** A plural resource: [count] picks the form (e.g. "1 record" / "2 records"). */
+    data class Plural(@PluralsRes val id: Int, val count: Int, val args: List<Any> = emptyList()) : UiText
 }
 
 @Composable
 fun UiText.resolve(): String = when (this) {
     is UiText.Res -> stringResource(id, *args.toTypedArray())
     is UiText.Raw -> text
+    is UiText.Plural -> pluralStringResource(id, count, *args.toTypedArray())
 }
 
 /** The app's current language (follows the in-app choice), for date formatting. */
@@ -91,12 +96,12 @@ fun BpCategory.title() = stringResource(
 
 @Composable
 fun ScoreDetail.text(): String = when (this) {
-    is ScoreDetail.Sleep -> stringResource(R.string.detail_sleep, oneDecimal(avgHours), nights)
-    is ScoreDetail.Activity -> stringResource(R.string.detail_activity, grouped(avgSteps), days)
+    is ScoreDetail.Sleep -> pluralStringResource(R.plurals.detail_sleep, nights, oneDecimal(avgHours), nights)
+    is ScoreDetail.Activity -> pluralStringResource(R.plurals.detail_activity, days, grouped(avgSteps), days)
     is ScoreDetail.BloodPressure -> stringResource(R.string.detail_bp, systolic, diastolic, category.title())
     is ScoreDetail.Bmi -> stringResource(R.string.detail_bmi, oneDecimal(bmi), category.title())
-    is ScoreDetail.Medication -> stringResource(R.string.detail_medication, taken, due)
-    is ScoreDetail.Habits -> stringResource(R.string.detail_habits, done, possible)
+    is ScoreDetail.Medication -> pluralStringResource(R.plurals.detail_medication, due, taken, due)
+    is ScoreDetail.Habits -> pluralStringResource(R.plurals.detail_habits, possible, done, possible)
 }
 
 @Composable

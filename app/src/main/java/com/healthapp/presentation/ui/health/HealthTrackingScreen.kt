@@ -1,5 +1,6 @@
 package com.healthapp.presentation.ui.health
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -241,7 +242,7 @@ private fun TrendChart(metric: TrendMetric, points: List<TrendPoint>) {
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(metric.label), style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink, modifier = Modifier.weight(1f))
-                Pill(stringResource(R.string.entries_count, points.size), accent)
+                Pill(pluralStringResource(R.plurals.entries_count, points.size, points.size), accent)
             }
             if (points.isEmpty()) {
                 Box(Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) {
@@ -263,7 +264,7 @@ private fun TrendChart(metric: TrendMetric, points: List<TrendPoint>) {
                 // The line draws from left to right when the data or period changes.
                 val reveal = remember(points) { Animatable(0f) }
                 LaunchedEffect(points) { reveal.animateTo(1f, tween(700, easing = FastOutSlowInEasing)) }
-                val chartLabel = stringResource(R.string.chart_cd, stringResource(metric.label), points.size, oneDecimal(points.last().value.toDouble()))
+                val chartLabel = pluralStringResource(R.plurals.chart_cd, points.size, stringResource(metric.label), points.size, oneDecimal(points.last().value.toDouble()))
                 Canvas(
                     Modifier.fillMaxWidth().height(150.dp).padding(top = 8.dp, bottom = 8.dp)
                         .semantics { contentDescription = chartLabel }
