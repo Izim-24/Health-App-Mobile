@@ -18,6 +18,11 @@ import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.WaterDrop
+import androidx.compose.material.icons.rounded.PictureAsPdf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
+import android.content.Intent
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -40,6 +45,19 @@ import com.healthapp.presentation.viewmodel.ReportsViewModel
 @Composable
 fun ReportsScreen(navController: NavController, viewModel: ReportsViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    LaunchedEffect(state.pdfFile) {
+        val file = state.pdfFile ?: return@LaunchedEffect
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, file.name)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(send, context.getString(R.string.pdf_chooser)))
+        viewModel.pdfConsumed()
+    }
     Scaffold(
         containerColor = HealthPalette.Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -91,6 +109,17 @@ fun ReportsScreen(navController: NavController, viewModel: ReportsViewModel = hi
                         if (state.activeHabits == 0) stringResource(R.string.no_habits_created) else pluralStringResource(R.plurals.tracking_habits, state.activeHabits, state.activeHabits)) {
                         if (state.activeHabits > 0) ReportItem(stringResource(R.string.completions), "${state.completedHabits}")
                     }
+                    OutlinedButton(
+                        onClick = viewModel::exportPdf, enabled = state.report != null && !state.exporting,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                    ) {
+                        if (state.exporting) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        else Icon(Icons.Rounded.PictureAsPdf, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.report_export_pdf))
+                    }
+                    Text(stringResource(R.string.pdf_note), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                    state.exportError?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 }
             }
             Spacer(Modifier.height(28.dp))

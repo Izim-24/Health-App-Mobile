@@ -46,7 +46,7 @@ Rules:
 
 Kotlin · Jetpack Compose + Material 3 · Hilt · Room (schemas exported to `app/schemas/`) · DataStore
 (account id; app settings: onboarding done, theme) · Compose Navigation · WorkManager (reminders; medication
-fallback) · AlarmManager exact alarms (medication doses, re-armed by `MedicationBootReceiver`) · Retrofit/OkHttp/Gson ·
+fallback; Health Connect background sync every 6 h) · AlarmManager exact alarms (medication doses, re-armed by `MedicationBootReceiver`) · Retrofit/OkHttp/Gson ·
 Coil · Health Connect client · system camera via `ActivityResultContracts.TakePicture` (not CameraX) ·
 charts drawn with Compose `Canvas` (no chart library).
 

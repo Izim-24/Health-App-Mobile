@@ -52,6 +52,8 @@ class HealthConnectManager @Inject constructor(
             HeartRateRecord::class, WeightRecord::class, BloodPressureRecord::class, BloodGlucoseRecord::class
         )
         val PERMISSIONS: Set<String> = READ_TYPES.map { HealthPermission.getReadPermission(it) }.toSet()
+        /** Lets the periodic worker read while the app is closed (Health Connect in Android 14+ with SDK extension 13). */
+        const val BACKGROUND_PERMISSION = "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"
         private const val PREFS = "health_connect"
         private const val KEY_ENABLED = "enabled"
         private const val KEY_LAST_SYNC = "last_sync"
@@ -63,7 +65,12 @@ class HealthConnectManager @Inject constructor(
     private val mutex = Mutex()
     private val mutable = MutableStateFlow(HcState())
     override val state: StateFlow<HcState> = mutable.asStateFlow()
-    override val permissions: Set<String> get() = PERMISSIONS
+    override val permissions: Set<String> get() = if (backgroundSupported()) PERMISSIONS + BACKGROUND_PERMISSION else PERMISSIONS
+
+    /** Background reads exist only in the platform Health Connect from SDK extension 13 (Android 14 QPR / 15+). */
+    private fun backgroundSupported(): Boolean =
+        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            android.os.ext.SdkExtensions.getExtensionVersion(android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) >= 13
 
     private val client: HealthConnectClient? get() =
         if (availability() == HcAvailability.AVAILABLE) HealthConnectClient.getOrCreate(context) else null
@@ -77,15 +84,20 @@ class HealthConnectManager @Inject constructor(
 
     /** Re-reads availability, granted permissions and stored sync info. */
     override suspend fun refresh() {
-        val granted = runCatching { client?.permissionController?.getGrantedPermissions()?.intersect(PERMISSIONS) }.getOrNull().orEmpty()
+        val all = runCatching { client?.permissionController?.getGrantedPermissions() }.getOrNull().orEmpty()
+        val supported = backgroundSupported()
         mutable.update {
             it.copy(
                 availability = availability(),
                 enabled = prefs.getBoolean(KEY_ENABLED, false),
-                granted = granted,
+                granted = all.intersect(PERMISSIONS),
+                backgroundSupported = supported,
+                backgroundGranted = supported && BACKGROUND_PERMISSION in all,
                 lastSync = prefs.getString(KEY_LAST_SYNC, null)?.let { s -> runCatching { LocalDateTime.parse(s) }.getOrNull() }
             )
         }
+        // Keep the periodic import in step with the permissions (they can change in Health Connect at any time).
+        runCatching { HealthConnectSyncWorker.update(context, state.value.backgroundSync) }
     }
 
     /** Called with the permissions the user granted in the system dialog. */

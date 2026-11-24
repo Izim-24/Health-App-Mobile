@@ -35,13 +35,20 @@ data class ReportsUiState(
     val avgWaterMl: Int = 0,
     val completedHabits: Int = 0,
     val activeHabits: Int = 0,
-    val error: UiText? = null
+    val error: UiText? = null,
+    /** The period's numbers, kept for the PDF export. */
+    val report: com.healthapp.domain.model.PeriodReport? = null,
+    val exporting: Boolean = false,
+    val exportError: UiText? = null,
+    /** A finished PDF waiting to be shared (consumed by the screen). */
+    val pdfFile: java.io.File? = null
 )
 
 @HiltViewModel
 class ReportsViewModel @Inject constructor(
     private val accountManager: AccountSession,
-    private val reports: ReportRepository
+    private val reports: ReportRepository,
+    private val exporter: com.healthapp.domain.repository.ReportExportRepository
 ) : ViewModel() {
     private val mutable = MutableStateFlow(ReportsUiState())
     val state = mutable.asStateFlow()
@@ -67,10 +74,24 @@ class ReportsViewModel @Inject constructor(
                     activityDays = r.activityDays, avgSteps = r.avgSteps,
                     totalExerciseMinutes = r.totalExerciseMinutes, totalCaloriesBurned = r.totalCaloriesBurned,
                     waterDays = r.waterDays, avgWaterMl = r.avgWaterMl,
-                    completedHabits = r.completedHabits, activeHabits = r.activeHabits
+                    completedHabits = r.completedHabits, activeHabits = r.activeHabits, report = r
                 )
             }.onSuccess { if (mutable.value.period == period) mutable.value = it }
                 .onFailure { mutable.value = mutable.value.copy(loading = false, error = it.message?.let(UiText::Raw) ?: UiText.Res(R.string.err_load_report)) }
         }
     }
+
+    /** Writes the shown period to a PDF; the screen opens the share sheet when [ReportsUiState.pdfFile] is set. */
+    fun exportPdf() {
+        val report = mutable.value.report ?: return
+        if (mutable.value.exporting) return
+        mutable.value = mutable.value.copy(exporting = true, exportError = null)
+        viewModelScope.launch {
+            exporter.exportPdf(report)
+                .onSuccess { file -> mutable.value = mutable.value.copy(exporting = false, pdfFile = file) }
+                .onFailure { e -> mutable.value = mutable.value.copy(exporting = false, exportError = UiText.Res(R.string.msg_pdf_failed, listOf(e.message.orEmpty()))) }
+        }
+    }
+
+    fun pdfConsumed() { mutable.value = mutable.value.copy(pdfFile = null) }
 }

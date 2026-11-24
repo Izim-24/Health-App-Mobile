@@ -691,4 +691,13 @@
     <plurals name="msg_imported">
         <item quantity="other">Đã khôi phục %1$d mục.</item>
     </plurals>
+    <string name="hc_background">Đồng bộ nền</string>
+    <string name="hc_background_sub">Nhập dữ liệu mới khoảng 6 giờ/lần kể cả khi không mở ứng dụng</string>
+    <string name="hc_sync_note_background">Tự đồng bộ khi mở ứng dụng và khoảng 6 giờ/lần khi ứng dụng đóng (khi pin không yếu). Lần đầu lấy 30 ngày gần nhất. Số bước nhập từ Health Connect được cộng cùng số bước bạn tự nhập trong ngày.</string>
+    <string name="report_export_pdf">Xuất báo cáo PDF</string>
+    <string name="pdf_note">Tệp PDF chỉ chứa các số liệu trên, để in hoặc gửi cho bác sĩ. Hãy chia sẻ cẩn thận vì đây là dữ liệu sức khỏe.</string>
+    <string name="pdf_chooser">Lưu hoặc chia sẻ báo cáo</string>
+    <string name="pdf_generated">Tạo lúc %1$s bằng Health App</string>
+    <string name="pdf_disclaimer">Số liệu do người dùng tự ghi hoặc nhập từ Health Connect, chỉ tính những ngày có nhật ký. Đây là bản tổng hợp để tham khảo, không phải chẩn đoán y khoa.</string>
+    <string name="msg_pdf_failed">Không tạo được PDF: %1$s</string>
 </resources>

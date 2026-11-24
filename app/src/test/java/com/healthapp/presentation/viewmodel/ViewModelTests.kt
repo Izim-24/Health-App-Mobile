@@ -56,6 +56,15 @@ private class FakeReports : ReportRepository {
     }
 }
 
+private class FakeExporter(val fail: Boolean = false) : com.healthapp.domain.repository.ReportExportRepository {
+    val exported = mutableListOf<PeriodReport>()
+    override suspend fun exportPdf(report: PeriodReport): Result<java.io.File> = runCatching {
+        check(!fail) { "disk full" }
+        exported += report
+        java.io.File("report.pdf")
+    }
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class ViewModelTests {
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -138,7 +147,7 @@ class ViewModelTests {
 
     @Test fun reports_weekStartsOnMonday_andMapsRepositoryValues() {
         val repo = FakeReports()
-        val vm = ReportsViewModel(FakeSession(), repo)
+        val vm = ReportsViewModel(FakeSession(), repo, FakeExporter())
         vm.select(ReportPeriod.WEEK)
         val (start, end) = repo.lastRange!!
         assertEquals(java.time.DayOfWeek.MONDAY, start.dayOfWeek)
@@ -152,7 +161,37 @@ class ViewModelTests {
 
     @Test fun reports_monthStartsOnFirstDay() {
         val repo = FakeReports()
-        ReportsViewModel(FakeSession(), repo).select(ReportPeriod.MONTH)
+        ReportsViewModel(FakeSession(), repo, FakeExporter()).select(ReportPeriod.MONTH)
         assertEquals(1, repo.lastRange!!.first.dayOfMonth)
+    }
+
+    @Test fun reports_exportPdf_usesShownPeriod_andIsConsumedOnce() {
+        val exporter = FakeExporter()
+        val vm = ReportsViewModel(FakeSession(), FakeReports(), exporter)
+        vm.select(ReportPeriod.WEEK)
+        vm.exportPdf()
+        assertEquals(1, exporter.exported.size)
+        assertEquals(java.time.DayOfWeek.MONDAY, exporter.exported.single().start.dayOfWeek)
+        assertNotNull(vm.state.value.pdfFile)
+        assertFalse(vm.state.value.exporting)
+        vm.pdfConsumed()
+        assertNull(vm.state.value.pdfFile)
+    }
+
+    @Test fun reports_exportFailure_keepsReportVisible() {
+        val vm = ReportsViewModel(FakeSession(), FakeReports(), FakeExporter(fail = true))
+        vm.exportPdf()
+        val s = vm.state.value
+        assertNotNull(s.exportError)
+        assertNull(s.error)          // the report cards stay on screen
+        assertEquals(1850, s.avgCalories)
+        assertNull(s.pdfFile)
+    }
+
+    @Test fun healthConnect_backgroundSyncNeedsConnectionAndPermission() {
+        val base = com.healthapp.domain.model.HcState(enabled = true, granted = setOf("read_steps"))
+        assertFalse(base.backgroundSync)
+        assertTrue(base.copy(backgroundSupported = true, backgroundGranted = true).backgroundSync)
+        assertFalse(base.copy(enabled = false, backgroundGranted = true).backgroundSync)
     }
 }

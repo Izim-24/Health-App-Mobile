@@ -113,10 +113,23 @@ fun HealthConnectScreen(navController: NavController, viewModel: HealthConnectVi
                                     Text(stringResource(label), color = if (ok) HealthPalette.Ink else HealthPalette.Muted)
                                 }
                             }
+                            if (state.backgroundSupported) {
+                                val ok = state.backgroundGranted
+                                HorizontalDivider(color = HealthPalette.Line)
+                                Row(Modifier.semantics(mergeDescendants = true) { stateDescription = if (ok) grantedText else notGrantedText },
+                                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Icon(if (ok) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, null, tint = if (ok) HealthPalette.Sky.strong else HealthPalette.Subtle, modifier = Modifier.size(20.dp))
+                                    Column {
+                                        Text(stringResource(R.string.hc_background), color = if (ok) HealthPalette.Ink else HealthPalette.Muted)
+                                        Text(stringResource(R.string.hc_background_sub), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                                    }
+                                }
+                            }
                         }
                     }
 
-                    if (!state.connected || state.granted.size < viewModel.permissions.size) {
+                    val missing = state.granted.size < dataTypes.size || (state.backgroundSupported && !state.backgroundGranted)
+                    if (!state.connected || missing) {
                         PrimaryButton(stringResource(if (state.connected) R.string.hc_grant_more else R.string.hc_connect), { launcher.launch(viewModel.permissions) }, color = HealthPalette.Sky.strong)
                     }
                     if (state.connected) {
@@ -128,7 +141,7 @@ fun HealthConnectScreen(navController: NavController, viewModel: HealthConnectVi
                         }
                     }
                     Text(
-                        stringResource(R.string.hc_sync_note),
+                        stringResource(if (state.backgroundSync) R.string.hc_sync_note_background else R.string.hc_sync_note),
                         style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted
                     )
                 }

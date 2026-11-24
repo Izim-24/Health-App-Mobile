@@ -60,9 +60,14 @@ data class HcState(
     val syncing: Boolean = false,
     val lastSync: LocalDateTime? = null,
     val lastSummary: HcSyncSummary? = null,
-    val error: String? = null
+    val error: String? = null,
+    /** The device's Health Connect can read while the app is closed. */
+    val backgroundSupported: Boolean = false,
+    val backgroundGranted: Boolean = false
 ) {
     val connected get() = enabled && granted.isNotEmpty()
+    /** Data is imported every few hours even when the app isn't opened. */
+    val backgroundSync get() = connected && backgroundGranted
 }
 
 // ---- App preferences ----

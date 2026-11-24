@@ -34,6 +34,11 @@ interface ReportRepository {
     suspend fun periodReport(accountId: String, start: LocalDate, end: LocalDate): PeriodReport
 }
 
+interface ReportExportRepository {
+    /** Lays [report] out as a one-page PDF in the app cache (shared via FileProvider) and returns the file. */
+    suspend fun exportPdf(report: PeriodReport): Result<File>
+}
+
 interface MedicationRepository {
     suspend fun observeMedications(): Flow<List<Medication>>
     suspend fun observeLogs(from: LocalDate, to: LocalDate): Flow<List<DoseLog>>

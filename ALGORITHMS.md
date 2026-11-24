@@ -148,7 +148,7 @@ và *sau thời điểm hiện tại*. Sau mỗi lần thông báo, lịch tiế
 - **Bước chân:** dùng tổng theo ngày của Health Connect; ngày nào tổng rỗng thì cộng dữ liệu thô làm dự phòng.
 - **Nhịp tim:** đồng hồ ghi mẫu mỗi vài giây → giữ **một giá trị trung bình mỗi giờ**.
 - **Giấc ngủ:** gán theo **ngày thức dậy** (khớp nhập tay); phiên > 24 giờ bị bỏ.
-- **Cửa sổ đồng bộ:** lần đầu lấy 30 ngày; các lần sau đọc lại **2 ngày chồng lấn** để bắt dữ liệu đến muộn; tự đồng bộ tối đa 15 phút/lần.
+- **Cửa sổ đồng bộ:** lần đầu lấy 30 ngày; các lần sau đọc lại **2 ngày chồng lấn** để bắt dữ liệu đến muộn; tự đồng bộ tối đa 15 phút/lần khi mở ứng dụng; nếu được quyền đọc trong nền thì `HealthConnectSyncWorker` (WorkManager, định kỳ 6 giờ, điều kiện pin không yếu) gọi cùng hàm đó khi ứng dụng đóng. Mỗi lần làm mới quyền, worker được đặt lịch hoặc hủy theo `HcState.backgroundSync`.
 
 ---
 

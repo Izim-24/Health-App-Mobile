@@ -707,4 +707,13 @@
         <item quantity="one">Restored %1$d record.</item>
         <item quantity="other">Restored %1$d records.</item>
     </plurals>
+    <string name="hc_background">Background sync</string>
+    <string name="hc_background_sub">Imports new data about every 6 hours, even when the app is closed</string>
+    <string name="hc_sync_note_background">Syncs when you open the app and about every 6 hours while it\'s closed (when the battery isn\'t low). The first sync fetches the last 30 days. Imported steps are added to the steps you enter yourself.</string>
+    <string name="report_export_pdf">Export PDF report</string>
+    <string name="pdf_note">The PDF contains only the figures above, to print or send to a doctor. Share it carefully: it is health data.</string>
+    <string name="pdf_chooser">Save or share the report</string>
+    <string name="pdf_generated">Generated %1$s by Health App</string>
+    <string name="pdf_disclaimer">Figures were logged by the user or imported from Health Connect; only days with entries are counted. This summary is for reference and is not a medical diagnosis.</string>
+    <string name="msg_pdf_failed">Couldn\'t create the PDF: %1$s</string>
 </resources>
