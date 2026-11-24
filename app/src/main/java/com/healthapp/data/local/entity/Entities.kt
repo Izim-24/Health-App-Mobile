@@ -200,7 +200,9 @@ data class MedicationEntity(
     val startDate: String, // YYYY-MM-DD
     val endDate: String?, // YYYY-MM-DD inclusive
     val isActive: Boolean = true,
-    val createdAt: LocalDateTime
+    val createdAt: LocalDateTime,
+    val pillsLeft: Int? = null, // v6: null = supply not tracked
+    @androidx.room.ColumnInfo(defaultValue = "1") val pillsPerDose: Int = 1 // v6
 )
 
 @Entity(

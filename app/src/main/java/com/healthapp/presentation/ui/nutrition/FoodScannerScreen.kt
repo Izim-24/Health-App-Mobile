@@ -1,5 +1,13 @@
 package com.healthapp.presentation.ui.nutrition
 
+import kotlin.math.abs
+import com.healthapp.domain.usecase.FoodScan
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
+import com.healthapp.presentation.ui.theme.Illustration
+import com.healthapp.presentation.ui.theme.IllustrationImage
 import com.healthapp.presentation.ui.text.*
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
@@ -87,7 +95,10 @@ fun FoodScannerScreen(navController: NavController, viewModel: AIFoodScannerView
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
             // Photo
             Box(
-                Modifier.fillMaxWidth().height(230.dp).clip(RoundedCornerShape(26.dp)).background(orange.soft),
+                Modifier.fillMaxWidth()
+                    // Fixed height for the photo; the empty state may grow (illustration + tips, large fonts).
+                    .then(if (state.imageUri != null) Modifier.height(230.dp) else Modifier.heightIn(min = 230.dp))
+                    .clip(RoundedCornerShape(26.dp)).background(orange.soft),
                 contentAlignment = Alignment.Center
             ) {
                 if (state.imageUri != null) {
@@ -102,9 +113,10 @@ fun FoodScannerScreen(navController: NavController, viewModel: AIFoodScannerView
                     }
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(24.dp)) {
-                        IconBadge(Icons.Rounded.PhotoCamera, orange, size = 64.dp)
+                        IllustrationImage(Illustration.SCAN, Modifier.height(120.dp).aspectRatio(1.25f))
                         Text(stringResource(R.string.take_or_pick), style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
                         Text(stringResource(R.string.photo_tips), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Text(stringResource(R.string.photo_tip_reference), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Orange.strong, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
             }
@@ -131,7 +143,7 @@ fun FoodScannerScreen(navController: NavController, viewModel: AIFoodScannerView
 
             if (state.hasResult) ResultSection(
                 items = state.items, notes = state.notes, isMock = state.isMock, mealType = state.mealType, saving = state.isSaving,
-                onGrams = viewModel::setGrams, onRemove = viewModel::removeItem, onMealType = viewModel::setMealType, onSave = viewModel::save
+                onGrams = viewModel::setGrams, onPortion = viewModel::setPortion, onScaleAll = viewModel::scaleAll, onRemove = viewModel::removeItem, onMealType = viewModel::setMealType, onSave = viewModel::save
             )
 
             if (!state.hasResult) {
@@ -147,7 +159,8 @@ fun FoodScannerScreen(navController: NavController, viewModel: AIFoodScannerView
 @Composable
 private fun ResultSection(
     items: List<ScannedFood>, notes: String?, isMock: Boolean, mealType: MealType, saving: Boolean,
-    onGrams: (Int, Int) -> Unit, onRemove: (Int) -> Unit, onMealType: (MealType) -> Unit, onSave: () -> Unit
+    onGrams: (Int, Int) -> Unit, onPortion: (Int, Double) -> Unit, onScaleAll: (Double) -> Unit,
+    onRemove: (Int) -> Unit, onMealType: (MealType) -> Unit, onSave: () -> Unit
 ) {
     val totals = com.healthapp.domain.usecase.FoodScan.totals(items)
     Spacer(Modifier.height(18.dp))
@@ -184,8 +197,12 @@ private fun ResultSection(
 
     SectionHeader(stringResource(R.string.check_each_item), modifier = Modifier.padding(top = 14.dp))
     Text(stringResource(R.string.check_each_sub), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, modifier = Modifier.padding(bottom = 10.dp))
+    WholeMealPortion(items, onScaleAll)
+    Spacer(Modifier.height(10.dp))
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        items.forEachIndexed { index, item -> ScannedFoodRow(item, onGrams = { onGrams(index, it) }, onRemove = { onRemove(index) }) }
+        items.forEachIndexed { index, item ->
+            ScannedFoodRow(item, onGrams = { onGrams(index, it) }, onPortion = { onPortion(index, it) }, onRemove = { onRemove(index) })
+        }
     }
 
     SectionHeader(stringResource(R.string.meal), modifier = Modifier.padding(top = 14.dp))
@@ -202,8 +219,10 @@ private fun ResultSection(
 }
 
 @Composable
-private fun ScannedFoodRow(item: ScannedFood, onGrams: (Int) -> Unit, onRemove: () -> Unit) {
+private fun ScannedFoodRow(item: ScannedFood, onGrams: (Int) -> Unit, onPortion: (Double) -> Unit, onRemove: () -> Unit) {
     var gramsText by remember(item.name) { mutableStateOf(item.grams.toString()) }
+    // Keep the text field in step when a portion chip changes the grams.
+    LaunchedEffect(item.grams) { if (gramsText.toIntOrNull() != item.grams) gramsText = item.grams.toString() }
     AppCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -229,6 +248,60 @@ private fun ScannedFoodRow(item: ScannedFood, onGrams: (Int) -> Unit, onRemove: 
                     Pill(stringResource(R.string.confidence_pct, (item.confidence * 100).toInt()), if (item.lowConfidence) HealthPalette.Amber else HealthPalette.Emerald)
                     Pill(stringResource(if (item.fromTable) R.string.kcal_from_table else R.string.kcal_from_ai), if (item.fromTable) HealthPalette.Indigo else HealthPalette.Orange)
                     if (item.energyMismatch) Pill(stringResource(R.string.kcal_mismatch), HealthPalette.Coral)
+                }
+            }
+            Text(stringResource(R.string.portion_quick), style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted)
+            PortionChips(item.portionFactor, onPortion)
+        }
+    }
+}
+
+private fun factorLabel(f: Double) = when (f) { 0.5 -> "½"; 0.75 -> "¾"; 1.25 -> "1¼"; 1.5 -> "1½"; else -> "1" }
+
+/** ½ · ¾ · AI · 1¼ · 1½ — one tap scales the item relative to the AI's estimate. */
+@Composable
+private fun PortionChips(current: Double, onPick: (Double) -> Unit) {
+    Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        FoodScan.PORTION_STEPS.forEach { f ->
+            val selected = abs(current - f) < 0.02
+            val cd = stringResource(R.string.portion_factor_cd, factorLabel(f))
+            Box(
+                Modifier.weight(1f).heightIn(min = 40.dp).clip(CircleShape)
+                    .background(if (selected) HealthPalette.Orange.strong else HealthPalette.Orange.soft)
+                    .selectable(selected, role = Role.RadioButton, onClick = { onPick(f) })
+                    .semantics { contentDescription = cd },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    if (f == 1.0) stringResource(R.string.portion_ai) else "×" + factorLabel(f),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (selected) Color.White else HealthPalette.Orange.strong
+                )
+            }
+        }
+    }
+}
+
+/** Scale the whole meal at once, with the measured reason for doing so. */
+@Composable
+private fun WholeMealPortion(items: List<ScannedFood>, onScaleAll: (Double) -> Unit) {
+    val common = items.map { it.portionFactor }.distinct().singleOrNull()
+    AppCard(Modifier.fillMaxWidth(), color = HealthPalette.Amber.soft) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.whole_meal), style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
+            Text(stringResource(R.string.whole_meal_sub), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Ink)
+            Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0.85 to R.string.portion_less, 1.0 to R.string.portion_as_photo, 1.15 to R.string.portion_more).forEach { (f, label) ->
+                    val selected = common != null && abs(common - f) < 0.02
+                    Box(
+                        Modifier.weight(1f).heightIn(min = 44.dp).clip(CircleShape)
+                            .background(if (selected) HealthPalette.Amber.strong else HealthPalette.Surface)
+                            .selectable(selected, role = Role.RadioButton, onClick = { onScaleAll(f) }),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(stringResource(label), style = MaterialTheme.typography.labelLarge,
+                            color = if (selected) Color.White else HealthPalette.Ink)
+                    }
                 }
             }
         }

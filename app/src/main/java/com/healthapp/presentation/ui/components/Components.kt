@@ -99,7 +99,7 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier, action: String? 
 
 /** Compact metric tile: icon badge, label, big value, small detail. */
 @Composable
-fun StatTile(icon: ImageVector, label: String, value: String, detail: String?, accent: Accent, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+fun StatTile(icon: ImageVector, label: String, value: String, detail: String?, accent: Accent, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, progress: Float? = null) {
     AppCard(modifier, onClick = onClick) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             IconBadge(icon, accent, size = 36.dp)
@@ -107,6 +107,7 @@ fun StatTile(icon: ImageVector, label: String, value: String, detail: String?, a
             Text(label, style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(value, style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            progress?.let { Spacer(Modifier.height(4.dp)); AccentProgress(it, accent, height = 6.dp) }
         }
     }
 }
@@ -163,5 +164,53 @@ fun BackTopBar(title: String, onBack: () -> Unit) {
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = HealthPalette.Background, titleContentColor = HealthPalette.Ink),
         windowInsets = WindowInsets(0, 0, 0, 0)
+    )
+}
+
+/** Friendly empty state: an illustration, a short title, one line of guidance and an optional action. */
+@Composable
+fun EmptyState(
+    illustration: com.healthapp.presentation.ui.theme.Illustration,
+    title: String,
+    message: String,
+    modifier: Modifier = Modifier,
+    card: Boolean = true,
+    action: (@Composable () -> Unit)? = null
+) {
+    val content: @Composable () -> Unit = {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            com.healthapp.presentation.ui.theme.IllustrationImage(illustration, Modifier.height(132.dp).aspectRatio(1.25f))
+            Text(title, style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text(message, style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            action?.let { Spacer(Modifier.height(8.dp)); it() }
+        }
+    }
+    if (card) AppCard(modifier.fillMaxWidth()) { content() } else Box(modifier.fillMaxWidth()) { content() }
+}
+
+/** Asks before deleting something the user can't get back. The delete button is styled as destructive. */
+@Composable
+fun ConfirmDeleteDialog(title: String, message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(message) },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = { onConfirm(); onDismiss() },
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) { Text(androidx.compose.ui.res.stringResource(com.healthapp.R.string.action_delete)) }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(androidx.compose.ui.res.stringResource(com.healthapp.R.string.action_cancel))
+            }
+        }
     )
 }

@@ -1,5 +1,7 @@
 package com.healthapp.presentation.ui.mental
 
+import com.healthapp.presentation.ui.theme.Illustration
+import com.healthapp.presentation.ui.theme.IllustrationImage
 import com.healthapp.presentation.ui.text.*
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
@@ -184,7 +186,7 @@ fun MentalHealthScreen(viewModel: MentalHealthViewModel = hiltViewModel()) {
 
         SectionHeader(stringResource(R.string.recent_journal), modifier = Modifier.padding(top = 18.dp))
         if (entries.isEmpty()) {
-            Text(stringResource(R.string.no_checkins), color = HealthPalette.Muted)
+            EmptyState(Illustration.JOURNAL, stringResource(R.string.journal_empty_title), stringResource(R.string.no_checkins))
         } else {
             entries.sortedByDescending { it.date }.take(7).forEach { entry ->
                 val option = moodOptions.firstOrNull { it.label == entry.mood }

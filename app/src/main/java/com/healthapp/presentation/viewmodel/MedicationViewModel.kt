@@ -40,7 +40,9 @@ data class MedicationDraft(
     val instructions: String = "",
     val times: String = "08:00",
     val days: Set<DayOfWeek> = DayOfWeek.entries.toSet(),
-    val durationDays: String = ""
+    val durationDays: String = "",
+    val pillsLeft: String = "",
+    val pillsPerDose: String = "1"
 )
 
 @HiltViewModel
@@ -82,7 +84,9 @@ class MedicationViewModel @Inject constructor(
         instructions = med.instructions.orEmpty(),
         times = med.times.joinToString(", ") { MedicationSchedule.formatTime(it) },
         days = med.daysOfWeek?.toSet() ?: DayOfWeek.entries.toSet(),
-        durationDays = med.endDate?.let { (java.time.temporal.ChronoUnit.DAYS.between(med.startDate, it) + 1).toString() }.orEmpty()
+        durationDays = med.endDate?.let { (java.time.temporal.ChronoUnit.DAYS.between(med.startDate, it) + 1).toString() }.orEmpty(),
+        pillsLeft = med.pillsLeft?.toString().orEmpty(),
+        pillsPerDose = med.pillsPerDose.toString()
     )
 
     /** Returns an error message, or null when saved. */
@@ -94,6 +98,8 @@ class MedicationViewModel @Inject constructor(
         if (draft.days.isEmpty()) return UiText.Res(R.string.err_med_days)
         val duration = draft.durationDays.trim().takeIf { it.isNotEmpty() }?.let { it.toIntOrNull() ?: return UiText.Res(R.string.err_med_duration) }
         if (duration != null && duration !in 1..3650) return UiText.Res(R.string.err_med_duration_range)
+        val pillsLeft = draft.pillsLeft.trim().takeIf { it.isNotEmpty() }?.let { it.toIntOrNull()?.takeIf { n -> n in 0..9999 } ?: return UiText.Res(R.string.err_pills) }
+        val pillsPerDose = draft.pillsPerDose.trim().ifEmpty { "1" }.toIntOrNull()?.takeIf { it in 1..20 } ?: return UiText.Res(R.string.err_pills)
 
         val existing = state.value.medications.firstOrNull { it.id == draft.id }
         val start = existing?.startDate ?: LocalDate.now()
@@ -107,7 +113,9 @@ class MedicationViewModel @Inject constructor(
             startDate = start,
             endDate = duration?.let { start.plusDays(it - 1L) },
             isActive = existing?.isActive ?: true,
-            createdAt = existing?.createdAt ?: LocalDateTime.now()
+            createdAt = existing?.createdAt ?: LocalDateTime.now(),
+            pillsLeft = pillsLeft,
+            pillsPerDose = pillsPerDose
         )
         viewModelScope.launch {
             repository.save(med).onFailure { e -> mutable.update { it.copy(error = e.message?.let(UiText::Raw) ?: UiText.Res(R.string.err_med_save)) } }

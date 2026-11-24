@@ -28,7 +28,7 @@ import com.healthapp.data.local.entity.*
         MedicationLogEntity::class,
         MoodEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -127,6 +127,14 @@ abstract class HealthDatabase : RoomDatabase() {
             }
         }
 
-        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+        /** v6: medication supply (refill tracking). Existing medications keep "not tracked". */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE medications ADD COLUMN pillsLeft INTEGER")
+                database.execSQL("ALTER TABLE medications ADD COLUMN pillsPerDose INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
+        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
     }
 }

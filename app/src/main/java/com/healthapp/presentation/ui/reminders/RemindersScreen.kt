@@ -1,5 +1,13 @@
 package com.healthapp.presentation.ui.reminders
 
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import com.healthapp.presentation.ui.theme.Illustration
+import com.healthapp.presentation.ui.theme.IllustrationImage
 import com.healthapp.presentation.ui.text.*
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
@@ -59,12 +67,21 @@ fun RemindersScreen(navController: NavController, viewModel: RemindersViewModel 
     val context = LocalContext.current
     var editing by remember { mutableStateOf<Reminder?>(null) }
     var showEditor by remember { mutableStateOf(false) }
+    var reminderToDelete by remember { mutableStateOf<Reminder?>(null) }
+    reminderToDelete?.let { r ->
+        ConfirmDeleteDialog(
+            stringResource(R.string.delete_named_q, r.title), stringResource(R.string.confirm_delete_reminder_body),
+            onConfirm = { viewModel.delete(r.id) }, onDismiss = { reminderToDelete = null }
+        )
+    }
 
     fun hasPermission() = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     var permissionGranted by remember { mutableStateOf(hasPermission()) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { permissionGranted = it }
 
+    val listState = rememberLazyListState()
+    val fabExpanded by remember { derivedStateOf { !listState.canScrollBackward } }
     Scaffold(
         containerColor = HealthPalette.Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -82,13 +99,15 @@ fun RemindersScreen(navController: NavController, viewModel: RemindersViewModel 
                 containerColor = HealthPalette.Amber.strong,
                 contentColor = androidx.compose.ui.graphics.Color.White,
                 shape = androidx.compose.foundation.shape.CircleShape,
-                icon = { Icon(Icons.Default.Add, null) },
-                text = { Text(stringResource(R.string.add_reminder)) }
+                icon = { Icon(Icons.Default.Add, if (fabExpanded) null else stringResource(R.string.add_reminder)) },
+                text = { Text(stringResource(R.string.add_reminder)) },
+                expanded = fabExpanded
             )
         }
     ) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+            state = listState,
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 96.dp)
         ) {
@@ -117,20 +136,14 @@ fun RemindersScreen(navController: NavController, viewModel: RemindersViewModel 
                 item { Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
             } else if (state.reminders.isEmpty()) {
                 item {
-                    AppCard(Modifier.fillMaxWidth()) {
-                        Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            IconBadge(Icons.Default.NotificationsActive, HealthPalette.Amber, size = 64.dp)
-                            Text(stringResource(R.string.no_reminders), fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
-                            Text(stringResource(R.string.no_reminders_sub), color = HealthPalette.Muted, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
+                    EmptyState(Illustration.REMINDERS, stringResource(R.string.no_reminders), stringResource(R.string.no_reminders_sub))
                 }
             } else {
                 items(state.reminders, key = { it.id }) { reminder ->
                     ReminderRow(reminder,
                         onToggle = { viewModel.toggle(reminder, it) },
                         onEdit = { editing = reminder; showEditor = true },
-                        onDelete = { viewModel.delete(reminder.id) })
+                        onDelete = { reminderToDelete = reminder })
                 }
             }
         }

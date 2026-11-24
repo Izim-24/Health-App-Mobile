@@ -4,6 +4,7 @@ import com.healthapp.data.local.dao.MedicationDao
 import com.healthapp.data.local.entity.MedicationEntity
 import com.healthapp.data.local.entity.MedicationLogEntity
 import com.healthapp.data.reminder.MedicationScheduler
+import com.healthapp.data.reminder.notifyLowSupply
 import com.healthapp.domain.model.DoseLog
 import com.healthapp.domain.model.DoseStatus
 import com.healthapp.domain.model.Medication
@@ -20,6 +21,7 @@ import javax.inject.Singleton
 
 @Singleton
 class MedicationRepositoryImpl @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val dao: MedicationDao,
     private val accountManager: AccountManager,
     private val scheduler: MedicationScheduler
@@ -52,6 +54,8 @@ class MedicationRepositoryImpl @Inject constructor(
     /** Records TAKEN/SKIPPED for a dose slot; null clears the log (undo). */
     override suspend fun logDose(medicationId: String, date: LocalDate, time: LocalTime, status: DoseStatus?): Result<Unit> = runCatching {
         val t = MedicationSchedule.formatTime(time)
+        val wasTaken = dao.getLog(medicationId, date.toString(), t)?.status == DoseStatus.TAKEN.name
+        adjustSupply(medicationId, wasTaken, nowTaken = status == DoseStatus.TAKEN)
         if (status == null) {
             dao.deleteLog(medicationId, date.toString(), t)
         } else {
@@ -65,6 +69,19 @@ class MedicationRepositoryImpl @Inject constructor(
                     recordedAt = LocalDateTime.now()
                 )
             )
+        }
+    }
+
+    /** Updates pills on hand for a dose change; posts one "running low" notification when supply crosses the limit. */
+    private suspend fun adjustSupply(medicationId: String, wasTaken: Boolean, nowTaken: Boolean) {
+        val med = dao.getMedication(medicationId)?.toDomain() ?: return
+        val newPills = MedicationSchedule.pillsAfter(med, wasTaken, nowTaken) ?: return
+        if (newPills == med.pillsLeft) return
+        dao.setPillsLeft(medicationId, newPills)
+        val before = MedicationSchedule.supply(med)
+        val after = MedicationSchedule.supply(med.copy(pillsLeft = newPills))
+        if (after != null && after.low && before?.low != true) {
+            com.healthapp.data.reminder.MedicationWorker.notifyLowSupply(context, med, after.pillsLeft, after.daysLeft)
         }
     }
 
@@ -84,7 +101,9 @@ class MedicationRepositoryImpl @Inject constructor(
                 startDate = LocalDate.parse(startDate),
                 endDate = endDate?.let { LocalDate.parse(it) },
                 isActive = isActive,
-                createdAt = createdAt
+                createdAt = createdAt,
+                pillsLeft = pillsLeft,
+                pillsPerDose = pillsPerDose
             )
         }.getOrNull()
 
@@ -99,7 +118,9 @@ class MedicationRepositoryImpl @Inject constructor(
             startDate = startDate.toString(),
             endDate = endDate?.toString(),
             isActive = isActive,
-            createdAt = createdAt
+            createdAt = createdAt,
+            pillsLeft = pillsLeft,
+            pillsPerDose = pillsPerDose.coerceAtLeast(1)
         )
 
         fun MedicationLogEntity.toDomain(): DoseLog? = runCatching {

@@ -56,11 +56,22 @@ class DatabaseInstrumentedTest {
         db.query("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_analyses'").use { c -> assertFalse(c.moveToFirst()) }
     }
 
+    @Test fun migrate5To6_addsSupplyColumns_existingMedsNotTracked() {
+        helper.createDatabase(dbName, 5).apply {
+            execSQL("INSERT INTO medications (id, accountId, name, dosage, instructions, times, daysOfWeek, startDate, endDate, isActive, createdAt) VALUES ('d1','acc','Vitamin D3','1000 IU',NULL,'08:00',NULL,'2026-11-01',NULL,1,'2026-11-01T08:00')")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(dbName, 6, true, HealthDatabase.MIGRATION_5_6)
+        db.query("SELECT pillsLeft, pillsPerDose FROM medications WHERE id = 'd1'").use { c ->
+            assertTrue(c.moveToFirst()); assertTrue(c.isNull(0)); assertEquals(1, c.getInt(1))
+        }
+    }
+
     /** The app opens an old v4 file through the full migration chain without falling back to destroying data. */
     @Test fun appDatabaseOpensFromV4WithAllMigrations() {
         helper.createDatabase(dbName, 4).close()
         val db = Room.databaseBuilder(context, HealthDatabase::class.java, dbName).addMigrations(*HealthDatabase.ALL_MIGRATIONS).build()
-        db.openHelper.writableDatabase.query("PRAGMA user_version").use { c -> c.moveToFirst(); assertEquals(5, c.getInt(0)) }
+        db.openHelper.writableDatabase.query("PRAGMA user_version").use { c -> c.moveToFirst(); assertEquals(6, c.getInt(0)) }
         db.close()
     }
 

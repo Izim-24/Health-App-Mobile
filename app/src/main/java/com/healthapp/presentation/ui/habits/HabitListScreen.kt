@@ -1,5 +1,24 @@
 package com.healthapp.presentation.ui.habits
 
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedContent
+import com.healthapp.presentation.ui.theme.Illustration
+import com.healthapp.presentation.ui.theme.IllustrationImage
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
@@ -53,6 +72,16 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    val haptics = LocalHapticFeedback.current
+    val listState = rememberLazyListState()
+    val fabExpanded by remember { derivedStateOf { !listState.canScrollBackward } }
+    var habitToDelete by remember { mutableStateOf<Habit?>(null) }
+    habitToDelete?.let { h ->
+        ConfirmDeleteDialog(
+            stringResource(R.string.delete_named_q, h.name), stringResource(R.string.confirm_delete_habit_body),
+            onConfirm = { viewModel.deleteHabit(h.id) }, onDismiss = { habitToDelete = null }
+        )
+    }
     Box(Modifier.fillMaxSize().background(HealthPalette.Background)) {
         Column(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
@@ -60,7 +89,14 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
                 if (uiState.habits.isNotEmpty()) {
                     val done = uiState.habits.count { it.isCompletedToday }
                     val total = uiState.habits.count { it.isEnabled }.coerceAtLeast(1)
-                    val progress = done.toFloat() / total
+                    val progress by animateFloatAsState(done.toFloat() / total, tween(600, easing = FastOutSlowInEasing), label = "habits")
+                    val allDone = done == total
+                    // A stronger buzz once when the last habit of the day is checked off.
+                    var wasAllDone by remember { mutableStateOf(allDone) }
+                    LaunchedEffect(allDone) {
+                        if (allDone && !wasAllDone) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        wasAllDone = allDone
+                    }
                     GradientCard(HealthPalette.Violet.gradient, Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
@@ -70,7 +106,11 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
                             }
                             Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
                                 CircularProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxSize(), color = Color.White, trackColor = Color.White.copy(alpha = .25f), strokeWidth = 8.dp, strokeCap = androidx.compose.ui.graphics.StrokeCap.Round)
-                                Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.titleSmall, color = Color.White)
+                                // Percentage, replaced by a bouncing trophy when everything is done.
+                                AnimatedContent(allDone, transitionSpec = { (scaleIn(spring(dampingRatio = .45f)) + fadeIn()) togetherWith fadeOut() }, label = "done") { finished ->
+                                    if (finished) Text("🏆", fontSize = 26.sp)
+                                    else Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.titleSmall, color = Color.White)
+                                }
                             }
                         }
                     }
@@ -81,8 +121,8 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
                 uiState.isLoading && uiState.habits.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = HealthPalette.Violet.strong) }
                 uiState.error != null && uiState.habits.isEmpty() -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Text(uiState.error ?: stringResource(R.string.err_load_habits), color = HealthPalette.Muted) }
                 uiState.habits.isEmpty() -> Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    IconBadge(Icons.Rounded.EmojiEvents, HealthPalette.Violet, size = 72.dp)
-                    Spacer(Modifier.height(16.dp))
+                    IllustrationImage(Illustration.HABITS, Modifier.height(170.dp).aspectRatio(1.25f))
+                    Spacer(Modifier.height(12.dp))
                     Text(stringResource(R.string.habits_empty_title), style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink)
                     Spacer(Modifier.height(6.dp))
                     Text(stringResource(R.string.habits_empty_sub), color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
@@ -91,6 +131,7 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
                 }
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    state = listState,
                     contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -98,9 +139,12 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
                         HabitCard(
                             habit = habit,
                             date = uiState.date,
-                            onToggle = { checked -> viewModel.setHabitCompleted(habit.id, uiState.date, checked) },
+                            onToggle = { checked ->
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                viewModel.setHabitCompleted(habit.id, uiState.date, checked)
+                            },
                             onEdit = { editingHabit = habit; showHabitDialog = true },
-                            onDelete = { viewModel.deleteHabit(habit.id) }
+                            onDelete = { habitToDelete = habit }
                         )
                     }
                 }
@@ -113,8 +157,9 @@ fun HabitListScreen(navController: NavController, viewModel: HabitListViewModel 
             containerColor = HealthPalette.Violet.strong,
             contentColor = Color.White,
             shape = CircleShape,
-            icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
-            text = { Text(stringResource(R.string.new_habit)) }
+            icon = { Icon(Icons.Rounded.Add, contentDescription = if (fabExpanded) null else stringResource(R.string.new_habit)) },
+            text = { Text(stringResource(R.string.new_habit)) },
+            expanded = fabExpanded
         )
     }
 

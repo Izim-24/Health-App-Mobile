@@ -1,5 +1,11 @@
 package com.healthapp.presentation.ui.nutrition
 
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import com.healthapp.presentation.ui.theme.Illustration
+import com.healthapp.presentation.ui.theme.IllustrationImage
 import com.healthapp.presentation.ui.text.*
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
@@ -44,6 +50,7 @@ import com.healthapp.presentation.viewmodel.NutritionViewModel
 fun NutritionScreen(navController: NavController, viewModel: NutritionViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var mealToDelete by remember { mutableStateOf<String?>(null) }
     var showCustomDialog by remember { mutableStateOf(false) }
     var preselectedFood by remember { mutableStateOf<Food?>(null) }
     Column(Modifier.fillMaxSize().background(HealthPalette.Background).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
@@ -79,13 +86,19 @@ fun NutritionScreen(navController: NavController, viewModel: NutritionViewModel 
             Text(stringResource(R.string.meals), style = MaterialTheme.typography.titleLarge, color = HealthPalette.Ink, modifier = Modifier.weight(1f))
             SoftButton(stringResource(R.string.add_food), { preselectedFood = null; showAddDialog = true }, HealthPalette.Orange, icon = Icons.Rounded.Add)
         }
+        mealToDelete?.let { id ->
+            ConfirmDeleteDialog(
+                stringResource(R.string.confirm_delete_meal), stringResource(R.string.confirm_delete_meal_body),
+                onConfirm = { viewModel.deleteMeal(id) }, onDismiss = { mealToDelete = null }
+            )
+        }
         if (state.meals.isEmpty()) {
-            EmptyCard(stringResource(R.string.no_meals_today))
+            EmptyState(Illustration.MEALS, stringResource(R.string.meals_empty_title), stringResource(R.string.no_meals_today))
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 MealType.entries.forEach { type ->
                     state.meals.filter { it.mealType == type }.forEach { meal ->
-                        MealCard(meal, onDelete = { viewModel.deleteMeal(meal.id) })
+                        MealCard(meal, onDelete = { mealToDelete = meal.id })
                     }
                 }
             }

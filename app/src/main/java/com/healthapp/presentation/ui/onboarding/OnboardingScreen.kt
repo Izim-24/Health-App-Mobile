@@ -1,5 +1,7 @@
 package com.healthapp.presentation.ui.onboarding
 
+import com.healthapp.presentation.ui.theme.Illustration
+import com.healthapp.presentation.ui.theme.IllustrationImage
 import com.healthapp.presentation.ui.text.*
 import java.time.format.FormatStyle
 import androidx.compose.ui.semantics.semantics
@@ -147,7 +149,7 @@ private fun Feature(icon: ImageVector, accent: Accent, title: String, detail: St
 @Composable
 private fun AboutStep(state: OnboardingUiState, vm: OnboardingViewModel) {
     var showPicker by remember { mutableStateOf(false) }
-    StepTitle(stringResource(R.string.onb_about), stringResource(R.string.onb_about_sub))
+    StepTitle(stringResource(R.string.onb_about), stringResource(R.string.onb_about_sub), Illustration.ABOUT)
     OutlinedTextField(state.name, vm::setName, label = { Text(stringResource(R.string.onb_your_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium)
     Spacer(Modifier.height(12.dp))
     AppCard(Modifier.fillMaxWidth(), onClick = { showPicker = true }) {
@@ -197,7 +199,7 @@ private fun AboutStep(state: OnboardingUiState, vm: OnboardingViewModel) {
 
 @Composable
 private fun BodyStep(state: OnboardingUiState, vm: OnboardingViewModel) {
-    StepTitle(stringResource(R.string.onb_body), stringResource(R.string.onb_body_sub))
+    StepTitle(stringResource(R.string.onb_body), stringResource(R.string.onb_body_sub), Illustration.BODY)
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(state.heightCm, vm::setHeight, label = { Text(stringResource(R.string.height_cm)) }, singleLine = true, modifier = Modifier.weight(1f),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), shape = MaterialTheme.shapes.medium)
@@ -232,7 +234,7 @@ private fun BodyStep(state: OnboardingUiState, vm: OnboardingViewModel) {
 
 @Composable
 private fun GoalsStep(state: OnboardingUiState, vm: OnboardingViewModel) {
-    StepTitle(stringResource(R.string.onb_goals), stringResource(R.string.onb_goals_sub))
+    StepTitle(stringResource(R.string.onb_goals), stringResource(R.string.onb_goals_sub), Illustration.GOALS)
     val t = state.targets
     GradientCard(HealthPalette.Orange.gradient, Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.maintenance_energy), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .85f))
@@ -271,8 +273,9 @@ private fun Macro(label: String, grams: Double, accent: Accent, modifier: Modifi
 }
 
 @Composable
-private fun StepTitle(title: String, subtitle: String) {
-    Column(Modifier.padding(top = 8.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun StepTitle(title: String, subtitle: String, illustration: Illustration? = null) {
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        illustration?.let { IllustrationImage(it, Modifier.height(120.dp).aspectRatio(1.25f).align(Alignment.CenterHorizontally)) }
         Text(title, style = MaterialTheme.typography.headlineMedium, color = HealthPalette.Ink)
         Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = HealthPalette.Muted)
     }

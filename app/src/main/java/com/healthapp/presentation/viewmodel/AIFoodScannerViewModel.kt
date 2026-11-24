@@ -72,6 +72,14 @@ class AIFoodScannerViewModel @Inject constructor(
         s.copy(items = s.items.mapIndexed { i, f -> if (i == index) f.withGrams(grams) else f })
     }
 
+    /** Sets one item's portion to a multiple of the AI estimate. */
+    fun setPortion(index: Int, factor: Double) = _uiState.update { s ->
+        s.copy(items = s.items.mapIndexed { i, f -> if (i == index) f.scaled(factor) else f })
+    }
+
+    /** Scales every item relative to its AI estimate (e.g. "my plate was bigger than it looks"). */
+    fun scaleAll(factor: Double) = _uiState.update { s -> s.copy(items = s.items.map { it.scaled(factor) }) }
+
     fun removeItem(index: Int) = _uiState.update { s -> s.copy(items = s.items.filterIndexed { i, _ -> i != index }) }
 
     fun setMealType(type: MealType) = _uiState.update { it.copy(mealType = type) }

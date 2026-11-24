@@ -1,5 +1,7 @@
 package com.healthapp.presentation.ui.healthconnect
 
+import com.healthapp.presentation.ui.theme.Illustration
+import com.healthapp.presentation.ui.theme.IllustrationImage
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
@@ -79,6 +81,7 @@ fun HealthConnectScreen(navController: NavController, viewModel: HealthConnectVi
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            IllustrationImage(Illustration.SYNC, Modifier.fillMaxWidth().height(150.dp))
             Text(
                 stringResource(R.string.hc_intro),
                 color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium

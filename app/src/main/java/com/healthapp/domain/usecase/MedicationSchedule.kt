@@ -12,7 +12,37 @@ data class Adherence(val taken: Int, val scheduled: Int) {
     val rate: Float? get() = if (scheduled > 0) taken.toFloat() / scheduled else null
 }
 
+/** How long the pills on hand last at the current schedule. */
+data class Supply(val pillsLeft: Int, val daysLeft: Int) {
+    val low: Boolean get() = daysLeft <= MedicationSchedule.LOW_SUPPLY_DAYS
+}
+
 object MedicationSchedule {
+    /** "Running low" when the pills on hand cover this many days or fewer. */
+    const val LOW_SUPPLY_DAYS = 5
+
+    /**
+     * Days of supply = pills ÷ pills used per day. Pills per day averages the weekly schedule
+     * (e.g. one pill on Mon/Wed/Fri = 3/7 a day). Null when supply isn't tracked or nothing is scheduled.
+     */
+    fun supply(med: Medication): Supply? {
+        val pills = med.pillsLeft ?: return null
+        val daysPerWeek = med.daysOfWeek?.size ?: 7
+        val perDay = med.times.size * med.pillsPerDose * daysPerWeek / 7.0
+        if (perDay <= 0.0) return null
+        return Supply(pills, kotlin.math.floor(pills / perDay).toInt())
+    }
+
+    /** Pills after marking a dose: taken removes pillsPerDose (never below 0); undoing a taken dose puts them back. */
+    fun pillsAfter(med: Medication, wasTaken: Boolean, nowTaken: Boolean): Int? {
+        val pills = med.pillsLeft ?: return null
+        return when {
+            nowTaken && !wasTaken -> (pills - med.pillsPerDose).coerceAtLeast(0)
+            wasTaken && !nowTaken -> pills + med.pillsPerDose
+            else -> pills
+        }
+    }
+
 
     /** Parses "08:00, 20:30" into sorted, de-duplicated times; null if any entry is invalid or none given. */
     fun parseTimes(raw: String): List<LocalTime>? {
@@ -33,6 +63,13 @@ object MedicationSchedule {
     }
 
     /** All doses due on [date] across [meds], ordered by time, joined with any existing logs. */
+    /**
+     * The dose to surface on the home screen: the earliest one today not yet marked taken or skipped.
+     * An overdue dose comes before a later upcoming one, so a missed morning pill isn't hidden.
+     */
+    fun upNext(dosesToday: List<ScheduledDose>): ScheduledDose? =
+        dosesToday.filter { it.status == null }.minByOrNull { it.time }
+
     fun dosesFor(date: LocalDate, meds: List<Medication>, logs: List<DoseLog>): List<ScheduledDose> {
         val byKey = logs.filter { it.date == date }.associateBy { it.medicationId to it.time }
         return meds.filter { isScheduledOn(it, date) }

@@ -80,7 +80,9 @@ fun HealthScoreSheet(
                 )
             }
 
-            if (history.count { it.score != null } >= 2) ScoreHistoryCard(history)
+            // Start the chart at the first week with a score (keep at least 4 bars so it still reads as a trend).
+            val shownWeeks = history.dropWhile { it.score == null }.let { if (it.size < 4) history.takeLast(4) else it }
+            if (history.count { it.score != null } >= 2) ScoreHistoryCard(shownWeeks)
             if (insights.isNotEmpty()) InsightsCard(insights)
 
             result?.components?.forEach { ComponentRow(it, onClick = { onOpen(it.area.route()) }) }

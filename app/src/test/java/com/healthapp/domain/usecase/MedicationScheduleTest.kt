@@ -76,4 +76,24 @@ class MedicationScheduleTest {
         assertEquals(2f / 3, a.rate!!, 0.001f)
         assertNull(MedicationSchedule.adherence(emptyList(), emptyList(), sat, sat, now).rate)
     }
+
+    @Test fun upNext_isEarliestUnmarkedDose_soAMissedMorningPillComesFirst() {
+        val d = med()
+        val morningTaken = DoseLog("l1", d.id, sat, am, DoseStatus.TAKEN, sat.atTime(8, 5))
+        assertEquals(am, MedicationSchedule.upNext(MedicationSchedule.dosesFor(sat, listOf(d), emptyList()))?.time)
+        assertEquals(pm, MedicationSchedule.upNext(MedicationSchedule.dosesFor(sat, listOf(d), listOf(morningTaken)))?.time)
+        val eveningSkipped = DoseLog("l2", d.id, sat, pm, DoseStatus.SKIPPED, sat.atTime(20, 5))
+        assertNull(MedicationSchedule.upNext(MedicationSchedule.dosesFor(sat, listOf(d), listOf(morningTaken, eveningSkipped))))
+    }
+
+    @Test fun supply_daysLeftFromScheduleAndLowFlag() {
+        val twiceDaily = med().copy(pillsLeft = 20, pillsPerDose = 1)
+        assertEquals(10, MedicationSchedule.supply(twiceDaily)!!.daysLeft)
+        assertFalse(MedicationSchedule.supply(twiceDaily)!!.low)
+        assertTrue(MedicationSchedule.supply(twiceDaily.copy(pillsLeft = 9))!!.low)   // 4 days
+        assertNull(MedicationSchedule.supply(med()))                                    // not tracked
+        assertEquals(19, MedicationSchedule.pillsAfter(twiceDaily, wasTaken = false, nowTaken = true))
+        assertEquals(20, MedicationSchedule.pillsAfter(twiceDaily.copy(pillsLeft = 19), wasTaken = true, nowTaken = false))
+        assertEquals(0, MedicationSchedule.pillsAfter(twiceDaily.copy(pillsLeft = 0), wasTaken = false, nowTaken = true))
+    }
 }

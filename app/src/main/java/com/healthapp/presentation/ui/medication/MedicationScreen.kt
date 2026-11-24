@@ -1,5 +1,11 @@
 package com.healthapp.presentation.ui.medication
 
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.healthapp.presentation.ui.theme.Illustration
+import com.healthapp.presentation.ui.theme.IllustrationImage
 import com.healthapp.presentation.ui.text.*
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
@@ -83,6 +89,9 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
         ) permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
+    // The add button shrinks to an icon once the list scrolls, so it stops covering rows (e.g. a switch).
+    val listState = rememberLazyListState()
+    val fabExpanded by remember { derivedStateOf { !listState.canScrollBackward } }
     Scaffold(
         containerColor = HealthPalette.Background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -95,13 +104,15 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
                 containerColor = HealthPalette.Indigo.strong,
                 contentColor = Color.White,
                 shape = androidx.compose.foundation.shape.CircleShape,
-                icon = { Icon(Icons.Default.Add, null) },
-                text = { Text(stringResource(R.string.add_med)) }
+                icon = { Icon(Icons.Default.Add, if (fabExpanded) null else stringResource(R.string.add_med)) },
+                text = { Text(stringResource(R.string.add_med)) },
+                expanded = fabExpanded
             )
         }
     ) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+            state = listState,
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 96.dp)
         ) {
@@ -120,7 +131,7 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
                 item { ExactAlarmBanner(onAllow = { openExactAlarmSettings(context) }) }
             }
             if (state.medications.isEmpty()) {
-                item { EmptyState() }
+                item { EmptyState(Illustration.MEDS, stringResource(R.string.no_meds), stringResource(R.string.no_meds_sub)) }
                 return@LazyColumn
             }
 
@@ -178,16 +189,6 @@ fun MedicationScreen(navController: NavController, viewModel: MedicationViewMode
 private fun SectionTitle(text: String) =
     Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = HealthPalette.Ink, modifier = Modifier.padding(top = 4.dp))
 
-@Composable
-private fun EmptyState() {
-    AppCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            IconBadge(Icons.Default.Medication, HealthPalette.Indigo, size = 64.dp)
-            Text(stringResource(R.string.no_meds), fontWeight = FontWeight.SemiBold, color = HealthPalette.Ink)
-            Text(stringResource(R.string.no_meds_sub), color = HealthPalette.Muted, style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
 
 @Composable
 private fun AdherenceCard(doses: List<ScheduledDose>, today: Adherence, week: Adherence) {
@@ -272,6 +273,11 @@ private fun MedicationRow(med: Medication, onEdit: () -> Unit, onToggle: (Boolea
                 val days = med.daysOfWeek?.joinToString(" ") { names[it].orEmpty() } ?: stringResource(R.string.every_day)
                 val course = med.endDate?.let { stringResource(R.string.until_date, it.format(fmt)) } ?: stringResource(R.string.long_term)
                 Text("$days · $course${if (!med.isActive) stringResource(R.string.paused_suffix) else ""}", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                MedicationSchedule.supply(med)?.let { s ->
+                    Spacer(Modifier.height(4.dp))
+                    Pill(stringResource(R.string.supply_line, s.pillsLeft, s.daysLeft), if (s.low) HealthPalette.Coral else HealthPalette.Emerald)
+                    if (s.low && med.isActive) Text(stringResource(R.string.supply_low), style = MaterialTheme.typography.labelMedium, color = HealthPalette.Coral.strong)
+                }
             }
             IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, stringResource(R.string.delete_item, med.name), tint = HealthPalette.Muted) }
             Switch(checked = med.isActive, onCheckedChange = onToggle, colors = SwitchDefaults.colors(checkedTrackColor = HealthPalette.Indigo.strong))
@@ -310,6 +316,19 @@ private fun MedicationEditorDialog(initial: MedicationDraft, onDismiss: () -> Un
                     label = { Text(stringResource(R.string.duration_days)) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        d.pillsLeft, { d = d.copy(pillsLeft = it.filter(Char::isDigit).take(4)) },
+                        label = { Text(stringResource(R.string.pills_left_field)) }, singleLine = true, modifier = Modifier.weight(1.4f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        d.pillsPerDose, { d = d.copy(pillsPerDose = it.filter(Char::isDigit).take(2)) },
+                        label = { Text(stringResource(R.string.pills_per_dose_field)) }, singleLine = true, modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+                Text(stringResource(R.string.refill_hint), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
                 error?.let { Text(it.resolve(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
             }
         },

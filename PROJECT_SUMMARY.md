@@ -16,6 +16,7 @@ có ước tính dinh dưỡng từ ảnh món ăn bằng AI qua một backend n
 | Nhắc nhở & thuốc | Lịch nhắc theo giờ/ngày; lịch thuốc với nút "Đã uống/Bỏ qua" ngay trên thông báo; tỷ lệ tuân thủ 7 ngày | Thuốc: **báo thức chính xác** (`setExactAndAllowWhileIdle`, đúng phút cả khi Doze) + đặt lại sau khởi động/cập nhật/đổi giờ; không có quyền → WorkManager |
 | Giao diện | Chế độ sáng/tối/theo máy | Bảng màu `HealthPalette` có bản tối, thanh hệ thống đổi theo |
 | Ngôn ngữ | Tiếng Việt / English / theo máy, đổi ngay trong app | 608 chuỗi × 2 ngôn ngữ; per-app language (`LocaleManager`, `locales_config`); domain trả dữ liệu có cấu trúc, UI định dạng; ViewModel dùng `UiText`; backend nhận `lang` và trả mã lỗi `code` |
+| Hình minh họa | Onboarding, trạng thái trống, màn hình giới thiệu tính năng | 13 `ImageVector` tự vẽ, màu lấy từ bảng màu (sáng/tối) lúc chạy; một nguồn `tools/illustrations/gen.py` sinh cả Kotlin và trang xem trước |
 | Trợ năng | TalkBack, cỡ chữ lớn | Nhãn mô tả có tên mục, `Role` radio/checkbox, live region cho lỗi, vùng chạm ≥ 48 dp; chọn ảnh bằng Photo Picker hệ thống (không cần quyền bộ nhớ) |
 | Dữ liệu | Xuất JSON qua bảng chia sẻ, xóa toàn bộ, dữ liệu mẫu cho demo | FileProvider, id `demo_…` để xóa riêng |
 
@@ -47,7 +48,7 @@ flowchart LR
 - **domain không có lớp Android** → test JVM nhanh, không cần thiết bị.
 - Khóa API **chỉ ở server** (`server/.env`), không nằm trong APK.
 
-## 3. Cơ sở dữ liệu (Room, phiên bản 5)
+## 3. Cơ sở dữ liệu (Room, phiên bản 6)
 
 ```mermaid
 erDiagram
@@ -64,7 +65,7 @@ erDiagram
   accounts ||--o{ reminders : sets
 ```
 
-Ngoài ra: `water_logs`, `sleep_logs`, `activity_logs`, `weight_logs`. Lịch sử migration 1→5 đều có
+Ngoài ra: `water_logs`, `sleep_logs`, `activity_logs`, `weight_logs`. Lịch sử migration 1→6 đều có
 `Migration` tường minh; schema xuất ra `app/schemas/` và được kiểm thử bằng `MigrationTestHelper`.
 Migration 4→5 chuyển check-in cảm xúc từ SharedPreferences sang Room (dữ liệu cũ được nhập tự động) và bỏ bảng không dùng.
 
@@ -122,8 +123,8 @@ và `server/data/vn-foods.json` (món Việt, giá trị xấp xỉ). Lưu ý: s
 
 | Loại | Số test | Nội dung |
 |---|---|---|
-| JVM unit | 60 | Điểm sức khỏe + **lịch sử tuần & nhận xét**, BMI châu Á, TDEE, lịch nhắc/thuốc, tuân thủ, quét ảnh (nguồn calo), Health Connect mapping, **ViewModel** (Profile, Mental, Reports) với fake repository |
-| Instrumented (emulator) | 7 | Migration 4→5 + chuỗi 1→5, hồi quy bữa ăn (Room), nhập dữ liệu cảm xúc cũ, **Compose UI** (điểm sức khỏe, biểu đồ tuần) — chạy đạt ở cả tiếng Việt và tiếng Anh |
+| JVM unit | 63 | Điểm sức khỏe + **lịch sử tuần & nhận xét**, BMI châu Á, TDEE, lịch nhắc/thuốc, tuân thủ, quét ảnh (nguồn calo), Health Connect mapping, **ViewModel** (Profile, Mental, Reports) với fake repository |
+| Instrumented (emulator) | 10 | Migration 4→5 + chuỗi 1→5, hồi quy bữa ăn (Room), nhập dữ liệu cảm xúc cũ, **Compose UI** (điểm sức khỏe, biểu đồ tuần) — chạy đạt ở cả tiếng Việt và tiếng Anh |
 | Backend | 18 | Endpoint, xác thực đầu vào, JSON schema, Gemini/OpenAI, model dự phòng, chế độ giả lập, **bảng dinh dưỡng** (khớp/không khớp, độ hợp lý từng dòng), ngôn ngữ trả lời, mã lỗi |
 | Lint | 0 lỗi | `./gradlew :app:lintDebug` |
 

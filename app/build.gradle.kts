@@ -29,12 +29,28 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "AI_BACKEND_URL", "\"http://10.0.2.2:8787/\"")
+            buildConfigField("boolean", "DEMO_TOOLS", "true")
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // No backend is deployed yet: AI features stay off until a real HTTPS URL is configured.
+            buildConfigField("String", "AI_BACKEND_URL", "\"https://example.invalid/\"")
+            buildConfigField("boolean", "DEMO_TOOLS", "false")
+        }
+        // Release-optimised (R8, ~4x faster start than debug) but talks to the local backend on the emulator
+        // and keeps the sample-data tools. For presenting: ./gradlew :app:installDemo
+        create("demo") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            buildConfigField("String", "AI_BACKEND_URL", "\"http://10.0.2.2:8787/\"")
+            buildConfigField("boolean", "DEMO_TOOLS", "true")
         }
     }
 
@@ -45,6 +61,13 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    lint {
+        // Lint's Kotlin (K2) analysis crashes on the test sources since the demo build type was added
+        // ("Unexpected failure during lint analysis", a lint bug). Tests aren't shipped, so skip them;
+        // app code is still fully checked.
+        ignoreTestSources = true
     }
 
     buildFeatures {

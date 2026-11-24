@@ -1,5 +1,14 @@
 package com.healthapp.presentation.ui.dashboard
 
+import com.healthapp.domain.model.ScheduledDose
+import com.healthapp.domain.model.DoseStatus
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import com.healthapp.presentation.ui.text.*
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.role
@@ -54,17 +63,19 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
     // Reload when returning from other screens, where data may have been added.
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
-        var first = true
+        // The only place the dashboard loads: once when it first appears, and again whenever the user comes back
+        // to it (from another screen or from the background), so edits made elsewhere always show up.
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) { if (first) first = false else viewModel.refreshDashboard() }
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) viewModel.refreshDashboard()
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(Unit) { viewModel.refreshDashboard() }
+    // Tells Android when the first screen is really ready (logged as "Fully drawn"; used for startup metrics).
+    androidx.activity.compose.ReportDrawnWhen { !uiState.isLoading && !uiState.scoreLoading }
 
     when {
-        uiState.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = HealthPalette.Primary) }
+        uiState.isLoading -> DashboardPlaceholder()
         uiState.error != null -> Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Text(stringResource(R.string.dash_load_error), style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
             Text(uiState.error.orEmpty(), color = HealthPalette.Muted)
@@ -95,8 +106,14 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
                 }
             }
 
-            ScoreHero(uiState.healthScore, uiState.scoreDetails, onClick = { showScore = true })
-            Spacer(Modifier.height(18.dp))
+            ScoreHero(uiState.healthScore, uiState.scoreDetails, uiState.scoreLoading, onClick = { showScore = true })
+            Spacer(Modifier.height(12.dp))
+            if (uiState.dosesToday > 0) {
+                UpNextCard(uiState.nextDose, uiState.dosesDoneToday, uiState.dosesToday,
+                    onTaken = { viewModel.markDose(it, DoseStatus.TAKEN) }, onOpen = { navController.navigate("medications") })
+                Spacer(Modifier.height(6.dp))
+            }
+            Spacer(Modifier.height(12.dp))
 
             // Quick actions
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -112,8 +129,14 @@ fun DashboardScreen(navController: NavController, viewModel: DashboardViewModel 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 StatTile(Icons.AutoMirrored.Rounded.DirectionsWalk, stringResource(R.string.stat_steps), uiState.totalSteps?.let { grouped(it) } ?: "—",
                     stringResource(if (uiState.totalSteps != null) R.string.stat_steps_today else R.string.not_recorded), HealthPalette.Orange, Modifier.weight(1f), toHealth)
-                StatTile(Icons.Rounded.WaterDrop, stringResource(R.string.stat_water), uiState.waterIntakeMl?.let { stringResource(R.string.ml_value, it) } ?: "—",
-                    stringResource(if (uiState.waterIntakeMl == null) R.string.not_recorded else R.string.today_lower), HealthPalette.Sky, Modifier.weight(1f)) { navController.navigate("water") }
+                val goal = uiState.waterGoal
+                // With a goal, "0 ml of 2000 ml" plus a bar reads well; without one, keep "—" for nothing logged.
+                val waterValue = if (goal != null || uiState.waterIntakeMl != null) stringResource(R.string.ml_value, uiState.waterIntakeMl ?: 0) else "—"
+                StatTile(Icons.Rounded.WaterDrop, stringResource(R.string.stat_water), waterValue,
+                    if (goal != null) stringResource(R.string.water_of_goal, goal)
+                    else stringResource(if (uiState.waterIntakeMl == null) R.string.not_recorded else R.string.today_lower),
+                    HealthPalette.Sky, Modifier.weight(1f),
+                    onClick = { navController.navigate("water") }, progress = goal?.let { (uiState.waterIntakeMl ?: 0).toFloat() / it })
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -188,7 +211,10 @@ private fun greeting(): Int = when (LocalTime.now().hour) {
 }
 
 @Composable
-private fun ScoreHero(score: Int?, details: com.healthapp.domain.usecase.HealthScoreResult?, onClick: () -> Unit) {
+private fun ScoreHero(score: Int?, details: com.healthapp.domain.usecase.HealthScoreResult?, calculating: Boolean, onClick: () -> Unit) {
+    // Count the number up and sweep the ring when the score arrives or changes.
+    val shown by animateIntAsState(score ?: 0, tween(900, easing = FastOutSlowInEasing), label = "score")
+    val ring by animateFloatAsState((score ?: 0) / 100f, tween(900, easing = FastOutSlowInEasing), label = "ring")
     val heroDescription = stringResource(R.string.score_hero_cd, score?.toString() ?: "—")
     GradientCard(HealthPalette.HeroGradient, Modifier.fillMaxWidth().semantics { contentDescription = heroDescription }, onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -196,11 +222,12 @@ private fun ScoreHero(score: Int?, details: com.healthapp.domain.usecase.HealthS
                 Text(stringResource(R.string.health_score), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = .85f))
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(score?.toString() ?: "—", style = MaterialTheme.typography.displayLarge, color = Color.White)
+                    Text(if (score != null) shown.toString() else "—", style = MaterialTheme.typography.displayLarge, color = Color.White.copy(alpha = if (score == null && calculating) .5f else 1f))
                     if (score != null) Text(" /100", style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = .7f), modifier = Modifier.padding(bottom = 8.dp))
                 }
                 Text(
                     when {
+                        details == null && calculating -> stringResource(R.string.score_calculating)
                         details?.score != null -> stringResource(R.string.score_grade_areas, details.grade!!.title(), details.components.size)
                         details != null -> stringResource(R.string.score_need_more, (HealthScore.MIN_AREAS - details.components.size).coerceAtLeast(1))
                         else -> stringResource(R.string.score_not_enough)
@@ -210,7 +237,7 @@ private fun ScoreHero(score: Int?, details: com.healthapp.domain.usecase.HealthS
             }
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(96.dp)) {
                 CircularProgressIndicator(
-                    progress = { (score ?: 0) / 100f }, modifier = Modifier.fillMaxSize(),
+                    progress = { ring }, modifier = Modifier.fillMaxSize(),
                     color = Color.White, trackColor = Color.White.copy(alpha = .22f), strokeWidth = 10.dp, strokeCap = StrokeCap.Round
                 )
                 Icon(Icons.Rounded.Favorite, null, tint = Color.White, modifier = Modifier.size(30.dp))
@@ -247,6 +274,7 @@ private fun QuickAction(icon: ImageVector, label: String, accent: Accent, onClic
 
 @Composable
 private fun HabitsCard(done: Int, total: Int, pending: List<Pair<String, String>>, onCheck: (String) -> Unit, onOpen: () -> Unit) {
+    val haptics = LocalHapticFeedback.current
     AppCard(Modifier.fillMaxWidth(), onClick = onOpen) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -267,7 +295,7 @@ private fun HabitsCard(done: Int, total: Int, pending: List<Pair<String, String>
                 Spacer(Modifier.height(6.dp))
                 pending.forEach { (id, name) ->
                     Row(
-                        Modifier.fillMaxWidth().toggleable(value = false, role = Role.Checkbox, onValueChange = { if (it) onCheck(id) }),
+                        Modifier.fillMaxWidth().toggleable(value = false, role = Role.Checkbox, onValueChange = { if (it) { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onCheck(id) } }),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(checked = false, onCheckedChange = null, colors = CheckboxDefaults.colors(uncheckedColor = HealthPalette.Subtle, checkedColor = HealthPalette.Violet.strong))
@@ -313,5 +341,70 @@ private fun MacroPill(label: String, value: Double, target: Double, accent: Acce
         Text(label, style = MaterialTheme.typography.labelSmall, color = accent.strong)
         Text(stringResource(R.string.grams_value, value.toInt()), style = MaterialTheme.typography.titleMedium, color = HealthPalette.Ink)
         if (target > 0) AccentProgress((value / target).toFloat(), accent, track = HealthPalette.Surface, height = 5.dp)
+    }
+}
+
+/** Grey shapes in the dashboard layout, gently pulsing, while today's data loads. */
+@Composable
+private fun DashboardPlaceholder() {
+    val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "placeholder")
+    val alpha by pulse.animateFloat(
+        0.45f, 0.9f,
+        androidx.compose.animation.core.infiniteRepeatable(tween(800), androidx.compose.animation.core.RepeatMode.Reverse),
+        label = "alpha"
+    )
+    val block = HealthPalette.SurfaceAlt.copy(alpha = alpha)
+    val loading = stringResource(R.string.loading_dashboard)
+    Column(
+        Modifier.fillMaxSize().background(HealthPalette.Background).padding(horizontal = 20.dp)
+            .semantics { contentDescription = loading },
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Spacer(Modifier.height(20.dp))
+        Box(Modifier.fillMaxWidth(.45f).height(14.dp).clip(RoundedCornerShape(7.dp)).background(block))
+        Box(Modifier.fillMaxWidth(.7f).height(26.dp).clip(RoundedCornerShape(8.dp)).background(block))
+        Spacer(Modifier.height(6.dp))
+        Box(Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(28.dp)).background(block))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            repeat(4) { Box(Modifier.size(58.dp).clip(RoundedCornerShape(20.dp)).background(block)) }
+        }
+        Spacer(Modifier.height(6.dp))
+        repeat(2) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(2) { Box(Modifier.weight(1f).height(104.dp).clip(RoundedCornerShape(22.dp)).background(block)) }
+            }
+        }
+    }
+}
+
+/** The next medication dose, with a one-tap "Taken"; overdue doses turn coral. */
+@Composable
+private fun UpNextCard(dose: ScheduledDose?, done: Int, total: Int, onTaken: (ScheduledDose) -> Unit, onOpen: () -> Unit) {
+    val now = java.time.LocalTime.now()
+    val overdue = dose != null && !dose.time.isAfter(now)
+    val accent = if (overdue) HealthPalette.Coral else HealthPalette.Indigo
+    AppCard(Modifier.fillMaxWidth(), onClick = onOpen) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconBadge(Icons.Rounded.Medication, accent)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                if (dose == null) {
+                    Text(stringResource(R.string.all_doses_done), style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
+                } else {
+                    val time = com.healthapp.domain.usecase.MedicationSchedule.formatTime(dose.time)
+                    Text(
+                        if (overdue) stringResource(R.string.up_next_overdue, time) else stringResource(R.string.up_next) + " · " + stringResource(R.string.up_next_at, time),
+                        style = MaterialTheme.typography.labelMedium, color = accent.strong
+                    )
+                    Text(listOf(dose.medication.name, dose.medication.dosage).filter { it.isNotBlank() }.joinToString(" · "),
+                        style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Text(stringResource(R.string.doses_progress, done, total), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+            }
+            if (dose != null) {
+                Spacer(Modifier.width(8.dp))
+                SoftButton(stringResource(R.string.action_taken), { onTaken(dose) }, accent, icon = Icons.Rounded.Check)
+            }
+        }
     }
 }

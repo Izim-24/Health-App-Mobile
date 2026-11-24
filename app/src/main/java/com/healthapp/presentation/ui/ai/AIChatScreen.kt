@@ -1,5 +1,7 @@
 package com.healthapp.presentation.ui.ai
 
+import com.healthapp.presentation.ui.theme.Illustration
+import com.healthapp.presentation.ui.theme.IllustrationImage
 import com.healthapp.presentation.ui.text.*
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
@@ -44,9 +46,8 @@ fun AIChatScreen(onBack: () -> Unit = {}, viewModel: AIChatViewModel = hiltViewM
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
             LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 8.dp)) {
                 if (state.messages.isEmpty()) item {
+                    IllustrationImage(Illustration.CHAT, Modifier.fillMaxWidth().height(120.dp))
                     GradientCard(violet.gradient, Modifier.fillMaxWidth()) {
-                        IconBadge(Icons.Rounded.AutoAwesome, violet, onDark = true)
-                        Spacer(Modifier.height(12.dp))
                         Text(stringResource(R.string.chat_hello), style = MaterialTheme.typography.titleLarge, color = Color.White)
                         Text(
                             stringResource(R.string.chat_intro),

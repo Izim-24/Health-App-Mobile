@@ -48,6 +48,16 @@ class FoodScanTest {
         assertTrue(items[0].withGrams(100).fromTable)
     }
 
+    @Test fun portionSteps_scaleRelativeToAiEstimate_notToCurrentGrams() {
+        val item = FoodScan.fromRecognized(listOf(raw(grams = 200, kcal = 260))).single()
+        val more = item.scaled(1.25)
+        assertEquals(250, more.grams)
+        assertEquals(325, more.calories)            // nutrition follows the grams
+        assertEquals(1.25, more.portionFactor, 1e-9)
+        assertEquals(150, more.scaled(0.75).grams)  // still relative to the AI's 200 g, not to 250 g
+        assertEquals(200, more.aiGrams)
+    }
+
     @Test fun totals_sumAllItems() {
         val items = FoodScan.fromRecognized(listOf(raw(), raw(name = "Trứng chiên", grams = 50, kcal = 90, p = 6.0, c = 0.5, f = 7.0)))
         val t = FoodScan.totals(items)

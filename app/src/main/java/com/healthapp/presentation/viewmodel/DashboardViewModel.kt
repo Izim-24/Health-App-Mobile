@@ -24,6 +24,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -67,7 +70,13 @@ data class DashboardUiState(
     /** Weekly scores, oldest first (last = current 7 days), and what changed since last week. */
     val scoreHistory: List<com.healthapp.domain.usecase.WeekScore> = emptyList(),
     val scoreInsights: List<com.healthapp.domain.usecase.ScoreInsight> = emptyList(),
-    val loadedOnce: Boolean = false
+    val loadedOnce: Boolean = false,
+    /** True while the score/history (step 2 of loading) is being calculated. */
+    val scoreLoading: Boolean = false,
+    /** Earliest dose today not yet marked; null when nothing is pending. */
+    val nextDose: com.healthapp.domain.model.ScheduledDose? = null,
+    val dosesToday: Int = 0,
+    val dosesDoneToday: Int = 0
 )
 
 private const val HISTORY_WEEKS = 8
@@ -88,94 +97,132 @@ class DashboardViewModel @Inject constructor(
     private val medicationRepository: com.healthapp.domain.repository.MedicationRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(DashboardUiState())
+    private val _uiState = MutableStateFlow(DashboardUiState(isLoading = true))
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     init {
-        refreshDashboard()
+        // Loading is driven by the screen (on each resume), so it happens exactly once per visit.
         // Reload when a Health Connect import finishes (it runs in the background on app start).
         viewModelScope.launch {
             healthConnect.state.map { it.lastSync }.distinctUntilChanged().drop(1).collect { refreshDashboard() }
         }
     }
 
+    private var loadJob: Job? = null
+
+    /**
+     * Loads in two steps so the screen appears quickly: today's cards first (independent queries run in
+     * parallel), then the health score and its 8-week history. A new refresh cancels one still running.
+     */
     fun refreshDashboard() {
         val today = LocalDate.now().toString()
-        _uiState.update { it.copy(isLoading = !it.loadedOnce) }
+        _uiState.update { it.copy(isLoading = !it.loadedOnce, scoreLoading = true) }
 
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             try {
                 val accountId = accountManager.getCurrentAccountId()
-
-                // Load nutrition summary
-                val nutritionResult = nutritionRepository.getNutritionSummary(accountId, today)
-
-                // Load activity data
-                val durationResult = activityRepository.getTotalDurationForDate(accountId, today)
-                val activities = activityRepository.observeActivitiesByDate(accountId, today).first()
-                val steps = activities.takeIf { it.isNotEmpty() }?.sumOf { it.steps }
-
-                // Load water intake
-                val waterLogs = waterRepository.observeWaterLogsForDate(accountId, today).first()
-                val waterTotal = waterLogs.takeIf { it.isNotEmpty() }?.sumOf { it.amountMl }
-
-                // Load habit completion
-                val completedHabitsResult = habitRepository.getCompletedHabitsForDate(accountId, today)
-                val totalHabitsResult = habitRepository.getTotalActiveHabits(accountId)
-                val activeHabits = habitRepository.observeHabits(accountId).first().filter { it.isEnabled }
-                val completedHabitIds = habitRepository.getCompletedHabitIdsForDate(accountId, today).getOrDefault(emptySet())
-                val todayReminders = reminderRepository.getEnabledReminders(accountId).getOrDefault(emptyList()).filter { reminder ->
-                    reminder.daysOfWeek.isNullOrEmpty() || reminder.daysOfWeek.any { it.name == LocalDate.now().dayOfWeek.name }
+                val t = coroutineScope {
+                    val nutrition = async { nutritionRepository.getNutritionSummary(accountId, today).getOrNull() }
+                    val duration = async { activityRepository.getTotalDurationForDate(accountId, today).getOrDefault(0) }
+                    val activities = async { activityRepository.observeActivitiesByDate(accountId, today).first() }
+                    val water = async { waterRepository.observeWaterLogsForDate(accountId, today).first() }
+                    val completedCount = async { habitRepository.getCompletedHabitsForDate(accountId, today).getOrDefault(0) }
+                    val activeCount = async { habitRepository.getTotalActiveHabits(accountId).getOrDefault(0) }
+                    val habits = async { habitRepository.observeHabits(accountId).first().filter { it.isEnabled } }
+                    val doneIds = async { habitRepository.getCompletedHabitIdsForDate(accountId, today).getOrDefault(emptySet()) }
+                    val reminders = async { reminderRepository.getEnabledReminders(accountId).getOrDefault(emptyList()) }
+                    val profile = async { profileRepository.getProfile(accountId) }
+                    val weights = async { weightRepository.observeWeightRecords(accountId).first() }
+                    val sleep = async { sleepRepository.getSleepForDate(accountId, today).getOrNull()?.durationMinutes }
+                    val vitals = async { vitalRepository.observeAll(accountId).first().groupBy { it.type } }
+                    val waterGoal = async { runCatching { waterRepository.getDailyGoal(accountId) }.getOrNull() }
+                    val meds = async { medicationRepository.observeMedications().first() }
+                    val medLogs = async { medicationRepository.observeLogs(LocalDate.now(), LocalDate.now()).first() }
+                    TodayData(
+                        nutrition.await(), duration.await(), activities.await(), water.await(), completedCount.await(),
+                        activeCount.await(), habits.await(), doneIds.await(), reminders.await(), profile.await(),
+                        weights.await(), sleep.await(), vitals.await(), waterGoal.await(),
+                        com.healthapp.domain.usecase.MedicationSchedule.dosesFor(LocalDate.now(), meds.await(), medLogs.await())
+                    )
                 }
-                val profile = profileRepository.getProfile(accountId)
+
                 // Latest logged weight (people weigh every few days, not daily), else the profile value.
-                val weight = weightRepository.observeWeightRecords(accountId).first().maxByOrNull { it.recordedAt }?.weight
-                    ?: profile?.weightKg?.takeIf { it > 0 }
-                val sleep = sleepRepository.getSleepForDate(accountId, today).getOrNull()?.durationMinutes
-                val latestVitals = vitalRepository.observeAll(accountId).first().groupBy { it.type }
-                val latestHeartRate = latestVitals[VitalType.HEART_RATE]?.maxByOrNull { it.recordedAt }
-                val latestBloodPressure = latestVitals[VitalType.BLOOD_PRESSURE]?.maxByOrNull { it.recordedAt }
-                val latestGlucose = latestVitals[VitalType.GLUCOSE]?.maxByOrNull { it.recordedAt }
-                val height = profile?.heightCm?.takeIf { it > 0 }
+                val weight = t.weights.maxByOrNull { it.recordedAt }?.weight ?: t.profile?.weightKg?.takeIf { it > 0 }
+                val height = t.profile?.heightCm?.takeIf { it > 0 }
                 val bmi = if (weight != null && height != null) weight / ((height / 100.0) * (height / 100.0)) else null
+                val latestHeartRate = t.vitals[VitalType.HEART_RATE]?.maxByOrNull { it.recordedAt }
+                val latestBloodPressure = t.vitals[VitalType.BLOOD_PRESSURE]?.maxByOrNull { it.recordedAt }
+                val latestGlucose = t.vitals[VitalType.GLUCOSE]?.maxByOrNull { it.recordedAt }
+                val dayName = LocalDate.now().dayOfWeek.name
 
-                val history = runCatching { computeHistory(accountId, profile?.weightKg, height) }.getOrNull().orEmpty()
-                val scoreDetails = history.lastOrNull()?.result
-                val insights = history.lastOrNull()?.let { ScoreHistory.insights(it, history.getOrNull(history.size - 2)) }.orEmpty()
-
+                // Step 1: today's cards are on screen now.
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
                         loadedOnce = true,
-                        scoreDetails = scoreDetails,
-                        scoreHistory = history,
-                        scoreInsights = insights,
-                        nutrition = nutritionResult.getOrNull(),
-                        totalSteps = steps,
-                        totalActivityMinutes = durationResult.getOrDefault(0),
-                        waterIntakeMl = waterTotal,
-                        habitCompletedToday = completedHabitsResult.getOrDefault(0),
-                        totalHabitsActive = totalHabitsResult.getOrDefault(0),
-                        habits = activeHabits.map { it.copy(isCompletedToday = it.id in completedHabitIds) },
-                        reminders = todayReminders,
+                        nutrition = t.nutrition,
+                        totalSteps = t.activities.takeIf { it.isNotEmpty() }?.sumOf { it.steps },
+                        totalActivityMinutes = t.duration,
+                        waterIntakeMl = t.water.takeIf { it.isNotEmpty() }?.sumOf { it.amountMl },
+                        habitCompletedToday = t.completedCount,
+                        totalHabitsActive = t.activeCount,
+                        habits = t.habits.map { it.copy(isCompletedToday = it.id in t.doneIds) },
+                        reminders = t.reminders.filter { r -> r.daysOfWeek.isNullOrEmpty() || r.daysOfWeek.any { it.name == dayName } },
                         date = today,
-                        userName = profile?.fullName?.takeIf { it.isNotBlank() },
+                        userName = t.profile?.fullName?.takeIf { it.isNotBlank() },
                         heightCm = height,
                         weightKg = weight,
                         bmi = bmi,
-                        sleepDurationMinutes = sleep,
-                        // Transparent guideline-based score; null until at least 3 areas have data.
-                        healthScore = scoreDetails?.score,
+                        sleepDurationMinutes = t.sleep,
                         heartRateBpm = latestHeartRate?.value?.toInt(),
                         bloodPressureSystolic = latestBloodPressure?.value?.toInt(),
                         bloodPressureDiastolic = latestBloodPressure?.secondaryValue?.toInt(),
                         glucoseValue = latestGlucose?.value,
-                        glucoseUnit = latestGlucose?.unit
+                        glucoseUnit = latestGlucose?.unit,
+                        waterGoal = t.waterGoal?.takeIf { it > 0 },
+                        nextDose = com.healthapp.domain.usecase.MedicationSchedule.upNext(t.doses),
+                        dosesToday = t.doses.size,
+                        dosesDoneToday = t.doses.count { it.status != null }
                     )
                 }
+
+                // Step 2: the score and its history (needs every record of the last 8 weeks).
+                val history = runCatching { computeHistory(accountId, t.profile?.weightKg, height) }.getOrNull().orEmpty()
+                val scoreDetails = history.lastOrNull()?.result
+                val insights = history.lastOrNull()?.let { ScoreHistory.insights(it, history.getOrNull(history.size - 2)) }.orEmpty()
+                _uiState.update {
+                    it.copy(
+                        scoreLoading = false,
+                        scoreDetails = scoreDetails,
+                        scoreHistory = history,
+                        scoreInsights = insights,
+                        // Transparent guideline-based score; null until at least 3 areas have data.
+                        healthScore = scoreDetails?.score
+                    )
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = e.message) }
+                _uiState.update { it.copy(isLoading = false, scoreLoading = false, error = e.message) }
             }
+        }
+    }
+
+    private class TodayData(
+        val nutrition: NutritionSummary?, val duration: Int, val activities: List<com.healthapp.domain.model.ActivityRecord>,
+        val water: List<com.healthapp.domain.model.WaterIntake>, val completedCount: Int, val activeCount: Int,
+        val habits: List<Habit>, val doneIds: Set<String>, val reminders: List<Reminder>,
+        val profile: com.healthapp.domain.model.HealthProfile?, val weights: List<com.healthapp.domain.model.WeightRecord>,
+        val sleep: Int?, val vitals: Map<VitalType, List<com.healthapp.domain.model.VitalMeasurement>>,
+        val waterGoal: Int?, val doses: List<com.healthapp.domain.model.ScheduledDose>
+    )
+
+    /** Marks a dose from the home screen, then reloads (score, adherence and supply all change). */
+    fun markDose(dose: com.healthapp.domain.model.ScheduledDose, status: com.healthapp.domain.model.DoseStatus) {
+        viewModelScope.launch {
+            medicationRepository.logDose(dose.medication.id, dose.date, dose.time, status)
+            refreshDashboard()
         }
     }
 

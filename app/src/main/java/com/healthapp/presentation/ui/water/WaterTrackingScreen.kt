@@ -1,5 +1,9 @@
 package com.healthapp.presentation.ui.water
 
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import com.healthapp.presentation.ui.text.*
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
@@ -44,6 +48,7 @@ fun WaterTrackingScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showGoalDialog by remember { mutableStateOf(false) }
+    var waterToDelete by remember { mutableStateOf<WaterIntake?>(null) }
     var goalInput by remember { mutableStateOf("") }
     val sky = HealthPalette.Sky
 
@@ -114,13 +119,19 @@ fun WaterTrackingScreen(
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    uiState.waterLogs.forEach { log -> WaterLogItem(log, onDelete = { viewModel.deleteWaterLog(log.id) }) }
+                    uiState.waterLogs.forEach { log -> WaterLogItem(log, onDelete = { waterToDelete = log }) }
                 }
             }
             Spacer(Modifier.height(28.dp))
         }
     }
 
+    waterToDelete?.let { log ->
+        ConfirmDeleteDialog(
+            stringResource(R.string.confirm_delete_water, log.amountMl), stringResource(R.string.cannot_undo),
+            onConfirm = { viewModel.deleteWaterLog(log.id) }, onDismiss = { waterToDelete = null }
+        )
+    }
     if (showGoalDialog) AlertDialog(
         onDismissRequest = { showGoalDialog = false },
         title = { Text(stringResource(R.string.water_goal_title), style = MaterialTheme.typography.titleLarge) },

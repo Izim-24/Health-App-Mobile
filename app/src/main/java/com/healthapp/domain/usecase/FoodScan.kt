@@ -45,6 +45,15 @@ data class ScannedFood(
 
     fun withGrams(newGrams: Int): ScannedFood = copy(grams = newGrams.coerceIn(1, FoodScan.MAX_GRAMS))
 
+    /** The AI's own portion estimate, kept so the user can scale relative to it. */
+    val aiGrams: Int get() = baseGrams
+
+    /** Portion as a multiple of the AI estimate (1.0 = as estimated). */
+    fun scaled(factor: Double): ScannedFood = withGrams((baseGrams * factor).roundToInt())
+
+    /** Current grams / AI grams, e.g. 1.25 after choosing "a bit more". */
+    val portionFactor: Double get() = grams.toDouble() / baseGrams
+
     companion object {
         private fun round1(v: Double) = (v * 10).roundToInt() / 10.0
     }
@@ -55,6 +64,12 @@ data class ScanTotals(val calories: Int, val protein: Double, val carbs: Double,
 object FoodScan {
     const val LOW_CONFIDENCE = 0.5f
     const val MAX_GRAMS = 3000
+
+    /**
+     * Quick portion choices relative to the AI estimate. On lab-weighed photos the model underestimated
+     * grams by about 12% on average (server/eval), so "more" options are the useful correction.
+     */
+    val PORTION_STEPS = listOf(0.5, 0.75, 1.0, 1.25, 1.5)
 
     /** Turns raw AI items into reviewable foods, dropping anything unusable. */
     fun fromRecognized(items: List<RecognizedFood>): List<ScannedFood> = items.mapNotNull { f ->

@@ -14,7 +14,11 @@ data class Medication(
     val startDate: LocalDate,
     val endDate: LocalDate? = null,   // inclusive; null = ongoing
     val isActive: Boolean = true,
-    val createdAt: LocalDateTime
+    val createdAt: LocalDateTime,
+    /** Pills (or doses) on hand; null = supply not tracked. Goes down when a dose is marked taken. */
+    val pillsLeft: Int? = null,
+    /** Pills used per dose, e.g. 2 tablets. */
+    val pillsPerDose: Int = 1
 )
 
 enum class DoseStatus { TAKEN, SKIPPED }

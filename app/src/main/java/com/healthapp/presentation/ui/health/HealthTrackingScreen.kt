@@ -1,5 +1,20 @@
 package com.healthapp.presentation.ui.health
 
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import kotlin.math.roundToInt
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Animatable
+import com.healthapp.presentation.ui.theme.Illustration
+import com.healthapp.presentation.ui.theme.IllustrationImage
 import com.healthapp.presentation.ui.text.*
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.selectableGroup
@@ -65,6 +80,7 @@ private val TrendMetric.accent: Accent @Composable get() = when (this) {
 fun HealthTrackingScreen(navController: NavController, viewModel: HealthTrackingViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
     var entry by remember { mutableStateOf<HealthEntryKind?>(null) }
+    var readingToDelete by remember { mutableStateOf<String?>(null) }
     var trendMetric by remember { mutableStateOf(TrendMetric.WEIGHT) }
     var trendDays by remember { mutableIntStateOf(7) }
     val latest = state.vitals.groupBy { it.type }.mapValues { (_, values) -> values.maxByOrNull { it.recordedAt } }
@@ -129,13 +145,17 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
 
         SectionHeader(stringResource(R.string.section_history), modifier = Modifier.padding(top = 18.dp))
         val history = state.vitals.sortedByDescending { it.recordedAt }.take(20)
+        readingToDelete?.let { id ->
+            ConfirmDeleteDialog(
+                stringResource(R.string.confirm_delete_reading), stringResource(R.string.cannot_undo),
+                onConfirm = { viewModel.deleteVital(id) }, onDismiss = { readingToDelete = null }
+            )
+        }
         if (history.isEmpty() && state.weights.isEmpty() && state.sleeps.isEmpty() && state.activities.isEmpty()) {
-            AppCard(Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.no_readings), Modifier.padding(18.dp), color = HealthPalette.Muted)
-            }
+            EmptyState(Illustration.READINGS, stringResource(R.string.readings_empty_title), stringResource(R.string.no_readings))
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            history.forEach { record -> VitalHistoryRow(record, onDelete = { viewModel.deleteVital(record.id) }) }
+            history.forEach { record -> VitalHistoryRow(record, onDelete = { readingToDelete = record.id }) }
             state.weights.take(10).forEach { HealthHistoryLabel(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, stringResource(R.string.metric_weight), stringResource(R.string.kg_value, oneDecimal(it.weight)), it.recordedAt, origin(it.id)) }
             state.sleeps.take(10).forEach { HealthHistoryLabel(Icons.Rounded.Bedtime, HealthPalette.Violet, stringResource(R.string.stat_sleep), stringResource(R.string.sleep_duration, it.durationMinutes / 60, it.durationMinutes % 60), it.wakeupTime, origin(it.id)) }
             state.activities.take(10).forEach {
@@ -228,10 +248,34 @@ private fun TrendChart(metric: TrendMetric, points: List<TrendPoint>) {
                     Text(stringResource(R.string.no_data_in_range), color = HealthPalette.Muted, style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
-                Text("%.1f".format(points.last().value), style = MaterialTheme.typography.headlineMedium, color = accent.strong, modifier = Modifier.padding(top = 6.dp))
+                val fmt = DateTimeFormatter.ofPattern("dd/MM")
+                // Tapping selects the nearest point; its value and date replace the latest value above the chart.
+                var selected by remember(points) { mutableStateOf<Int?>(null) }
+                val shownPoint = points[selected ?: points.lastIndex]
+                Text(
+                    if (selected == null) oneDecimal(shownPoint.value.toDouble())
+                    else stringResource(R.string.chart_point, oneDecimal(shownPoint.value.toDouble()), shownPoint.date.format(fmt)),
+                    style = MaterialTheme.typography.headlineMedium, color = accent.strong, modifier = Modifier.padding(top = 6.dp)
+                )
+                Text(stringResource(R.string.chart_hint), style = MaterialTheme.typography.labelSmall, color = HealthPalette.Subtle)
                 val gridColor = HealthPalette.Line
                 val dotCenter = HealthPalette.Surface
-                Canvas(Modifier.fillMaxWidth().height(150.dp).padding(top = 8.dp, bottom = 8.dp)) {
+                // The line draws from left to right when the data or period changes.
+                val reveal = remember(points) { Animatable(0f) }
+                LaunchedEffect(points) { reveal.animateTo(1f, tween(700, easing = FastOutSlowInEasing)) }
+                val chartLabel = stringResource(R.string.chart_cd, stringResource(metric.label), points.size, oneDecimal(points.last().value.toDouble()))
+                Canvas(
+                    Modifier.fillMaxWidth().height(150.dp).padding(top = 8.dp, bottom = 8.dp)
+                        .semantics { contentDescription = chartLabel }
+                        .pointerInput(points) {
+                            detectTapGestures { tap ->
+                                val left = 8f
+                                val right = size.width - 8f
+                                selected = if (points.size == 1) 0
+                                else (((tap.x - left) / (right - left)) * (points.size - 1)).roundToInt().coerceIn(0, points.lastIndex)
+                            }
+                        }
+                ) {
                     val left = 8f
                     val right = size.width - 8f
                     val top = 10f
@@ -250,16 +294,19 @@ private fun TrendChart(metric: TrendMetric, points: List<TrendPoint>) {
                     if (coords.size > 1) {
                         val line = Path().apply { coords.forEachIndexed { i, o -> if (i == 0) moveTo(o.x, o.y) else lineTo(o.x, o.y) } }
                         val fill = Path().apply { addPath(line); lineTo(coords.last().x, bottom); lineTo(coords.first().x, bottom); close() }
-                        drawPath(fill, Brush.verticalGradient(listOf(accent.strong.copy(alpha = .28f), accent.strong.copy(alpha = 0f)), startY = top, endY = bottom))
-                        drawPath(line, accent.strong, style = Stroke(width = 6f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        clipRect(right = left + (right - left) * reveal.value + 12f) {
+                            drawPath(fill, Brush.verticalGradient(listOf(accent.strong.copy(alpha = .28f), accent.strong.copy(alpha = 0f)), startY = top, endY = bottom))
+                            drawPath(line, accent.strong, style = Stroke(width = 6f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                        }
                     }
-                    coords.forEach { o ->
-                        drawCircle(dotCenter, radius = 9f, center = o)
-                        drawCircle(accent.strong, radius = 6f, center = o)
+                    selected?.let { i -> drawLine(accent.strong.copy(alpha = .5f), Offset(coords[i].x, top), Offset(coords[i].x, bottom), strokeWidth = 3f) }
+                    coords.forEachIndexed { i, o ->
+                        val big = i == selected
+                        drawCircle(dotCenter, radius = if (big) 14f else 9f, center = o)
+                        drawCircle(accent.strong, radius = if (big) 10f else 6f, center = o)
                     }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    val fmt = DateTimeFormatter.ofPattern("dd/MM")
                     Text(points.first().date.format(fmt), style = MaterialTheme.typography.labelSmall, color = HealthPalette.Muted)
                     Text(points.last().date.format(fmt), style = MaterialTheme.typography.labelSmall, color = HealthPalette.Muted)
                 }

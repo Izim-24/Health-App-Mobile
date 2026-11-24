@@ -93,6 +93,29 @@ class MedicationWorker(appContext: Context, params: WorkerParameters) : Coroutin
     }
 }
 
+/** One-time "running low" notice, posted when supply drops to [MedicationSchedule.LOW_SUPPLY_DAYS] days or fewer. */
+internal fun MedicationWorker.Companion.notifyLowSupply(context: Context, med: Medication, pills: Int, days: Int) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+    ) return
+    ReminderWorker.ensureChannel(context)
+    val res = com.healthapp.core.AppLocale.localized(context)
+    val open = PendingIntent.getActivity(
+        context, ("refill_" + med.id).hashCode(),
+        Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    )
+    val notification = NotificationCompat.Builder(context, ReminderWorker.CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_launcher_foreground)
+        .setContentTitle(res.getString(R.string.notif_low_title, med.name))
+        .setContentText(res.getString(R.string.notif_low_body, pills, days))
+        .setContentIntent(open)
+        .setAutoCancel(true)
+        .setCategory(NotificationCompat.CATEGORY_REMINDER)
+        .build()
+    NotificationManagerCompat.from(context).notify(("refill_" + med.id).hashCode(), notification)
+}
+
 /** Handles "Taken" / "Skip" taps on a dose notification without opening the app. */
 class MedicationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

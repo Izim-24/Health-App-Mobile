@@ -10,6 +10,10 @@
 ## Đã hoạt động
 
 - **Tiếng Việt và English**: toàn bộ giao diện nằm trong `strings.xml` (608 chuỗi mỗi ngôn ngữ); chọn ngôn ngữ trong **Cài đặt → Ngôn ngữ** (Theo máy / Tiếng Việt / English), Android 13+ cũng hiện trong Cài đặt hệ thống → Ứng dụng → Ngôn ngữ. Trợ lý AI và tên món từ ảnh trả lời theo ngôn ngữ đang chọn.
+- **Hình minh họa**: 13 hình vẽ vector tự thiết kế (onboarding, trạng thái trống, quét món, trợ lý AI, Health Connect), tự đổi màu theo giao diện sáng/tối; sinh từ `tools/illustrations/gen.py`.
+- **Trải nghiệm**: trang chủ có thẻ **liều thuốc tiếp theo** (bấm "Đã uống" ngay), tiến độ nước so với mục tiêu, khung tải thay cho vòng xoay, điểm số đếm lên, rung nhẹ khi hoàn thành thói quen, chạm biểu đồ để xem từng ngày; **hỏi xác nhận trước khi xóa** thói quen, bữa ăn, số đo, lượt uống nước, nhắc nhở.
+- **Theo dõi số viên thuốc**: nhập số viên đang có, app đếm lùi khi bấm "Đã uống" và báo khi còn ≤ 5 ngày.
+- **Quét món ăn – chỉnh khẩu phần nhanh**: ½ · ¾ · AI · 1¼ · 1½ cho từng món và "ít hơn / như ảnh / nhiều hơn" cho cả bữa (AI thường ước lượng thấp ~10–15% gram).
 - **Trợ năng**: nhãn TalkBack cho nút biểu tượng (kèm tên mục, ví dụ "Xóa Vitamin D3"), vai trò radio/checkbox cho lựa chọn, thông báo lỗi tự đọc (live region), vùng chạm ≥ 48 dp, kiểm tra với cỡ chữ 130%.
 - Lần đầu mở: **onboarding** 4 bước (tên, ngày sinh, giới tính → chiều cao, cân nặng, mức vận động → gợi ý calo/macro, nước, BMI), có thể bỏ qua. Giao diện **sáng / tối / theo máy** trong Cài đặt.
 - Dashboard: chỉ số đã nhập, thói quen, dinh dưỡng và trạng thái trống khi chưa có dữ liệu. **Điểm sức khỏe** (0–100) chấm từng mặt theo khuyến nghị công khai — giấc ngủ 7–9 giờ (7 đêm gần nhất), ~8.000 bước/ngày (ngày trọn vẹn gần nhất), huyết áp theo ACC/AHA 2017 (đo trong 30 ngày), BMI theo chuẩn châu Á–Thái Bình Dương của WHO (bình thường 18,5–22,9; thừa cân từ 23, béo phì từ 25 — cũng dùng cho nhãn BMI trong Hồ sơ), tỷ lệ uống thuốc và hoàn thành thói quen 7 ngày — rồi lấy trung bình có trọng số; cần ít nhất 3 mặt có dữ liệu. Chạm vào để xem chi tiết từng phần, gợi ý, **biểu đồ điểm 8 tuần** và **nhận xét so với tuần trước** (ngủ, bước chân, uống thuốc, thói quen) — mỗi tuần tính cùng quy tắc với điểm hôm nay. Không phải chẩn đoán y khoa.
@@ -45,12 +49,12 @@ Yêu cầu JDK 17 và Android SDK 35. Từ thư mục dự án:
 
 APK debug: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Kiểm thử (85 test):
+Kiểm thử (91 test):
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest          # 60 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
+.\gradlew.bat :app:testDebugUnitTest          # 63 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
 .\gradlew.bat :app:lintDebug                  # Android Lint: 0 lỗi
-.\gradlew.bat :app:connectedDebugAndroidTest  # 7 test trên emulator (chạy được ở cả tiếng Việt và tiếng Anh)
+.\gradlew.bat :app:connectedDebugAndroidTest  # 10 test trên emulator: migration Room (đến v6), hồi quy, Compose UI
 cd server; npm test                          # 18 test backend
 ```
 

@@ -33,7 +33,7 @@ object DatabaseModule {
     @Singleton
     @Provides
     fun provideAiBackendApi(): AiBackendApi = Retrofit.Builder()
-        .baseUrl(if (BuildConfig.DEBUG) "http://10.0.2.2:8787/" else "https://example.invalid/")
+        .baseUrl(BuildConfig.AI_BACKEND_URL) // per build type, see app/build.gradle.kts
         // Vision requests take longer than chat: allow up to a minute.
         .client(
             okhttp3.OkHttpClient.Builder()

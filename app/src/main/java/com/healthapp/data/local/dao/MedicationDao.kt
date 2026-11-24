@@ -45,6 +45,12 @@ interface MedicationDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertLog(log: MedicationLogEntity)
 
+    @Query("SELECT * FROM medication_logs WHERE medicationId = :medicationId AND date = :date AND time = :time")
+    suspend fun getLog(medicationId: String, date: String, time: String): MedicationLogEntity?
+
+    @Query("UPDATE medications SET pillsLeft = :pills WHERE id = :id")
+    suspend fun setPillsLeft(id: String, pills: Int?)
+
     @Query("DELETE FROM medication_logs WHERE medicationId = :medicationId AND date = :date AND time = :time")
     suspend fun deleteLog(medicationId: String, date: String, time: String)
 }

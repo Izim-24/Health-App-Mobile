@@ -84,7 +84,7 @@ fun SettingsScreen(navController: NavController, viewModel: SettingsViewModel = 
             SettingRow(Icons.Default.Sync, HealthPalette.Sky, "Health Connect", stringResource(R.string.set_hc_sub)) { navController.navigate("health_connect") }
             SettingRow(Icons.Default.Medication, HealthPalette.Indigo, stringResource(R.string.link_meds), stringResource(R.string.set_meds_sub)) { navController.navigate("medications") }
             SettingRow(Icons.Default.FileDownload, HealthPalette.Emerald, stringResource(R.string.set_export), stringResource(R.string.set_export_sub)) { if (!state.busy) viewModel.export() }
-            if (com.healthapp.BuildConfig.DEBUG) {
+            if (com.healthapp.BuildConfig.DEMO_TOOLS) {
                 SettingRow(Icons.Default.Science, HealthPalette.Violet, stringResource(R.string.set_demo), stringResource(R.string.set_demo_sub)) { if (!state.busy) viewModel.seedDemoData() }
                 if (state.hasDemoData) SettingRow(Icons.Default.LayersClear, HealthPalette.Amber, stringResource(R.string.set_demo_clear), stringResource(R.string.set_demo_clear_sub)) { if (!state.busy) viewModel.clearDemoData() }
             }
