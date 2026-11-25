@@ -326,10 +326,10 @@
     <string name="choose_food">Chọn thực phẩm</string>
     <string name="add_portion">Thêm khẩu phần</string>
     <string name="food_or_product">Tên thực phẩm hoặc sản phẩm</string>
-    <string name="food_search_example">Ví dụ: sữa chua, yến mạch</string>
+    <string name="food_search_example">Ví dụ: phở bò, cơm tấm, sữa chua</string>
     <string name="search_food">Tra cứu thực phẩm</string>
-    <string name="search_hint">Nhấn kính lúp để tra thư viện trực tuyến. Dữ liệu sản phẩm do cộng đồng đóng góp; hãy đối chiếu nhãn bao bì.</string>
-    <string name="search_none">Không tìm thấy món phù hợp. Thử từ khóa khác hoặc kiểm tra kết nối.</string>
+    <string name="search_hint">Gõ có dấu hoặc không dấu đều được. Có sẵn 42 món Việt (giá trị ước tính theo công thức phổ biến); nhấn kính lúp để tra thêm sản phẩm đóng gói trên Open Food Facts (dữ liệu cộng đồng, hãy đối chiếu nhãn bao bì).</string>
+    <string name="search_none">Không tìm thấy món phù hợp. Thử từ khóa ngắn hơn (ví dụ \"pho\") hoặc tự nhập món.</string>
     <string name="food_line_per">%1$d kcal / %2$d g · %3$s</string>
     <string name="portion_step1">Bước 1: nhập lượng bạn đã ăn. Giá trị bên dưới được tính theo %1$d g.</string>
     <string name="portion_grams">Khẩu phần (gram)</string>
@@ -700,4 +700,5 @@
     <string name="pdf_generated">Tạo lúc %1$s bằng Health App</string>
     <string name="pdf_disclaimer">Số liệu do người dùng tự ghi hoặc nhập từ Health Connect, chỉ tính những ngày có nhật ký. Đây là bản tổng hợp để tham khảo, không phải chẩn đoán y khoa.</string>
     <string name="msg_pdf_failed">Không tạo được PDF: %1$s</string>
+    <string name="source_vn">Món Việt · giá trị ước tính</string>
 </resources>

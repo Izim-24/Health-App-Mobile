@@ -27,7 +27,8 @@ interface NutritionRepository {
     suspend fun getMeal(mealId: String): Result<Meal>
     fun observeMealsByDate(userId: String, date: String): Flow<List<Meal>>
     suspend fun getNutritionSummary(userId: String, date: String): Result<NutritionSummary>
-    suspend fun searchFoods(query: String): Result<List<Food>>
+    /** Built-in dishes and stored foods (accent-insensitive); with [online], also Open Food Facts products. */
+    suspend fun searchFoods(query: String, online: Boolean = true): Result<List<Food>>
     suspend fun addCustomFood(food: Food): Result<Food>
     suspend fun seedDefaultFoods(): Result<Unit>
 }

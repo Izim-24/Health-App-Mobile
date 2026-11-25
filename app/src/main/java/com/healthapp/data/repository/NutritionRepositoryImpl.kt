@@ -3,6 +3,8 @@ package com.healthapp.data.repository
 import com.healthapp.data.local.dao.*
 import com.healthapp.data.local.entity.*
 import com.healthapp.data.remote.OpenFoodFactsApi
+import com.healthapp.data.food.VietnameseFoodLibrary
+import com.healthapp.domain.usecase.FoodSearch
 import com.healthapp.domain.model.*
 import com.healthapp.domain.repository.NutritionRepository
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +18,8 @@ class NutritionRepositoryImpl @Inject constructor(
     private val mealDao: MealDao,
     private val mealItemDao: MealItemDao,
     private val profileDao: UserProfileDao,
-    private val openFoodFactsApi: OpenFoodFactsApi
+    private val openFoodFactsApi: OpenFoodFactsApi,
+    private val vnLibrary: VietnameseFoodLibrary
 ) : NutritionRepository {
 
     override suspend fun addMeal(userId: String, meal: Meal): Result<Meal> = try {
@@ -98,11 +101,21 @@ class NutritionRepositoryImpl @Inject constructor(
         Result.failure(e)
     }
 
-    override suspend fun searchFoods(query: String): Result<List<Food>> = try {
-        val localFoods = foodDao.searchFoods(query).filter { it.source != "INTEGRATED_LIBRARY" && it.source != "AI_SCANNED" }.map { it.toDomain() }
-        val onlineFoods = if (query.trim().length >= 2) {
+    override suspend fun searchFoods(query: String, online: Boolean): Result<List<Food>> = try {
+        val q = query.trim()
+        // 1) Built-in Vietnamese dishes (offline). Stored so meal items can point at them.
+        val library = FoodSearch.search(vnLibrary.foods, q) { it.name }
+        if (library.isNotEmpty()) foodDao.insertFoods(library)
+        // 2) Foods already on the phone (own entries, earlier look-ups, sample data), accent-insensitive.
+        val stored = foodDao.getAllFoods().filter {
+            it.source != "INTEGRATED_LIBRARY" && it.source != "AI_SCANNED" && it.source != VietnameseFoodLibrary.SOURCE
+        }
+        val localFoods = FoodSearch.search(stored, q) { it.name }.map { it.toDomain() }
+        val libraryFoods = library.map { it.toDomain() }
+        // 3) Open Food Facts (packaged products), only for a real query.
+        val onlineFoods = if (online && q.length >= 2) {
             runCatching {
-                openFoodFactsApi.searchProducts(query.trim()).products.mapNotNull { product ->
+                openFoodFactsApi.searchProducts(q).products.mapNotNull { product ->
                     val name = product.productName?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
                     val nutrients = product.nutrients ?: return@mapNotNull null
                     val calories = nutrients.caloriesPer100g?.takeIf { it >= 0 } ?: return@mapNotNull null
@@ -125,7 +138,9 @@ class NutritionRepositoryImpl @Inject constructor(
                 }.also { foods -> foodDao.insertFoods(foods.map { it.toEntity() }) }
             }.getOrDefault(emptyList())
         } else emptyList()
-        Result.success((onlineFoods + localFoods).distinctBy { it.name.trim().lowercase() })
+        // Blank query (the "library" list): your own foods first. Searching: dishes, then yours, then products.
+        val ordered = if (q.isEmpty()) localFoods + libraryFoods else libraryFoods + localFoods + onlineFoods
+        Result.success(ordered.distinctBy { FoodSearch.fold(it.name) })
     } catch (e: Exception) {
         Result.failure(e)
     }

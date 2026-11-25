@@ -141,8 +141,9 @@ interface FoodDao {
     @Query("SELECT * FROM foods WHERE id = :foodId")
     suspend fun getFoodById(foodId: String): FoodEntity?
 
-    @Query("SELECT * FROM foods WHERE name LIKE '%' || :query || '%' ORDER BY name ASC")
-    suspend fun searchFoods(query: String): List<FoodEntity>
+    /** All stored foods; search filters them in Kotlin (accent-insensitive, see FoodSearch). */
+    @Query("SELECT * FROM foods ORDER BY name ASC")
+    suspend fun getAllFoods(): List<FoodEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFood(food: FoodEntity)

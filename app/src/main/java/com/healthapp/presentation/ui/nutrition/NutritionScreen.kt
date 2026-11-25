@@ -133,8 +133,9 @@ fun NutritionScreen(navController: NavController, viewModel: NutritionViewModel 
             isSearching = state.isSearchingFoods,
             initialFood = preselectedFood,
             onSearch = viewModel::searchFoods,
-            onDismiss = { showAddDialog = false },
-            onAdd = { food, grams, type -> viewModel.addFood(food, grams, type); showAddDialog = false; preselectedFood = null }
+            onFilter = viewModel::filterFoods,
+            onDismiss = { showAddDialog = false; viewModel.filterFoods("") },
+            onAdd = { food, grams, type -> viewModel.addFood(food, grams, type); showAddDialog = false; preselectedFood = null; viewModel.filterFoods("") }
         )
     }
     if (showCustomDialog) CustomFoodDialog(onDismiss = { showCustomDialog = false }, onSave = { name, calories, protein, carbs, fat ->
@@ -205,7 +206,7 @@ private fun MealCard(meal: Meal, onDelete: () -> Unit) {
 }
 
 @Composable
-private fun FoodAddDialog(foods: List<Food>, isSearching: Boolean, initialFood: Food?, onSearch: (String) -> Unit, onDismiss: () -> Unit, onAdd: (Food, Int, MealType) -> Unit) {
+private fun FoodAddDialog(foods: List<Food>, isSearching: Boolean, initialFood: Food?, onSearch: (String) -> Unit, onFilter: (String) -> Unit, onDismiss: () -> Unit, onAdd: (Food, Int, MealType) -> Unit) {
     var query by remember { mutableStateOf("") }
     var selectedFood by remember(initialFood?.id) { mutableStateOf(initialFood) }
     var grams by remember(initialFood?.id) { mutableStateOf(initialFood?.servingSize?.toString() ?: "100") }
@@ -218,7 +219,7 @@ private fun FoodAddDialog(foods: List<Food>, isSearching: Boolean, initialFood: 
                 if (selectedFood == null) {
                     OutlinedTextField(
                         value = query,
-                        onValueChange = { query = it },
+                        onValueChange = { query = it; onFilter(it) },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text(stringResource(R.string.food_or_product)) },
                         placeholder = { Text(stringResource(R.string.food_search_example)) },
@@ -278,5 +279,6 @@ private fun EmptyCard(message: String) {
 private fun Food.sourceLabel(): String = when (source) {
     "OPEN_FOOD_FACTS" -> stringResource(R.string.source_off)
     "USER_CREATED" -> stringResource(R.string.source_user)
+    "VN_LIBRARY" -> stringResource(R.string.source_vn)
     else -> stringResource(R.string.source_builtin)
 }

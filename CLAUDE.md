@@ -29,7 +29,7 @@ tests don't uninstall the app (which would wipe emulator data). Keep it.
 ```
 app/src/main/java/com/healthapp/
 ├── domain/        Pure Kotlin: models, repository interfaces, use cases (HealthScore, ScoreHistory, FoodScan,
-│                  HealthCalculations, MedicationSchedule, ReminderSchedule, WaterPace). No Android imports.
+│                  HealthCalculations, MedicationSchedule, ReminderSchedule, WaterPace, FoodSearch). No Android imports.
 ├── data/          Room entities/DAOs, repository implementations, Retrofit APIs, WorkManager workers,
 │                  Health Connect import (HealthConnectManager implements HealthSyncRepository)
 ├── presentation/  Compose screens + ViewModels. Depends on domain only — never import com.healthapp.data.
@@ -130,4 +130,6 @@ so read them in composition, not inside `Canvas` draw lambdas or top-level vals.
 - Health data is sensitive: backups are disabled, exports warn the user, no analytics.
 - Export/restore: `DataManagementRepositoryImpl` writes `healthapp-export-v1` JSON; restore merges by id in one
   transaction (`DataManagementDao.importAll`), moves rows to the current account, re-arms reminders/medications.
+- Food search folds accents in Kotlin (`FoodSearch`), not SQL LIKE. Built-in dishes: `data/food/VietnameseFoodLibrary`
+  reads `assets/vn-foods.json`, an exact copy of `server/data/vn-foods.json` (a test enforces it — copy after editing).
 - Algorithms are documented for the report in `ALGORITHMS.md` — update it when a rule in `domain/usecase` changes.

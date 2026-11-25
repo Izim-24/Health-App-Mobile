@@ -23,7 +23,7 @@
 - Theo dõi sức khỏe: nhập nhịp tim, huyết áp, đường huyết, cân nặng, giấc ngủ và hoạt động; xem lịch sử, biểu đồ theo ngày/tuần/tháng.
 - Thói quen: tạo và chỉnh mục tiêu, đánh dấu hoàn thành theo ngày. Sang ngày mới, trạng thái hoàn thành của ngày trước không còn áp dụng.
 - Nước uống: ghi và xóa lượt uống, tự đặt mục tiêu ml/ngày.
-- Dinh dưỡng: ghi bữa ăn và khẩu phần, tìm sản phẩm qua Open Food Facts. Dữ liệu sản phẩm do cộng đồng đóng góp, cần đối chiếu nhãn thực phẩm.
+- Dinh dưỡng: ghi bữa ăn và khẩu phần. **Tìm món không phân biệt dấu** (`pho bo` = "Phở bò"), kết quả hiện ngay khi gõ, kể cả offline: có sẵn **42 món Việt** theo một khẩu phần thường gặp (cùng bảng giá trị với AI quét ảnh, là ước tính theo công thức phổ biến). Nhấn kính lúp để tra thêm sản phẩm đóng gói qua Open Food Facts (dữ liệu cộng đồng, cần đối chiếu nhãn).
 - Sức khỏe tinh thần: check-in cảm xúc, mức căng thẳng, ghi chú riêng tư và bài tập thở ngắn.
 - Hồ sơ: nhập tên, ngày sinh, giới tính, chiều cao, cân nặng và mức vận động. Nút **Tính mục tiêu calo & macro** ước tính BMR/TDEE theo công thức Mifflin–St Jeor và chia macro (đạm 1,6 g/kg, chất béo 30%), có gợi ý lượng nước. BMI chỉ tính khi có dữ liệu do người dùng nhập.
 - Nhắc nhở: tạo nhắc uống nước, vận động, bữa ăn, giấc ngủ, thói quen theo giờ và ngày trong tuần; bật/tắt, sửa, xóa. Lên lịch bằng WorkManager (giữ sau khi khởi động lại máy), cần quyền thông báo trên Android 13+.
@@ -53,12 +53,12 @@ Yêu cầu JDK 17 và Android SDK 35. Từ thư mục dự án:
 
 APK debug: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Kiểm thử (98 test):
+Kiểm thử (105 test):
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest          # 70 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
+.\gradlew.bat :app:testDebugUnitTest          # 76 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
 .\gradlew.bat :app:lintDebug                  # Android Lint: 0 lỗi
-.\gradlew.bat :app:connectedDebugAndroidTest  # 10 test trên emulator: migration Room (đến v6), hồi quy, Compose UI
+.\gradlew.bat :app:connectedDebugAndroidTest  # 11 test trên emulator: migration Room (đến v6), hồi quy, tìm món offline, Compose UI
 cd server; npm test                          # 18 test backend
 ```
 

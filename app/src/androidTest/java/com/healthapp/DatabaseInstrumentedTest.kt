@@ -79,13 +79,29 @@ class DatabaseInstrumentedTest {
      * Regression test: the meal list observes only the meals table, so a meal must become visible
      * together with its items (the bug showed "Bữa ăn · 0 g" right after saving).
      */
+    /** "pho bo" (no accents, no network) finds the built-in "Phở bò", sized as one bowl. */
+    @Test fun searchFoods_findsBuiltInVietnameseDish_withoutAccentsOffline() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, HealthDatabase::class.java).build()
+        val noNetwork = object : OpenFoodFactsApi {
+            override suspend fun searchProducts(query: String, simple: Int, action: String, json: Int, pageSize: Int, fields: String): OpenFoodFactsSearchResponse =
+                throw java.io.IOException("offline")
+        }
+        val repo = NutritionRepositoryImpl(db.foodDao(), db.mealDao(), db.mealItemDao(), db.userProfileDao(), noNetwork, com.healthapp.data.food.VietnameseFoodLibrary(context))
+        val found = repo.searchFoods("pho bo").getOrThrow()
+        assertEquals("Phở bò", found.first().name)
+        assertEquals(500, found.first().servingSize)
+        assertEquals(450, found.first().calories) // 90 kcal/100 g × 500 g
+        assertEquals("Phở bò", repo.searchFoods("PHỞ BÒ").getOrThrow().first().name)
+        db.close()
+    }
+
     @Test fun addMeal_firstEmissionAlreadyHasItems() = runBlocking {
         val db = Room.inMemoryDatabaseBuilder(context, HealthDatabase::class.java).build()
         val noNetwork = object : OpenFoodFactsApi {
             override suspend fun searchProducts(query: String, simple: Int, action: String, json: Int, pageSize: Int, fields: String): OpenFoodFactsSearchResponse =
                 throw UnsupportedOperationException()
         }
-        val repo = NutritionRepositoryImpl(db.foodDao(), db.mealDao(), db.mealItemDao(), db.userProfileDao(), noNetwork)
+        val repo = NutritionRepositoryImpl(db.foodDao(), db.mealDao(), db.mealItemDao(), db.userProfileDao(), noNetwork, com.healthapp.data.food.VietnameseFoodLibrary(context))
         val food = Food("f1", "Phở bò", 450, 28.0, 55.0, 12.0, 0.0, 0.0, 0, 500, "USER_CREATED")
         repo.addCustomFood(food)
         val item = MealItem("i1", food, 1.0, 500, 450, 28.0, 55.0, 12.0, 0.0, 0.0, 0)

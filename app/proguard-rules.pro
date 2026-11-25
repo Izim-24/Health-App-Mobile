@@ -73,3 +73,6 @@
 
 # Backup restore reads this class with Gson (field names must survive R8).
 -keep class com.healthapp.data.repository.BackupFile { *; }
+
+# Built-in Vietnamese food library parses assets/vn-foods.json with Gson.
+-keep class com.healthapp.data.food.VietnameseFoodLibrary$* { *; }

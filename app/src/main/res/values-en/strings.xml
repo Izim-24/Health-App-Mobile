@@ -325,10 +325,10 @@
     <string name="choose_food">Choose a food</string>
     <string name="add_portion">Add portion</string>
     <string name="food_or_product">Food or product name</string>
-    <string name="food_search_example">e.g. yogurt, oats</string>
+    <string name="food_search_example">e.g. pho bo, com tam, yogurt</string>
     <string name="search_food">Search foods</string>
-    <string name="search_hint">Tap the magnifier to search the online library. Product data is community-sourced; check the package label.</string>
-    <string name="search_none">No matching food. Try another word or check your connection.</string>
+    <string name="search_hint">Accents are optional. 42 Vietnamese dishes are built in (estimates for typical recipes); tap the magnifier to also search packaged products on Open Food Facts (community data; check the label).</string>
+    <string name="search_none">No matching food. Try a shorter word (e.g. \"pho\") or enter the food yourself.</string>
     <string name="food_line_per">%1$d kcal / %2$d g · %3$s</string>
     <string name="portion_step1">Step 1: enter how much you ate. The values below are per %1$d g.</string>
     <string name="portion_grams">Portion (grams)</string>
@@ -716,4 +716,5 @@
     <string name="pdf_generated">Generated %1$s by Health App</string>
     <string name="pdf_disclaimer">Figures were logged by the user or imported from Health Connect; only days with entries are counted. This summary is for reference and is not a medical diagnosis.</string>
     <string name="msg_pdf_failed">Couldn\'t create the PDF: %1$s</string>
+    <string name="source_vn">Vietnamese dish · estimated values</string>
 </resources>

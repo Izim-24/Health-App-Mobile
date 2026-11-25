@@ -143,8 +143,9 @@ object RepositoryModule {
         mealDao: MealDao,
         mealItemDao: MealItemDao,
         profileDao: UserProfileDao,
-        openFoodFactsApi: OpenFoodFactsApi
-    ): NutritionRepository = NutritionRepositoryImpl(foodDao, mealDao, mealItemDao, profileDao, openFoodFactsApi)
+        openFoodFactsApi: OpenFoodFactsApi,
+        vnLibrary: com.healthapp.data.food.VietnameseFoodLibrary
+    ): NutritionRepository = NutritionRepositoryImpl(foodDao, mealDao, mealItemDao, profileDao, openFoodFactsApi, vnLibrary)
 
     @Singleton
     @Provides

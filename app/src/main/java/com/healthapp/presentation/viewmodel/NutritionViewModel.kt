@@ -69,11 +69,18 @@ class NutritionViewModel @Inject constructor(
         }
     }
 
-    fun searchFoods(query: String) {
+    /** Magnifier: built-in dishes, your foods and Open Food Facts. */
+    fun searchFoods(query: String) = runSearch(query, online = true)
+
+    /** While typing: offline only (built-in dishes and your foods), short debounce, no network calls. */
+    fun filterFoods(query: String) = runSearch(query, online = false, debounceMs = 250)
+
+    private fun runSearch(query: String, online: Boolean, debounceMs: Long = 0) {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
-            _uiState.update { it.copy(isSearchingFoods = true, error = null) }
-            repository.searchFoods(query).onSuccess { foods -> _uiState.update { it.copy(foods = foods, isSearchingFoods = false) } }
+            if (debounceMs > 0) delay(debounceMs)
+            _uiState.update { it.copy(isSearchingFoods = online, error = null) }
+            repository.searchFoods(query, online).onSuccess { foods -> _uiState.update { it.copy(foods = foods, isSearchingFoods = false) } }
                 .onFailure { error -> _uiState.update { it.copy(error = error.message?.let(UiText::Raw), isSearchingFoods = false) } }
         }
     }

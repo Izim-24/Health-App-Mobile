@@ -16,6 +16,7 @@ Mọi quy tắc nghiệp vụ nằm trong `app/src/main/java/com/healthapp/domai
 | 8 | Nhập dữ liệu Health Connect | `data/healthconnect/HealthConnectMapper.kt` | `HealthConnectMapperTest` (6) |
 | 9 | Báo thức thuốc chính xác | `data/reminder/MedicationScheduler.kt` | kiểm thử trên emulator |
 | 10 | Sao lưu / khôi phục | `data/repository/DataManagementRepositoryImpl.kt` | kiểm thử trên emulator |
+| 11 | Tìm món không phân biệt dấu | `FoodSearch.kt` + `data/food/VietnameseFoodLibrary.kt` | `FoodSearchTest` (3), `VietnameseFoodLibraryTest` (3), emulator (1) |
 
 ---
 
@@ -169,6 +170,17 @@ và *sau thời điểm hiện tại*. Sau mỗi lần thông báo, lịch tiế
 - **Chuyển sang tài khoản trên máy này** (id tài khoản trong tệp khác máy mới), sau đó **đặt lại nhắc nhở & báo thức thuốc**.
 - Tệp không đúng định dạng bị từ chối với thông báo rõ ràng; tệp > 20 MB bị từ chối.
 - Đã kiểm chứng trên emulator: xóa một bản ghi → khôi phục → bản ghi trở lại; khôi phục lần hai vẫn chỉ 1 bản ghi.
+
+---
+
+## 11. Tìm món không phân biệt dấu (FoodSearch)
+
+- **Vấn đề:** SQL `LIKE` chỉ bỏ qua hoa/thường với chữ ASCII và phân biệt dấu → gõ `pho bo` hoặc `PHỞ BÒ` không ra "Phở bò"; người dùng (và bàn phím emulator) hay gõ không dấu.
+- **Chuẩn hóa (fold):** chữ thường → tách dấu bằng Unicode NFD → bỏ mọi dấu (ký tự loại *Mark*) → `đ` → `d` → gộp khoảng trắng. Ví dụ "Đậu phụ chiên" → `dau phu chien`.
+- **Khớp:** mọi từ của câu tìm đều nằm trong tên đã chuẩn hóa (không cần đúng thứ tự: `bo pho` vẫn ra).
+- **Xếp hạng:** 0 = tên bắt đầu bằng câu tìm, 1 = một từ trong tên bắt đầu bằng nó, 2 = chỉ chứa; cùng hạng thì tên ngắn trước ("Phở bò" trước "Gia vị phở bò").
+- **Nguồn, theo thứ tự:** 42 món Việt có sẵn (offline, mỗi món một khẩu phần thường gặp, giá trị /100 g lấy từ **cùng tệp** `vn-foods.json` mà AI quét ảnh dùng — test bắt hai bản phải giống hệt) → món đã lưu trên máy → Open Food Facts (chỉ khi bấm kính lúp, để không gọi mạng mỗi lần gõ). Gõ chữ thì lọc offline sau 250 ms.
+- **Độ phức tạp:** O(n·m) với n món (vài trăm) và m độ dài tên — tức thì trên điện thoại.
 
 ---
 
