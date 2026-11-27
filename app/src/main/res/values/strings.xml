@@ -701,4 +701,23 @@
     <string name="pdf_disclaimer">Số liệu do người dùng tự ghi hoặc nhập từ Health Connect, chỉ tính những ngày có nhật ký. Đây là bản tổng hợp để tham khảo, không phải chẩn đoán y khoa.</string>
     <string name="msg_pdf_failed">Không tạo được PDF: %1$s</string>
     <string name="source_vn">Món Việt · giá trị ước tính</string>
+    <string name="channel_health_alerts">Cảnh báo sức khỏe</string>
+    <string name="channel_health_alerts_desc">Nhịp tim, huyết áp bất thường từ đồng hồ hoặc số đo của bạn</string>
+    <string name="alert_sim_prefix">Mô phỏng · %1$s</string>
+    <string name="alert_title_rest_tachy">Tim nhanh khi đang nghỉ</string>
+    <string name="alert_title_rest_tachy_severe">Tim rất nhanh khi đang nghỉ</string>
+    <string name="alert_title_rest_brady">Tim chậm bất thường</string>
+    <string name="alert_title_over_exertion">Đang tập quá sức</string>
+    <string name="alert_title_above_max_hr">Vượt nhịp tim tối đa</string>
+    <string name="alert_title_bp_crisis">Huyết áp ở mức nguy hiểm</string>
+    <string name="alert_title_bp_high">Huyết áp cao</string>
+    <string name="alert_title_bp_sustained">Huyết áp cao kéo dài</string>
+    <string name="alert_body_rest_tachy">Tim đập %1$d lần/phút suốt hơn 10 phút trong khi bạn đang nghỉ. Hãy ngồi nghỉ, thở chậm; nếu kèm đau ngực, khó thở hoặc choáng, gọi 115.</string>
+    <string name="alert_body_rest_tachy_severe">Tim đập %1$d lần/phút khi đang nghỉ. Dừng mọi hoạt động; nếu kèm đau ngực, khó thở, ngất hoặc yếu liệt, gọi 115 ngay.</string>
+    <string name="alert_body_rest_brady">Nhịp tim chỉ %1$d lần/phút khi nghỉ trong hơn 10 phút. Nếu thấy chóng mặt, mệt lả hoặc ngất, hãy đi khám ngay.</string>
+    <string name="alert_body_over_exertion">Nhịp tim %1$d, trên 90%% mức tối đa của bạn (%2$d) trong lúc tập. Hãy giảm cường độ, đi chậm lại và uống nước.</string>
+    <string name="alert_body_above_max_hr">Nhịp tim %1$d vượt mức tối đa ước tính của bạn (%2$d). Dừng tập và nghỉ ngơi đến khi tim chậm lại.</string>
+    <string name="alert_body_bp_crisis">Huyết áp %1$d/%2$d mmHg – mức nguy hiểm. Kiểm tra dấu hiệu đột quỵ F.A.S.T (méo miệng, yếu tay, nói ngọng); nếu có, gọi 115 ngay.</string>
+    <string name="alert_body_bp_high">Huyết áp %1$d/%2$d mmHg. Ngồi nghỉ 5 phút rồi đo lại; nếu vẫn cao, hãy liên hệ bác sĩ.</string>
+    <string name="alert_body_bp_sustained">Huyết áp trung bình 7 ngày qua là %1$d/%2$d mmHg (từ 135/85 là cao). Huyết áp cao kéo dài là yếu tố nguy cơ đột quỵ – nên đi khám.</string>
 </resources>

@@ -60,6 +60,7 @@ class VitalAlertsTest {
         val a = VitalAlerts.heartAlerts(s, steps(16, 150, fromMin = -10), 28, nowAfter(s)) // already running for 10 min
         assertEquals(listOf(AlertKind.OVER_EXERTION), kinds(a))
         assertEquals(ActivityState.ACTIVE, a.single().state)
+        assertEquals(192, a.single().secondary) // max heart rate, shown in the notification
     }
 
     @Test fun aboveMax_supersedesOverExertion() {

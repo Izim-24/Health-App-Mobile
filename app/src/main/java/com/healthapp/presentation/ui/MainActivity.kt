@@ -11,6 +11,11 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    companion object {
+        /** Notification extra: a navigation route to open (e.g. "health_alerts"). */
+        const val EXTRA_OPEN_ROUTE = "open_route"
+    }
+
     @Inject lateinit var healthConnect: HealthSyncRepository
 
     // Android 12 and older: apply the in-app language choice (no-op on 13+, where the framework does it).

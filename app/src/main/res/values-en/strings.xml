@@ -717,4 +717,23 @@
     <string name="pdf_disclaimer">Figures were logged by the user or imported from Health Connect; only days with entries are counted. This summary is for reference and is not a medical diagnosis.</string>
     <string name="msg_pdf_failed">Couldn\'t create the PDF: %1$s</string>
     <string name="source_vn">Vietnamese dish · estimated values</string>
+    <string name="channel_health_alerts">Health alerts</string>
+    <string name="channel_health_alerts_desc">Unusual heart rate or blood pressure from your watch or readings</string>
+    <string name="alert_sim_prefix">Simulated · %1$s</string>
+    <string name="alert_title_rest_tachy">Fast heart rate at rest</string>
+    <string name="alert_title_rest_tachy_severe">Very fast heart rate at rest</string>
+    <string name="alert_title_rest_brady">Unusually slow heart rate</string>
+    <string name="alert_title_over_exertion">Pushing too hard</string>
+    <string name="alert_title_above_max_hr">Above your maximum heart rate</string>
+    <string name="alert_title_bp_crisis">Dangerously high blood pressure</string>
+    <string name="alert_title_bp_high">High blood pressure</string>
+    <string name="alert_title_bp_sustained">Blood pressure high all week</string>
+    <string name="alert_body_rest_tachy">Heart rate %1$d bpm for over 10 minutes while you were resting. Sit down and breathe slowly; with chest pain, breathlessness or dizziness, call 115 (emergency).</string>
+    <string name="alert_body_rest_tachy_severe">Heart rate %1$d bpm at rest. Stop all activity; with chest pain, breathlessness, fainting or weakness, call 115 (emergency) now.</string>
+    <string name="alert_body_rest_brady">Heart rate only %1$d bpm at rest for over 10 minutes. If you feel dizzy, exhausted or faint, see a doctor now.</string>
+    <string name="alert_body_over_exertion">Heart rate %1$d, above 90%% of your maximum (%2$d) while exercising. Ease off, slow down and drink some water.</string>
+    <string name="alert_body_above_max_hr">Heart rate %1$d is above your estimated maximum (%2$d). Stop exercising and rest until it slows down.</string>
+    <string name="alert_body_bp_crisis">Blood pressure %1$d/%2$d mmHg – a dangerous level. Check the F.A.S.T stroke signs (face drooping, arm weakness, speech difficulty); if any, call 115 (emergency) now.</string>
+    <string name="alert_body_bp_high">Blood pressure %1$d/%2$d mmHg. Rest for 5 minutes and measure again; if it stays high, contact a doctor.</string>
+    <string name="alert_body_bp_sustained">Your 7-day average blood pressure is %1$d/%2$d mmHg (135/85 or more is high). Long-term high blood pressure is a stroke risk factor – see a doctor.</string>
 </resources>

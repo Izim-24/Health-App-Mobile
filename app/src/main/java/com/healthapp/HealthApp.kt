@@ -9,5 +9,6 @@ class HealthApp : Application() {
     override fun onCreate() {
         super.onCreate()
         ReminderWorker.ensureChannel(this)
+        com.healthapp.data.alerts.HealthAlertRepositoryImpl.ensureChannel(this)
     }
 }

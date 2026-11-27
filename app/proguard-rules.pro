@@ -76,3 +76,6 @@
 
 # Built-in Vietnamese food library parses assets/vn-foods.json with Gson.
 -keep class com.healthapp.data.food.VietnameseFoodLibrary$* { *; }
+
+# Recent health alerts are stored as JSON with Gson.
+-keep class com.healthapp.data.alerts.HealthAlertRepositoryImpl$Stored { *; }

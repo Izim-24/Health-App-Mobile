@@ -191,6 +191,7 @@ object RepositoryModule {
     @Provides fun provideAccountSession(impl: AccountManager): AccountSession = impl
     @Provides fun provideProfileRepository(impl: ProfileRepositoryImpl): ProfileRepository = impl
     @Provides fun provideReportRepository(impl: ReportRepositoryImpl): ReportRepository = impl
+    @Provides fun provideHealthAlertRepository(impl: com.healthapp.data.alerts.HealthAlertRepositoryImpl): com.healthapp.domain.repository.HealthAlertRepository = impl
     @Provides fun provideReportExportRepository(impl: com.healthapp.data.report.ReportPdfRepositoryImpl): com.healthapp.domain.repository.ReportExportRepository = impl
     @Provides fun provideMedicationRepository(impl: MedicationRepositoryImpl): MedicationRepository = impl
     @Provides fun provideMoodRepository(impl: MoodRepositoryImpl): MoodRepository = impl

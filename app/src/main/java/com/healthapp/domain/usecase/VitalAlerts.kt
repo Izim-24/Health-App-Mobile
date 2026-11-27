@@ -25,7 +25,7 @@ enum class AlertKind(val level: AlertLevel) {
     BP_SUSTAINED(AlertLevel.TREND)
 }
 
-/** [value]/[secondary]: bpm, or systolic/diastolic (BP); [state]: activity when the heart rate was measured. */
+/** [value]/[secondary]: bpm (secondary = max heart rate for exertion alerts), or systolic/diastolic (BP); [state]: activity when the heart rate was measured. */
 data class VitalAlert(
     val kind: AlertKind,
     val at: LocalDateTime,
@@ -69,7 +69,7 @@ object VitalAlerts {
         val state = recent.associate { it.time to activityState(steps, it.time) }
         fun resting(s: HrSample) = state[s.time] == ActivityState.RESTING
         fun active(s: HrSample) = state[s.time] == ActivityState.ACTIVE
-        fun alert(kind: AlertKind, s: HrSample) = VitalAlert(kind, s.time, s.bpm, state = state[s.time])
+        fun alert(kind: AlertKind, s: HrSample, secondary: Int? = null) = VitalAlert(kind, s.time, s.bpm, secondary, state[s.time])
 
         val out = mutableListOf<VitalAlert>()
         when {
@@ -78,8 +78,8 @@ object VitalAlerts {
             sustained(recent, 10) { resting(it) && it.bpm < 40 } != null -> out += alert(AlertKind.REST_BRADY, recent.last())
         }
         when {
-            sustained(recent, 2) { active(it) && it.bpm > max } != null -> out += alert(AlertKind.ABOVE_MAX_HR, recent.last())
-            sustained(recent, 5) { active(it) && it.bpm > max * 0.9 } != null -> out += alert(AlertKind.OVER_EXERTION, recent.last())
+            sustained(recent, 2) { active(it) && it.bpm > max } != null -> out += alert(AlertKind.ABOVE_MAX_HR, recent.last(), max)
+            sustained(recent, 5) { active(it) && it.bpm > max * 0.9 } != null -> out += alert(AlertKind.OVER_EXERTION, recent.last(), max)
         }
         return out
     }

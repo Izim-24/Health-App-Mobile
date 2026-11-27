@@ -34,6 +34,27 @@ interface ReportRepository {
     suspend fun periodReport(accountId: String, start: LocalDate, end: LocalDate): PeriodReport
 }
 
+interface HealthAlertRepository {
+    /** Newest first, at most 20, simulated alerts included (flagged). */
+    val recent: kotlinx.coroutines.flow.Flow<List<com.healthapp.domain.usecase.VitalAlert>>
+    /**
+     * Runs [com.healthapp.domain.usecase.VitalAlerts] (adding the profile age and, for real data, stored blood pressure of
+     * the last 7 days), applies the cooldown, posts a notification for each due alert when [notify] and records them.
+     * Returns the due alerts.
+     */
+    suspend fun check(
+        hr: List<com.healthapp.domain.usecase.HrSample>,
+        steps: List<com.healthapp.domain.usecase.StepSample>,
+        bp: List<com.healthapp.domain.usecase.BpReading>,
+        now: java.time.LocalDateTime = java.time.LocalDateTime.now(),
+        notify: Boolean = true,
+        simulated: Boolean = false
+    ): List<com.healthapp.domain.usecase.VitalAlert>
+    /** Forgets the simulator's cooldown so a new scenario can alert again. */
+    fun resetSimulation()
+    suspend fun clearRecent()
+}
+
 interface ReportExportRepository {
     /** Lays [report] out as a one-page PDF in the app cache (shared via FileProvider) and returns the file. */
     suspend fun exportPdf(report: PeriodReport): Result<File>
