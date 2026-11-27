@@ -102,7 +102,7 @@ interface HealthSyncRepository {
     suspend fun refresh()
     suspend fun onPermissionsResult(granted: Set<String>)
     suspend fun sync(force: Boolean): Result<HcSyncSummary>
-    suspend fun syncIfDue()
+    suspend fun syncIfDue(minIntervalMin: Long = 15)
     suspend fun disconnect(removeImported: Boolean)
     fun clearError()
 }

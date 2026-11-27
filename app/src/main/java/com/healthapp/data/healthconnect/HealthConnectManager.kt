@@ -12,6 +12,15 @@ import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.RespiratoryRateRecord
+import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.request.ChangesTokenRequest
+import androidx.health.connect.client.changes.UpsertionChange
+import androidx.health.connect.client.changes.DeletionChange
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -50,7 +59,9 @@ class HealthConnectManager @Inject constructor(
     companion object {
         val READ_TYPES: List<KClass<out Record>> = listOf(
             StepsRecord::class, ActiveCaloriesBurnedRecord::class, SleepSessionRecord::class,
-            HeartRateRecord::class, WeightRecord::class, BloodPressureRecord::class, BloodGlucoseRecord::class
+            HeartRateRecord::class, WeightRecord::class, BloodPressureRecord::class, BloodGlucoseRecord::class,
+            ExerciseSessionRecord::class, OxygenSaturationRecord::class, RestingHeartRateRecord::class,
+            BodyTemperatureRecord::class, RespiratoryRateRecord::class, HydrationRecord::class
         )
         val PERMISSIONS: Set<String> = READ_TYPES.map { HealthPermission.getReadPermission(it) }.toSet()
         /** Lets the periodic worker read while the app is closed (Health Connect in Android 14+ with SDK extension 13). */
@@ -58,7 +69,9 @@ class HealthConnectManager @Inject constructor(
         private const val PREFS = "health_connect"
         private const val KEY_ENABLED = "enabled"
         private const val KEY_LAST_SYNC = "last_sync"
-        private const val AUTO_SYNC_MIN_INTERVAL_MIN = 15L
+        /** Health Connect changes token, valid for the permission set stored next to it. */
+        private const val KEY_TOKEN = "changes_token"
+        private const val KEY_TOKEN_PERMS = "changes_token_perms"
         private const val MAX_RECORDS_PER_TYPE = 5000
     }
 
@@ -113,13 +126,13 @@ class HealthConnectManager @Inject constructor(
         }
     }
 
-    /** Foreground auto-sync: runs only when connected and the last sync is older than 15 minutes. */
-    override suspend fun syncIfDue() {
+    /** Auto-sync: runs only when connected and the last sync is older than [minIntervalMin] minutes. */
+    override suspend fun syncIfDue(minIntervalMin: Long) {
         refresh()
         val s = state.value
         if (!s.connected) return
         val last = s.lastSync
-        if (last != null && last.isAfter(LocalDateTime.now().minusMinutes(AUTO_SYNC_MIN_INTERVAL_MIN))) return
+        if (last != null && last.isAfter(LocalDateTime.now().minusMinutes(minIntervalMin))) return
         sync(force = false)
     }
 
@@ -128,17 +141,38 @@ class HealthConnectManager @Inject constructor(
         mutable.update { it.copy(syncing = true, error = null) }
         val result = runCatching {
             val granted = hc.permissionController.getGrantedPermissions()
-            fun has(type: KClass<out Record>) = HealthPermission.getReadPermission(type) in granted
+            val grantedTypes = READ_TYPES.filter { HealthPermission.getReadPermission(it) in granted }
+            fun has(type: KClass<out Record>) = type in grantedTypes
 
             val accountId = accountManager.getCurrentAccountId()
             val now = LocalDateTime.now()
             val zone = ZoneId.systemDefault()
-            val from = HealthConnectMapper.syncStart(if (force) null else state.value.lastSync, now)
-            val range = TimeRangeFilter.between(from.atZone(zone).toInstant(), now.atZone(zone).toInstant())
             fun Instant.local() = LocalDateTime.ofInstant(this, zone)
 
+            // 1) What changed since the last sync? A token is only valid for the permission set it was made for.
+            val permsKey = grantedTypes.joinToString(",") { it.simpleName.orEmpty() }
+            val savedToken = prefs.getString(KEY_TOKEN, null)?.takeIf { !force && prefs.getString(KEY_TOKEN_PERMS, null) == permsKey }
+            val feed = savedToken?.let { readChanges(hc, it, zone) }
+            val plan = HealthConnectSyncPlan.plan(feed?.changes, tokenExpired = feed?.expired == true,
+                lastSync = if (force) null else state.value.lastSync, now = now)
+            // A fresh token is taken before a full read, so nothing written meanwhile is missed next time.
+            val nextToken = if (feed != null && !feed.expired) feed.nextToken
+                else if (grantedTypes.isNotEmpty()) runCatching { hc.getChangesToken(ChangesTokenRequest(grantedTypes.toSet())) }.getOrNull()
+                else null
+            if (plan.skip) {
+                saveToken(nextToken, permsKey)
+                prefs.edit().putString(KEY_LAST_SYNC, now.toString()).apply()
+                return@runCatching HcSyncSummary(0, 0, 0, 0, 0, 0)
+            }
+            val from = plan.from ?: HealthConnectMapper.syncStart(null, now)
+            val range = TimeRangeFilter.between(from.atZone(zone).toInstant(), now.atZone(zone).toInstant())
+            // 2) Read each granted type on its own: one failing type must not stop the others.
+            var failures = 0
+            suspend fun <T> safe(block: suspend () -> List<T>): List<T> =
+                runCatching { block() }.getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it; failures++; emptyList() }
+
             // Daily totals (Health Connect de-duplicates overlapping sources in aggregates).
-            val aggregateDays = if (has(StepsRecord::class) || has(ActiveCaloriesBurnedRecord::class)) {
+            val aggregateDays = if (has(StepsRecord::class) || has(ActiveCaloriesBurnedRecord::class)) safe {
                 val metrics = buildSet {
                     if (has(StepsRecord::class)) add(StepsRecord.COUNT_TOTAL)
                     if (has(ActiveCaloriesBurnedRecord::class)) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
@@ -153,40 +187,61 @@ class HealthConnectManager @Inject constructor(
                     )
                 }
             } else emptyList()
-            val rawSteps = if (has(StepsRecord::class)) readAll(hc, StepsRecord::class, range)
+            val rawSteps = if (has(StepsRecord::class)) safe { readAll(hc, StepsRecord::class, range) }
                 .map { HcRawSteps(it.metadata.dataOrigin.packageName, it.startTime.local(), it.count, it.endTime.local()) } else emptyList()
             val rawStepsFallback = HealthConnectMapper.dailyStepsFromRaw(rawSteps)
             val days = HealthConnectMapper.mergeDailySteps(aggregateDays, rawStepsFallback)
                 .mapNotNull { HealthConnectMapper.steps(accountId, it, now) }
 
-            val sleep = if (has(SleepSessionRecord::class)) readAll(hc, SleepSessionRecord::class, range)
+            val sleep = if (has(SleepSessionRecord::class)) safe { readAll(hc, SleepSessionRecord::class, range) }
                 .mapNotNull { HealthConnectMapper.sleep(accountId, HcSleep(it.metadata.id, it.startTime.local(), it.endTime.local())) } else emptyList()
 
-            val heartSamples = if (has(HeartRateRecord::class)) readAll(hc, HeartRateRecord::class, range)
+            val heartSamples = if (has(HeartRateRecord::class)) safe { readAll(hc, HeartRateRecord::class, range) }
                 .flatMap { r -> r.samples.map { HcHeartSample(it.time.local(), it.beatsPerMinute) } } else emptyList()
             val heart = HealthConnectMapper.heartRateHourly(accountId, heartSamples)
 
-            val weights = if (has(WeightRecord::class)) readAll(hc, WeightRecord::class, range)
+            val weights = if (has(WeightRecord::class)) safe { readAll(hc, WeightRecord::class, range) }
                 .mapNotNull { HealthConnectMapper.weight(accountId, HcWeight(it.metadata.id, it.time.local(), it.weight.inKilograms)) } else emptyList()
 
-            val bp = if (has(BloodPressureRecord::class)) readAll(hc, BloodPressureRecord::class, range)
-                .map { HealthConnectMapper.bloodPressure(accountId, HcBloodPressure(it.metadata.id, it.time.local(), it.systolic.inMillimetersOfMercury, it.diastolic.inMillimetersOfMercury)) } else emptyList()
+            val bp = if (has(BloodPressureRecord::class)) safe { readAll(hc, BloodPressureRecord::class, range) }
+                .map { HealthConnectMapper.bloodPressure(accountId, HcBloodPressure(it.metadata.id, it.time.local(), it.systolic.inMillimetersOfMercury, it.diastolic.inMillimetersOfMercury, it.metadata.dataOrigin.packageName)) } else emptyList()
 
-            val glucose = if (has(BloodGlucoseRecord::class)) readAll(hc, BloodGlucoseRecord::class, range)
-                .map { HealthConnectMapper.glucose(accountId, HcGlucose(it.metadata.id, it.time.local(), it.level.inMillimolesPerLiter)) } else emptyList()
+            val glucose = if (has(BloodGlucoseRecord::class)) safe { readAll(hc, BloodGlucoseRecord::class, range) }
+                .map { HealthConnectMapper.glucose(accountId, HcGlucose(it.metadata.id, it.time.local(), it.level.inMillimolesPerLiter, it.metadata.dataOrigin.packageName)) } else emptyList()
 
-            dao.upsertAll(days, sleep, weights, heart + bp + glucose)
+            val exercises = if (has(ExerciseSessionRecord::class)) safe { readAll(hc, ExerciseSessionRecord::class, range) }
+                .map { HcExercise(it.metadata.id, it.startTime.local(), it.endTime.local(), it.exerciseType, it.title) } else emptyList()
+            val spo2 = if (has(OxygenSaturationRecord::class)) safe { readAll(hc, OxygenSaturationRecord::class, range) }
+                .mapNotNull { HealthConnectMapper.spo2(accountId, HcSpo2(it.metadata.id, it.time.local(), it.percentage.value, it.metadata.dataOrigin.packageName)) } else emptyList()
+            val restingHr = if (has(RestingHeartRateRecord::class)) safe { readAll(hc, RestingHeartRateRecord::class, range) }
+                .mapNotNull { HealthConnectMapper.restingHeartRate(accountId, HcRestingHr(it.metadata.id, it.time.local(), it.beatsPerMinute, it.metadata.dataOrigin.packageName)) } else emptyList()
+            val temperature = if (has(BodyTemperatureRecord::class)) safe { readAll(hc, BodyTemperatureRecord::class, range) }
+                .mapNotNull { HealthConnectMapper.temperature(accountId, HcTemperature(it.metadata.id, it.time.local(), it.temperature.inCelsius, it.metadata.dataOrigin.packageName)) } else emptyList()
+            val respiration = if (has(RespiratoryRateRecord::class)) safe { readAll(hc, RespiratoryRateRecord::class, range) }
+                .mapNotNull { HealthConnectMapper.respiratoryRate(accountId, HcRespiratory(it.metadata.id, it.time.local(), it.rate, it.metadata.dataOrigin.packageName)) } else emptyList()
+            val water = if (has(HydrationRecord::class)) safe { readAll(hc, HydrationRecord::class, range) }
+                .mapNotNull { HealthConnectMapper.hydration(accountId, HcHydration(it.metadata.id, it.startTime.local(), it.volume.inLiters)) } else emptyList()
+            val workouts = exercises.mapNotNull { HealthConnectMapper.exercise(accountId, it) }
+
+
+            // 3) Apply: deletions from the source apps first, then the new and edited rows.
+            if (plan.deleteIds.isNotEmpty()) dao.deleteByIds(plan.deleteIds)
+            dao.upsertAll(days + workouts, sleep, weights, heart + bp + glucose + spo2 + restingHr + temperature + respiration, water)
             prefs.edit().putString(KEY_LAST_SYNC, now.toString()).apply()
+            // Keep the old token after a failed type, so its changes are read again next time.
+            if (failures == 0) saveToken(nextToken, permsKey)
             // Early warnings from the watch: raw minute-level heart rate + steps of the last 2 hours (not the hourly averages).
             runCatching {
                 alerts.check(
                     hr = HealthConnectMapper.alertHeart(heartSamples, now),
                     steps = HealthConnectMapper.alertSteps(rawSteps, now),
                     bp = bp.map { com.healthapp.domain.usecase.BpReading(it.recordedAt, it.value.toInt(), it.secondaryValue?.toInt() ?: 0) },
-                    now = now
+                    now = now,
+                    sessions = exercises.filter { !it.end.isBefore(now.minusHours(2)) }.map { HealthConnectMapper.exerciseWindow(it) }
                 )
             }
-            HcSyncSummary(days.size, sleep.size, heart.size, weights.size, bp.size, glucose.size)
+            HcSyncSummary(days.size, sleep.size, heart.size, weights.size, bp.size, glucose.size,
+                spo2.size + restingHr.size + temperature.size + respiration.size + water.size + workouts.size)
         }
         mutable.update { s ->
             result.fold(
@@ -195,6 +250,56 @@ class HealthConnectManager @Inject constructor(
             )
         }
         result
+    }
+
+    private class ChangeFeed(val changes: List<HcChange>, val nextToken: String?, val expired: Boolean)
+
+    /** Pages through Health Connect's change log since [token]; an expired or rejected token means "read everything". */
+    private suspend fun readChanges(hc: HealthConnectClient, token: String, zone: ZoneId): ChangeFeed {
+        val out = mutableListOf<HcChange>()
+        var current = token
+        try {
+            while (true) {
+                val page = hc.getChanges(current)
+                if (page.changesTokenExpired) return ChangeFeed(emptyList(), null, expired = true)
+                page.changes.forEach { c ->
+                    when (c) {
+                        is UpsertionChange -> out += HcChange.Upsert(LocalDateTime.ofInstant(recordTime(c.record), zone))
+                        is DeletionChange -> out += HcChange.Deletion(c.recordId)
+                    }
+                }
+                current = page.nextChangesToken
+                if (!page.hasMore) break
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return ChangeFeed(emptyList(), null, expired = true)
+        }
+        return ChangeFeed(out, current, expired = false)
+    }
+
+    /** When a changed record happened (interval records: start). Unknown types count as "now". */
+    private fun recordTime(r: Record): Instant = when (r) {
+        is StepsRecord -> r.startTime
+        is ActiveCaloriesBurnedRecord -> r.startTime
+        is SleepSessionRecord -> r.startTime
+        is HeartRateRecord -> r.startTime
+        is ExerciseSessionRecord -> r.startTime
+        is HydrationRecord -> r.startTime
+        is WeightRecord -> r.time
+        is BloodPressureRecord -> r.time
+        is BloodGlucoseRecord -> r.time
+        is OxygenSaturationRecord -> r.time
+        is RestingHeartRateRecord -> r.time
+        is BodyTemperatureRecord -> r.time
+        is RespiratoryRateRecord -> r.time
+        else -> Instant.now()
+    }
+
+    private fun saveToken(token: String?, permsKey: String) {
+        if (token == null) prefs.edit().remove(KEY_TOKEN).remove(KEY_TOKEN_PERMS).apply()
+        else prefs.edit().putString(KEY_TOKEN, token).putString(KEY_TOKEN_PERMS, permsKey).apply()
     }
 
     private suspend fun <T : Record> readAll(hc: HealthConnectClient, type: KClass<T>, range: TimeRangeFilter): List<T> {
@@ -210,7 +315,7 @@ class HealthConnectManager @Inject constructor(
 
     /** Stops syncing, revokes access and (optionally) removes everything that was imported. */
     override suspend fun disconnect(removeImported: Boolean) {
-        prefs.edit().remove(KEY_ENABLED).remove(KEY_LAST_SYNC).apply()
+        prefs.edit().remove(KEY_ENABLED).remove(KEY_LAST_SYNC).remove(KEY_TOKEN).remove(KEY_TOKEN_PERMS).apply()
         runCatching { client?.permissionController?.revokeAllPermissions() }
         if (removeImported) dao.deleteImported(accountManager.getCurrentAccountId())
         mutable.update { HcState(availability = availability()) }

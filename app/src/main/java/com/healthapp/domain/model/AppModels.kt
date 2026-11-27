@@ -49,8 +49,12 @@ data class MoodEntry(
 
 enum class HcAvailability { AVAILABLE, NEEDS_UPDATE, NOT_SUPPORTED }
 
-data class HcSyncSummary(val days: Int, val sleep: Int, val heartRate: Int, val weight: Int, val bloodPressure: Int, val glucose: Int) {
-    val total get() = days + sleep + heartRate + weight + bloodPressure + glucose
+data class HcSyncSummary(
+    val days: Int, val sleep: Int, val heartRate: Int, val weight: Int, val bloodPressure: Int, val glucose: Int,
+    /** SpO2, resting heart rate, temperature, respiration, water and workouts. */
+    val others: Int = 0
+) {
+    val total get() = days + sleep + heartRate + weight + bloodPressure + glucose + others
 }
 
 data class HcState(

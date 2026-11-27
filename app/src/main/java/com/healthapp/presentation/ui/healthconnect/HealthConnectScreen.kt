@@ -50,7 +50,13 @@ private val dataTypes = listOf(
     HealthPermission.getReadPermission(HeartRateRecord::class) to R.string.stat_heart_rate,
     HealthPermission.getReadPermission(WeightRecord::class) to R.string.metric_weight,
     HealthPermission.getReadPermission(BloodPressureRecord::class) to R.string.stat_bp,
-    HealthPermission.getReadPermission(BloodGlucoseRecord::class) to R.string.stat_glucose
+    HealthPermission.getReadPermission(BloodGlucoseRecord::class) to R.string.stat_glucose,
+    HealthPermission.getReadPermission(ExerciseSessionRecord::class) to R.string.hc_workouts,
+    HealthPermission.getReadPermission(OxygenSaturationRecord::class) to R.string.stat_spo2,
+    HealthPermission.getReadPermission(RestingHeartRateRecord::class) to R.string.stat_resting_hr,
+    HealthPermission.getReadPermission(BodyTemperatureRecord::class) to R.string.stat_body_temp,
+    HealthPermission.getReadPermission(RespiratoryRateRecord::class) to R.string.stat_resp_rate,
+    HealthPermission.getReadPermission(HydrationRecord::class) to R.string.stat_water
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -97,7 +103,7 @@ fun HealthConnectScreen(navController: NavController, viewModel: HealthConnectVi
                 }
                 HcAvailability.AVAILABLE -> {
                     StatusCard(state.connected, state.syncing, state.lastSync?.format(DateTimeFormatter.ofPattern("HH:mm dd/MM")), state.lastSummary?.let {
-                        stringResource(R.string.hc_last_summary, it.days, it.sleep, it.heartRate, it.weight, it.bloodPressure, it.glucose)
+                        stringResource(R.string.hc_last_summary, it.days, it.sleep, it.heartRate, it.weight, it.bloodPressure, it.glucose, it.others)
                     })
 
                     AppCard(Modifier.fillMaxWidth()) {
