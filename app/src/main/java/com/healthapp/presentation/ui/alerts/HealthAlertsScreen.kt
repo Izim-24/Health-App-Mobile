@@ -50,8 +50,8 @@ fun HealthAlertsScreen(navController: NavController, viewModel: HealthAlertsView
             if (alerts.isEmpty()) {
                 EmptyState(Illustration.READINGS, stringResource(R.string.alerts_empty_title), stringResource(R.string.alerts_empty_msg))
             } else {
-                AlertDetail(alerts.first())
-                alerts.drop(1).forEach { AlertRow(it) }
+                val expanded = com.healthapp.presentation.viewmodel.alertsToExpand(alerts, java.time.LocalDateTime.now())
+                alerts.forEachIndexed { i, alert -> if (i in expanded) AlertDetail(alert) else AlertRow(alert) }
                 TextButton(onClick = viewModel::clear, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.alerts_clear)) }
             }
             Text(stringResource(R.string.alerts_disclaimer), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)

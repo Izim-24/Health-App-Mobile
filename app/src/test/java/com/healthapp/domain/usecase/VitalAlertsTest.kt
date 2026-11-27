@@ -1,6 +1,7 @@
 package com.healthapp.domain.usecase
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDateTime
@@ -13,6 +14,8 @@ class VitalAlertsTest {
     private fun steps(minutes: Int, perMin: Int, fromMin: Int = 0) = (0 until minutes).map { StepSample(t0.plusMinutes((fromMin + it).toLong()), perMin) }
     private fun kinds(a: List<VitalAlert>) = a.map { it.kind }
     private fun nowAfter(samples: List<HrSample>) = samples.last().time.plusMinutes(1)
+    /** The watch reporting 0 steps in each of these minutes (it is worn and the person is still). */
+    private fun still(samples: List<HrSample>) = samples.map { StepSample(it.time, 0) }
 
     @Test fun maxHeartRate_usesAgeOr40() {
         assertEquals(192, VitalAlerts.maxHeartRate(28))
@@ -28,7 +31,7 @@ class VitalAlertsTest {
 
     @Test fun restTachy_after10min_warning() {
         val s = hr(12, 125)
-        val a = VitalAlerts.heartAlerts(s, emptyList(), 28, nowAfter(s))
+        val a = VitalAlerts.heartAlerts(s, still(s), 28, nowAfter(s))
         assertEquals(listOf(AlertKind.REST_TACHY), kinds(a))
         assertEquals(125, a.single().value)
         assertEquals(ActivityState.RESTING, a.single().state)
@@ -37,17 +40,17 @@ class VitalAlertsTest {
 
     @Test fun restTachy_9min_noAlert() {
         val s = hr(9, 125)
-        assertTrue(VitalAlerts.heartAlerts(s, emptyList(), 28, nowAfter(s)).isEmpty())
+        assertTrue(VitalAlerts.heartAlerts(s, still(s), 28, nowAfter(s)).isEmpty())
     }
 
     @Test fun restTachySevere_supersedesWarning() {
         val s = hr(6, 155)
-        assertEquals(listOf(AlertKind.REST_TACHY_SEVERE), kinds(VitalAlerts.heartAlerts(s, emptyList(), 28, nowAfter(s))))
+        assertEquals(listOf(AlertKind.REST_TACHY_SEVERE), kinds(VitalAlerts.heartAlerts(s, still(s), 28, nowAfter(s))))
     }
 
     @Test fun restBrady_after10min() {
         val s = hr(11, 38)
-        assertEquals(listOf(AlertKind.REST_BRADY), kinds(VitalAlerts.heartAlerts(s, emptyList(), 28, nowAfter(s))))
+        assertEquals(listOf(AlertKind.REST_BRADY), kinds(VitalAlerts.heartAlerts(s, still(s), 28, nowAfter(s))))
     }
 
     @Test fun running_highHr_noAlert() {
@@ -75,12 +78,12 @@ class VitalAlertsTest {
 
     @Test fun dataGap_breaksSustained() {
         val s = hr(5, 125) + hr(5, 125, fromMin = 25)
-        assertTrue(VitalAlerts.heartAlerts(s, emptyList(), 28, nowAfter(s)).isEmpty())
+        assertTrue(VitalAlerts.heartAlerts(s, still(s), 28, nowAfter(s)).isEmpty())
     }
 
     @Test fun oldData_ignored() {
         val s = hr(15, 125)
-        assertTrue(VitalAlerts.heartAlerts(s, emptyList(), 28, s.last().time.plusHours(3)).isEmpty())
+        assertTrue(VitalAlerts.heartAlerts(s, still(s), 28, s.last().time.plusHours(3)).isEmpty())
     }
 
     @Test fun bpCrisis_and_high() {
@@ -114,4 +117,41 @@ class VitalAlertsTest {
         assertTrue(VitalAlerts.dueAlerts(listOf(trend), mapOf(AlertKind.BP_SUSTAINED to now.minusHours(2)), now).isEmpty())
         assertEquals(listOf(trend), VitalAlerts.dueAlerts(listOf(trend), mapOf(AlertKind.BP_SUSTAINED to now.minusDays(1)), now))
     }
+
+    // ---- review fixes ----
+
+    @Test fun restRules_skippedWithoutAnyStepData() {
+        // Cycling, gym or no steps permission: no step data at all, so "resting" can't be told apart from exercise.
+        val s = hr(12, 155)
+        assertTrue(VitalAlerts.heartAlerts(s, emptyList(), 28, nowAfter(s)).isEmpty())
+    }
+
+    @Test fun dueAlerts_sameReadingNeverRealerted() {
+        val reading = t0
+        val crisis = VitalAlert(AlertKind.BP_CRISIS, reading, 185, 120)
+        val now = reading.plusMinutes(31)
+        val lastSent = mapOf(AlertKind.BP_CRISIS to reading)
+        val lastAt = mapOf(AlertKind.BP_CRISIS to reading)
+        assertTrue(VitalAlerts.dueAlerts(listOf(crisis), lastSent, now, lastAt).isEmpty())
+        val newer = crisis.copy(at = reading.plusMinutes(5))
+        assertEquals(listOf(newer), VitalAlerts.dueAlerts(listOf(newer), lastSent, now, lastAt))
+    }
+
+    @Test fun isFresh_onlyRecentReadingsNotify() {
+        val a = VitalAlert(AlertKind.REST_TACHY, t0, 125)
+        assertTrue(VitalAlerts.isFresh(a, t0.plusMinutes(15)))
+        assertFalse(VitalAlerts.isFresh(a, t0.plusMinutes(16)))
+    }
+
+    @Test fun singleHeartReading_veryFastOnly() {
+        assertEquals(AlertKind.REST_TACHY_SEVERE, VitalAlerts.singleHeartReading(HrSample(t0, 170))?.kind)
+        assertEquals(null, VitalAlerts.singleHeartReading(HrSample(t0, 120)))
+    }
+
+    @Test fun simulatedDue_oncePerKindPerRun() {
+        val a = VitalAlert(AlertKind.REST_TACHY, t0, 125)
+        val b = VitalAlert(AlertKind.REST_TACHY_SEVERE, t0, 155)
+        assertEquals(listOf(b), VitalAlerts.simulatedDue(listOf(a, b), setOf(AlertKind.REST_TACHY)))
+    }
 }
+

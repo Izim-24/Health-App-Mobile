@@ -12,7 +12,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.healthapp.R
 import com.healthapp.core.AppLocale
 import com.healthapp.domain.model.VitalType
@@ -65,7 +64,7 @@ class HealthAlertRepositoryImpl @Inject constructor(
     private val gson = Gson()
     private val mutex = Mutex()
     private val recentFlow = MutableStateFlow(loadRecent())
-    private val simulatedSent = mutableMapOf<AlertKind, LocalDateTime>()
+    private val simulatedSent = mutableSetOf<AlertKind>()
 
     override val recent: Flow<List<VitalAlert>> = recentFlow.asStateFlow()
 
@@ -76,20 +75,45 @@ class HealthAlertRepositoryImpl @Inject constructor(
         val accountId = session.getCurrentAccountId()
         val age = profiles.getProfile(accountId)?.dateOfBirth
             ?.let { runCatching { HealthCalculations.ageOn(LocalDate.parse(it), now.toLocalDate()) }.getOrNull() }
-        // Real data: add stored readings so the 7-day trend sees the whole week. Simulations stay self-contained.
-        val readings = if (simulated) bp else (bp + storedBp(accountId, now)).distinctBy { Triple(it.at, it.systolic, it.diastolic) }
-        val candidates = VitalAlerts.heartAlerts(hr, steps, age, now) + VitalAlerts.bpAlerts(readings, now)
-        val lastSent = if (simulated) simulatedSent else loadLastSent()
-        val due = VitalAlerts.dueAlerts(candidates, lastSent, now).map { it.copy(simulated = simulated) }
-        if (due.isEmpty()) return@withLock due
+        // Acute BP rules look only at the readings passed in (a typed reading is handled by checkManual);
+        // the 7-day trend also uses stored readings (real data only).
+        val acuteBp = VitalAlerts.bpAlerts(bp, now).filter { it.kind != AlertKind.BP_SUSTAINED }
+        val trendBp = if (simulated) emptyList() else VitalAlerts.bpAlerts(
+            (bp + storedBp(accountId, now)).distinctBy { Triple(it.at, it.systolic, it.diastolic) }, now
+        ).filter { it.kind == AlertKind.BP_SUSTAINED }
+        val candidates = VitalAlerts.heartAlerts(hr, steps, age, now) + acuteBp + trendBp
 
-        if (simulated) due.forEach { simulatedSent[it.kind] = now }
-        else saveLastSent(lastSent + due.associate { it.kind to now })
-        val updated = (due.sortedByDescending { it.level } + recentFlow.value).take(MAX_RECENT)
+        val due: List<VitalAlert>
+        if (simulated) {
+            // Once per kind per scenario run; stamped with the real clock so the list never shows future times.
+            due = VitalAlerts.simulatedDue(candidates, simulatedSent).map { it.copy(simulated = true, at = LocalDateTime.now()) }
+            simulatedSent += due.map { it.kind }
+        } else {
+            val lastSent = loadLastSent(KEY_SENT)
+            val lastAt = loadLastSent(KEY_AT)
+            due = VitalAlerts.dueAlerts(candidates, lastSent, now, lastAt)
+            saveTimes(KEY_SENT, due.associate { it.kind to now })
+            saveTimes(KEY_AT, due.associate { it.kind to it.at })
+        }
+        if (due.isEmpty()) return@withLock due
+        record(due)
+        // Old readings (e.g. a sync after hours offline) are listed in the app, not pushed as if happening now.
+        if (notify) due.filter { simulated || VitalAlerts.isFresh(it, now) }.forEach { post(it) }
+        due
+    }
+
+    override suspend fun checkManual(hr: HrSample?, bp: BpReading?): List<VitalAlert> = mutex.withLock {
+        val now = LocalDateTime.now()
+        val alerts = listOfNotNull(hr?.let { VitalAlerts.singleHeartReading(it) }) +
+            (bp?.let { VitalAlerts.bpAlerts(listOf(it), now).filter { a -> a.kind != AlertKind.BP_SUSTAINED } } ?: emptyList())
+        if (alerts.isNotEmpty()) record(alerts)
+        alerts
+    }
+
+    private fun record(alerts: List<VitalAlert>) {
+        val updated = (alerts.sortedByDescending { it.level } + recentFlow.value).take(MAX_RECENT)
         recentFlow.value = updated
         saveRecent(updated)
-        if (notify) due.forEach { post(it) }
-        due
     }
 
     override fun resetSimulation() = simulatedSent.clear()
@@ -115,7 +139,9 @@ class HealthAlertRepositoryImpl @Inject constructor(
         val intent = Intent(context, MainActivity::class.java)
             .putExtra(MainActivity.EXTRA_OPEN_ROUTE, ROUTE)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        val pending = PendingIntent.getActivity(context, NOTIFICATION_BASE + alert.kind.ordinal, intent,
+        // Simulated alerts get their own ids so they never replace a pending real alert.
+        val id = (if (alert.simulated) SIMULATED_BASE else NOTIFICATION_BASE) + alert.kind.ordinal
+        val pending = PendingIntent.getActivity(context, id, intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -126,12 +152,12 @@ class HealthAlertRepositoryImpl @Inject constructor(
             .setAutoCancel(true)
             .setPriority(if (alert.level == AlertLevel.URGENT) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_HIGH)
             .build()
-        NotificationManagerCompat.from(context).notify(NOTIFICATION_BASE + alert.kind.ordinal, notification)
+        NotificationManagerCompat.from(context).notify(id, notification)
     }
 
     private fun loadRecent(): List<VitalAlert> = runCatching {
-        val type = object : TypeToken<List<Stored>>() {}.type
-        gson.fromJson<List<Stored>>(prefs.getString(KEY_RECENT, null) ?: return emptyList(), type).mapNotNull { s ->
+        // An array type, not a TypeToken: R8 strips the generic signature of anonymous TypeToken subclasses.
+        gson.fromJson(prefs.getString(KEY_RECENT, null) ?: return emptyList(), Array<Stored>::class.java).mapNotNull { s ->
             runCatching {
                 VitalAlert(AlertKind.valueOf(s.kind), LocalDateTime.parse(s.at), s.value, s.secondary,
                     s.state?.let { ActivityState.valueOf(it) }, s.simulated)
@@ -144,13 +170,15 @@ class HealthAlertRepositoryImpl @Inject constructor(
         prefs.edit().putString(KEY_RECENT, gson.toJson(stored)).apply()
     }
 
-    private fun loadLastSent(): Map<AlertKind, LocalDateTime> = AlertKind.entries.mapNotNull { k ->
-        prefs.getString(KEY_SENT + k.name, null)?.let { runCatching { k to LocalDateTime.parse(it) }.getOrNull() }
+    /** [prefix] KEY_SENT = when each kind was last notified; KEY_AT = time of the reading it reported. */
+    private fun loadLastSent(prefix: String): Map<AlertKind, LocalDateTime> = AlertKind.entries.mapNotNull { k ->
+        prefs.getString(prefix + k.name, null)?.let { runCatching { k to LocalDateTime.parse(it) }.getOrNull() }
     }.toMap()
 
-    private fun saveLastSent(map: Map<AlertKind, LocalDateTime>) {
+    private fun saveTimes(prefix: String, map: Map<AlertKind, LocalDateTime>) {
+        if (map.isEmpty()) return
         val edit = prefs.edit()
-        map.forEach { (k, t) -> edit.putString(KEY_SENT + k.name, t.toString()) }
+        map.forEach { (k, t) -> edit.putString(prefix + k.name, t.toString()) }
         edit.apply()
     }
 
@@ -160,6 +188,8 @@ class HealthAlertRepositoryImpl @Inject constructor(
         private const val PREFS = "health_alerts"
         private const val KEY_RECENT = "recent"
         private const val KEY_SENT = "sent_"
+        private const val KEY_AT = "at_"
+        private const val SIMULATED_BASE = 7400
         private const val MAX_RECENT = 20
         private const val NOTIFICATION_BASE = 7300
 

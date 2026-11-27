@@ -82,6 +82,7 @@ private class FakeHealthAlerts : com.healthapp.domain.repository.HealthAlertRepo
         return out
     }
     override fun resetSimulation() { resets++ }
+    override suspend fun checkManual(hr: com.healthapp.domain.usecase.HrSample?, bp: com.healthapp.domain.usecase.BpReading?): List<com.healthapp.domain.usecase.VitalAlert> = emptyList()
     override suspend fun clearRecent() { flow.value = emptyList() }
 }
 
@@ -273,6 +274,18 @@ class ViewModelTests {
         advanceTimeBy(15_000); runCurrent()
         vm.stop()
         assertTrue(repo.returned.map { it.kind }.toString(), com.healthapp.domain.usecase.AlertKind.REST_TACHY in repo.returned.map { it.kind })
+    }
+
+    @Test fun alertsToExpand_newestAndRecentUrgent() {
+        val now = java.time.LocalDateTime.of(2026, 11, 28, 12, 0)
+        fun a(kind: com.healthapp.domain.usecase.AlertKind, hoursAgo: Long) = com.healthapp.domain.usecase.VitalAlert(kind, now.minusHours(hoursAgo), 1)
+        val list = listOf(
+            a(com.healthapp.domain.usecase.AlertKind.BP_HIGH, 0),          // newest: always expanded
+            a(com.healthapp.domain.usecase.AlertKind.BP_CRISIS, 1),        // urgent within 3 h: expanded (F.A.S.T + 115)
+            a(com.healthapp.domain.usecase.AlertKind.REST_TACHY, 2),       // warning: compact
+            a(com.healthapp.domain.usecase.AlertKind.ABOVE_MAX_HR, 5)      // urgent but old: compact
+        )
+        assertEquals(setOf(0, 1), alertsToExpand(list, now))
     }
 }
 

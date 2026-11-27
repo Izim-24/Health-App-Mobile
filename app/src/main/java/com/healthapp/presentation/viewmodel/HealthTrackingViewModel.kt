@@ -81,12 +81,9 @@ class HealthTrackingViewModel @Inject constructor(
             result.onFailure { e -> _uiState.update { it.copy(error = e.message?.let(UiText::Raw)) } }
             // A typed reading is checked at once; the result shows in the "recent alert" card (no notification: the user is here).
             if (result.isSuccess && (type == VitalType.HEART_RATE || type == VitalType.BLOOD_PRESSURE)) runCatching {
-                healthAlerts.check(
-                    hr = if (type == VitalType.HEART_RATE) listOf(com.healthapp.domain.usecase.HrSample(now, first.toInt())) else emptyList(),
-                    steps = emptyList(),
-                    bp = if (type == VitalType.BLOOD_PRESSURE && second != null) listOf(com.healthapp.domain.usecase.BpReading(now, first.toInt(), second.toInt())) else emptyList(),
-                    now = now,
-                    notify = false
+                healthAlerts.checkManual(
+                    hr = if (type == VitalType.HEART_RATE) com.healthapp.domain.usecase.HrSample(now, first.toInt()) else null,
+                    bp = if (type == VitalType.BLOOD_PRESSURE && second != null) com.healthapp.domain.usecase.BpReading(now, first.toInt(), second.toInt()) else null
                 )
             }
         }

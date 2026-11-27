@@ -49,6 +49,10 @@ object VitalAlerts {
     const val MAX_GAP_MIN = 2L
     const val COOLDOWN_MIN = 30L
     const val RECENT_HOURS = 2L
+    /** Only readings this recent are pushed as notifications; older ones are listed in the app only. */
+    const val FRESH_MIN = 15L
+    /** A single typed heart rate this high is flagged even without a duration. */
+    const val SINGLE_READING_SEVERE = 150
 
     fun maxHeartRate(age: Int?): Int = 220 - (age ?: DEFAULT_AGE)
 
@@ -70,9 +74,12 @@ object VitalAlerts {
         fun resting(s: HrSample) = state[s.time] == ActivityState.RESTING
         fun active(s: HrSample) = state[s.time] == ActivityState.ACTIVE
         fun alert(kind: AlertKind, s: HrSample, secondary: Int? = null) = VitalAlert(kind, s.time, s.bpm, secondary, state[s.time])
+        // Without any step data (cycling, gym, swimming, no steps permission) "resting" can't be told apart from
+        // exercise, so the rest rules stay silent rather than raise a false alarm.
+        val knowsMovement = steps.any { !it.time.isBefore(now.minusHours(RECENT_HOURS)) && !it.time.isAfter(now) }
 
         val out = mutableListOf<VitalAlert>()
-        when {
+        if (knowsMovement) when {
             sustained(recent, 5) { resting(it) && it.bpm >= 150 } != null -> out += alert(AlertKind.REST_TACHY_SEVERE, recent.last())
             sustained(recent, 10) { resting(it) && it.bpm >= 120 } != null -> out += alert(AlertKind.REST_TACHY, recent.last())
             sustained(recent, 10) { resting(it) && it.bpm < 40 } != null -> out += alert(AlertKind.REST_BRADY, recent.last())
@@ -102,13 +109,32 @@ object VitalAlerts {
         return out
     }
 
-    /** Drops alerts sent too recently: the same kind within 30 minutes, a trend more than once a day. */
-    fun dueAlerts(candidates: List<VitalAlert>, lastSent: Map<AlertKind, LocalDateTime>, now: LocalDateTime): List<VitalAlert> =
+    /**
+     * Drops alerts sent too recently (the same kind within 30 minutes, a trend more than once a day) and alerts about a
+     * reading that was already reported ([lastAt] = time of the last reported reading per kind; syncs re-read the same data).
+     */
+    fun dueAlerts(
+        candidates: List<VitalAlert>, lastSent: Map<AlertKind, LocalDateTime>, now: LocalDateTime,
+        lastAt: Map<AlertKind, LocalDateTime> = emptyMap()
+    ): List<VitalAlert> =
         candidates.filter { a ->
+            val reported = lastAt[a.kind]
+            if (reported != null && !a.at.isAfter(reported)) return@filter false
             val last = lastSent[a.kind] ?: return@filter true
             if (a.level == AlertLevel.TREND) last.toLocalDate().isBefore(now.toLocalDate())
             else !last.isAfter(now.minusMinutes(COOLDOWN_MIN))
         }
+
+    /** True when the reading is recent enough to be worth a notification (≤ 15 min old). */
+    fun isFresh(alert: VitalAlert, now: LocalDateTime): Boolean = !alert.at.isBefore(now.minusMinutes(FRESH_MIN))
+
+    /** A single typed heart rate: only a very fast one (≥ 150) is flagged, as there is no duration or context. */
+    fun singleHeartReading(sample: HrSample): VitalAlert? =
+        if (sample.bpm >= SINGLE_READING_SEVERE) VitalAlert(AlertKind.REST_TACHY_SEVERE, sample.time, sample.bpm) else null
+
+    /** Simulator: each kind at most once per scenario run (simulated minutes pass 60× faster than real ones). */
+    fun simulatedDue(candidates: List<VitalAlert>, alreadySent: Set<AlertKind>): List<VitalAlert> =
+        candidates.filter { it.kind !in alreadySent }
 
     /** The run of samples ending at the latest one that all meet [ok], ≤ 2 min apart, spanning ≥ [minutes]. */
     private fun sustained(s: List<HrSample>, minutes: Long, ok: (HrSample) -> Boolean): HrSample? {

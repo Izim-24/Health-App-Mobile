@@ -16,7 +16,7 @@ Mọi quy tắc nghiệp vụ nằm trong `app/src/main/java/com/healthapp/domai
 | 8 | Nhập dữ liệu Health Connect | `data/healthconnect/HealthConnectMapper.kt` | `HealthConnectMapperTest` (6) |
 | 9 | Báo thức thuốc chính xác | `data/reminder/MedicationScheduler.kt` | kiểm thử trên emulator |
 | 10 | Sao lưu / khôi phục | `data/repository/DataManagementRepositoryImpl.kt` | kiểm thử trên emulator |
-| 12 | Cảnh báo sinh hiệu (nghỉ / vận động, huyết áp) | `VitalAlerts.kt`, `WatchScenario.kt` | `VitalAlertsTest` (15), `WatchScenarioTest` (5), mapper (4), ViewModel (4) |
+| 12 | Cảnh báo sinh hiệu (nghỉ / vận động, huyết áp) | `VitalAlerts.kt`, `WatchScenario.kt` | `VitalAlertsTest` (20), `WatchScenarioTest` (5), mapper (4), ViewModel (5) |
 | 11 | Tìm món không phân biệt dấu | `FoodSearch.kt` + `data/food/VietnameseFoodLibrary.kt` | `FoodSearchTest` (3), `VietnameseFoodLibraryTest` (3), emulator (1) |
 
 ---
@@ -205,7 +205,9 @@ và *sau thời điểm hiện tại*. Sau mỗi lần thông báo, lịch tiế
 | Huyết áp cao kéo dài | ≥ 5 lần đo trong 7 ngày, trung bình ≥ 135 hoặc ≥ 85 (ngưỡng đo tại nhà) | Xu hướng |
 
 - Mức nặng hơn **thay** mức nhẹ (không gửi cả hai). *Vừa tập xong* không bao giờ kích hoạt cảnh báo lúc nghỉ.
-- **Chống lặp:** cùng loại không gửi lại trong 30 phút; cảnh báo xu hướng tối đa 1 lần/ngày. Mỗi lần đồng bộ Health Connect đọc lại cùng 2 giờ dữ liệu nên điều này bắt buộc.
+- **Không có dữ liệu bước chân** trong 2 giờ (đạp xe, tập gym, bơi, chưa cấp quyền bước chân) → không xét các cảnh báo lúc nghỉ, vì không phân biệt được nghỉ với vận động (tránh báo động giả).
+- **Số đo tự nhập:** chỉ có một lần đo nên chỉ xét huyết áp và tim ≥ 150 bpm; hiện trong app, không gửi thông báo.
+- **Chống lặp:** cùng loại không gửi lại trong 30 phút; cảnh báo xu hướng tối đa 1 lần/ngày; **một số đo đã báo thì không bao giờ báo lại** (lưu thời điểm số đo đã báo cho từng loại) — mỗi lần đồng bộ Health Connect đọc lại cùng dữ liệu. Chỉ số đo trong 15 phút gần nhất mới được đẩy thành thông báo; cũ hơn thì chỉ hiện trong app. Đồng hồ mô phỏng: mỗi loại tối đa 1 lần cho mỗi lần chạy kịch bản.
 - **Nguồn dữ liệu:** Health Connect (nhịp tim gốc theo phút – lấy giá trị cao nhất mỗi phút để không làm mất cơn tăng ngắn; bước chân chia đều theo phút, điện thoại và đồng hồ cùng ghi một lần đi bộ thì lấy nguồn lớn hơn chứ không cộng); chỉ xét **2 giờ gần nhất**. Số tự nhập được kiểm tra ngay (hiện trong app, không gửi thông báo). Đồng hồ mô phỏng (bản demo): 1 giây = 1 phút, nhịp tim tiến dần nửa khoảng cách tới mục tiêu mỗi phút nên chuyển *Chạy bộ → Nghỉ* trông như hồi phục thật.
 - **Giới hạn:** app không chạy thời gian thực (đọc Health Connect khi mở app và khoảng 6 giờ/lần khi đóng); không có dữ liệu rung nhĩ; đa số đồng hồ không đo huyết áp.
 - **Độ phức tạp:** O(n) theo số mẫu trong 2 giờ (≤ 120 mẫu/phút-hóa) + O(m) bước chân cho mỗi mẫu → tức thì.

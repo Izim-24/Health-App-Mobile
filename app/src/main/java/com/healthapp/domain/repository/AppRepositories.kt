@@ -50,6 +50,14 @@ interface HealthAlertRepository {
         notify: Boolean = true,
         simulated: Boolean = false
     ): List<com.healthapp.domain.usecase.VitalAlert>
+    /**
+     * A reading the user typed: single-reading rules only (very fast heart rate, BP crisis/high). Shown in the app's
+     * recent list, never notified and never touching the cooldown of watch data. Returns the alerts.
+     */
+    suspend fun checkManual(
+        hr: com.healthapp.domain.usecase.HrSample?,
+        bp: com.healthapp.domain.usecase.BpReading?
+    ): List<com.healthapp.domain.usecase.VitalAlert>
     /** Forgets the simulator's cooldown so a new scenario can alert again. */
     fun resetSimulation()
     suspend fun clearRecent()
