@@ -74,4 +74,37 @@ class HealthConnectMapperTest {
         // A very old last sync is capped at the initial window.
         assertEquals(LocalDateTime.of(2026, 10, 16, 0, 0), HealthConnectMapper.syncStart(now.minusDays(90), now))
     }
+
+    // ---------------- Inputs for health alerts ----------------
+
+    @Test fun alertSteps_spreadsCountOverMinutes() {
+        val t = LocalDateTime.of(2026, 11, 28, 9, 0)
+        val out = HealthConnectMapper.alertSteps(listOf(HcRawSteps("watch", t, 600, t.plusMinutes(10))), t.plusMinutes(30))
+        assertEquals(10, out.size)
+        assertTrue(out.all { it.steps == 60 })
+        assertEquals(t.plusMinutes(1), out.first().time)   // steps of the minute ending at that time
+        assertEquals(t.plusMinutes(10), out.last().time)
+    }
+
+    @Test fun alertSteps_sameWalkFromTwoSources_notDoubled() {
+        val t = LocalDateTime.of(2026, 11, 28, 9, 0)
+        val raw = listOf(HcRawSteps("phone", t, 600, t.plusMinutes(10)), HcRawSteps("watch", t, 600, t.plusMinutes(10)))
+        assertEquals(600, HealthConnectMapper.alertSteps(raw, t.plusMinutes(30)).sumOf { it.steps })
+    }
+
+    @Test fun alertSteps_onlyLast2h() {
+        val t = LocalDateTime.of(2026, 11, 28, 6, 0)
+        assertTrue(HealthConnectMapper.alertSteps(listOf(HcRawSteps("watch", t, 600, t.plusMinutes(10))), t.plusHours(4)).isEmpty())
+    }
+
+    @Test fun alertHeart_keepsLast2hMaxPerMinute() {
+        val t = LocalDateTime.of(2026, 11, 28, 10, 0)
+        val samples = listOf(
+            HcHeartSample(t.plusSeconds(10), 80), HcHeartSample(t.plusSeconds(40), 95),
+            HcHeartSample(t.plusSeconds(80), 90), HcHeartSample(t.minusHours(3), 150)
+        )
+        val out = HealthConnectMapper.alertHeart(samples, t.plusMinutes(5))
+        assertEquals(listOf(com.healthapp.domain.usecase.HrSample(t, 95), com.healthapp.domain.usecase.HrSample(t.plusMinutes(1), 90)), out)
+    }
 }
+

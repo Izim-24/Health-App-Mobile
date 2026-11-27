@@ -43,7 +43,8 @@ class HealthTrackingViewModel @Inject constructor(
     private val vitalRepository: VitalRepository,
     private val weightRepository: WeightRepository,
     private val sleepRepository: SleepRepository,
-    private val activityRepository: ActivityRepository
+    private val activityRepository: ActivityRepository,
+    private val healthAlerts: com.healthapp.domain.repository.HealthAlertRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HealthTrackingUiState())
     val uiState: StateFlow<HealthTrackingUiState> = _uiState.asStateFlow()
@@ -75,8 +76,19 @@ class HealthTrackingViewModel @Inject constructor(
     fun addVital(type: VitalType, first: Double, second: Double? = null, unit: String) {
         viewModelScope.launch {
             val id = accountManager.getCurrentAccountId()
-            val result = vitalRepository.record(VitalMeasurement(UUID.randomUUID().toString(), id, type, first, second, unit, "MANUAL", LocalDateTime.now()))
+            val now = LocalDateTime.now()
+            val result = vitalRepository.record(VitalMeasurement(UUID.randomUUID().toString(), id, type, first, second, unit, "MANUAL", now))
             result.onFailure { e -> _uiState.update { it.copy(error = e.message?.let(UiText::Raw)) } }
+            // A typed reading is checked at once; the result shows in the "recent alert" card (no notification: the user is here).
+            if (result.isSuccess && (type == VitalType.HEART_RATE || type == VitalType.BLOOD_PRESSURE)) runCatching {
+                healthAlerts.check(
+                    hr = if (type == VitalType.HEART_RATE) listOf(com.healthapp.domain.usecase.HrSample(now, first.toInt())) else emptyList(),
+                    steps = emptyList(),
+                    bp = if (type == VitalType.BLOOD_PRESSURE && second != null) listOf(com.healthapp.domain.usecase.BpReading(now, first.toInt(), second.toInt())) else emptyList(),
+                    now = now,
+                    notify = false
+                )
+            }
         }
     }
 

@@ -44,7 +44,8 @@ import kotlin.reflect.KClass
 class HealthConnectManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dao: HealthConnectDao,
-    private val accountManager: AccountManager
+    private val accountManager: AccountManager,
+    private val alerts: com.healthapp.domain.repository.HealthAlertRepository
 ) : HealthSyncRepository {
     companion object {
         val READ_TYPES: List<KClass<out Record>> = listOf(
@@ -152,18 +153,18 @@ class HealthConnectManager @Inject constructor(
                     )
                 }
             } else emptyList()
-            val rawStepsFallback = if (has(StepsRecord::class)) HealthConnectMapper.dailyStepsFromRaw(
-                readAll(hc, StepsRecord::class, range).map { HcRawSteps(it.metadata.dataOrigin.packageName, it.startTime.local(), it.count) }
-            ) else emptyMap()
+            val rawSteps = if (has(StepsRecord::class)) readAll(hc, StepsRecord::class, range)
+                .map { HcRawSteps(it.metadata.dataOrigin.packageName, it.startTime.local(), it.count, it.endTime.local()) } else emptyList()
+            val rawStepsFallback = HealthConnectMapper.dailyStepsFromRaw(rawSteps)
             val days = HealthConnectMapper.mergeDailySteps(aggregateDays, rawStepsFallback)
                 .mapNotNull { HealthConnectMapper.steps(accountId, it, now) }
 
             val sleep = if (has(SleepSessionRecord::class)) readAll(hc, SleepSessionRecord::class, range)
                 .mapNotNull { HealthConnectMapper.sleep(accountId, HcSleep(it.metadata.id, it.startTime.local(), it.endTime.local())) } else emptyList()
 
-            val heart = if (has(HeartRateRecord::class)) HealthConnectMapper.heartRateHourly(accountId,
-                readAll(hc, HeartRateRecord::class, range).flatMap { r -> r.samples.map { HcHeartSample(it.time.local(), it.beatsPerMinute) } }
-            ) else emptyList()
+            val heartSamples = if (has(HeartRateRecord::class)) readAll(hc, HeartRateRecord::class, range)
+                .flatMap { r -> r.samples.map { HcHeartSample(it.time.local(), it.beatsPerMinute) } } else emptyList()
+            val heart = HealthConnectMapper.heartRateHourly(accountId, heartSamples)
 
             val weights = if (has(WeightRecord::class)) readAll(hc, WeightRecord::class, range)
                 .mapNotNull { HealthConnectMapper.weight(accountId, HcWeight(it.metadata.id, it.time.local(), it.weight.inKilograms)) } else emptyList()
@@ -176,6 +177,15 @@ class HealthConnectManager @Inject constructor(
 
             dao.upsertAll(days, sleep, weights, heart + bp + glucose)
             prefs.edit().putString(KEY_LAST_SYNC, now.toString()).apply()
+            // Early warnings from the watch: raw minute-level heart rate + steps of the last 2 hours (not the hourly averages).
+            runCatching {
+                alerts.check(
+                    hr = HealthConnectMapper.alertHeart(heartSamples, now),
+                    steps = HealthConnectMapper.alertSteps(rawSteps, now),
+                    bp = bp.map { com.healthapp.domain.usecase.BpReading(it.recordedAt, it.value.toInt(), it.secondaryValue?.toInt() ?: 0) },
+                    now = now
+                )
+            }
             HcSyncSummary(days.size, sleep.size, heart.size, weights.size, bp.size, glucose.size)
         }
         mutable.update { s ->

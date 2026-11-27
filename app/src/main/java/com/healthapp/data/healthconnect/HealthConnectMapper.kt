@@ -14,7 +14,7 @@ import kotlin.math.roundToInt
  * Room rows can be unit-tested without the Health Connect SDK.
  */
 data class HcDaySteps(val date: LocalDate, val steps: Long, val activeKcal: Double?)
-data class HcRawSteps(val origin: String, val start: LocalDateTime, val count: Long)
+data class HcRawSteps(val origin: String, val start: LocalDateTime, val count: Long, val end: LocalDateTime = start)
 data class HcSleep(val uid: String, val start: LocalDateTime, val end: LocalDateTime)
 data class HcHeartSample(val time: LocalDateTime, val bpm: Long)
 data class HcWeight(val uid: String, val time: LocalDateTime, val kg: Double)
@@ -83,6 +83,38 @@ object HealthConnectMapper {
             notes = SLEEP_NOTE,
             date = s.end.toLocalDate().toString()
         )
+    }
+
+    /**
+     * Heart rate for the alert rules: the last [com.healthapp.domain.usecase.VitalAlerts.RECENT_HOURS] hours, one sample
+     * per minute (the highest of that minute, so a short spike is not averaged away).
+     */
+    fun alertHeart(samples: List<HcHeartSample>, now: LocalDateTime): List<com.healthapp.domain.usecase.HrSample> =
+        samples.filter { it.bpm in 20..300 && !it.time.isAfter(now) && !it.time.isBefore(now.minusHours(com.healthapp.domain.usecase.VitalAlerts.RECENT_HOURS)) }
+            .groupBy { it.time.withSecond(0).withNano(0) }
+            .map { (minute, inMinute) -> com.healthapp.domain.usecase.HrSample(minute, inMinute.maxOf { it.bpm }.toInt()) }
+            .sortedBy { it.time }
+
+    /**
+     * Steps per minute for the alert rules (last 2 hours). Each record's count is spread evenly over its minutes;
+     * when phone and watch both saw the same walk, the larger source per minute is kept instead of adding them.
+     * A sample at time t holds the steps of the minute ending at t.
+     */
+    fun alertSteps(raw: List<HcRawSteps>, now: LocalDateTime): List<com.healthapp.domain.usecase.StepSample> {
+        val from = now.minusHours(com.healthapp.domain.usecase.VitalAlerts.RECENT_HOURS)
+        val perOrigin = mutableMapOf<Pair<String, LocalDateTime>, Double>()
+        for (r in raw) {
+            val start = r.start.withSecond(0).withNano(0)
+            val minutes = java.time.Duration.between(start, r.end).toMinutes().coerceAtLeast(1)
+            val each = r.count.toDouble() / minutes
+            for (i in 1..minutes) {
+                val t = start.plusMinutes(i)
+                if (t.isAfter(from) && !t.isAfter(now)) perOrigin.merge(r.origin to t, each, Double::plus)
+            }
+        }
+        return perOrigin.entries.groupBy { it.key.second }
+            .map { (t, byOrigin) -> com.healthapp.domain.usecase.StepSample(t, byOrigin.maxOf { it.value }.roundToInt()) }
+            .sortedBy { it.time }
     }
 
     /** Wearables write a sample every few seconds; keep one averaged reading per clock hour. */
