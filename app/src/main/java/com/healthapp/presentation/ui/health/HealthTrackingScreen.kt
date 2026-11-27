@@ -102,6 +102,19 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
         }
 
         RecentAlertCard(navController)
+        if (com.healthapp.BuildConfig.DEMO_TOOLS) {
+            AppCard(Modifier.fillMaxWidth().padding(top = 12.dp), onClick = { navController.navigate("watch_simulator") }) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconBadge(Icons.Rounded.Watch, HealthPalette.Coral)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.sim_entry), style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
+                        Text(stringResource(R.string.sim_entry_sub), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+                    }
+                    Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = HealthPalette.Muted)
+                }
+            }
+        }
 
         SectionHeader(stringResource(R.string.latest_readings), modifier = Modifier.padding(top = 14.dp))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

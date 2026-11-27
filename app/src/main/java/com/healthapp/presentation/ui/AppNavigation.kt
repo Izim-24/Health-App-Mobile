@@ -142,6 +142,9 @@ fun AppNavigation(startDestination: String = "dashboard", openRoute: String? = n
                 composable("medications") { MedicationScreen(navController) }
                 composable("health_connect") { HealthConnectScreen(navController) }
                 composable("health_alerts") { com.healthapp.presentation.ui.alerts.HealthAlertsScreen(navController) }
+                if (com.healthapp.BuildConfig.DEMO_TOOLS) {
+                    composable("watch_simulator") { com.healthapp.presentation.ui.alerts.WatchSimulatorScreen(navController) }
+                }
             }
         }
     }

@@ -739,4 +739,29 @@
     <string name="alerts_empty_msg">App sẽ báo khi nhịp tim hoặc huyết áp bất thường, có phân biệt lúc nghỉ với lúc vận động.</string>
     <string name="alerts_clear">Xóa danh sách</string>
     <string name="alerts_card_title">Cảnh báo gần đây</string>
+    <string name="sim_title">Đồng hồ mô phỏng</string>
+    <string name="sim_sub">Dữ liệu mô phỏng, không lưu vào nhật ký. 1 giây = 1 phút. Chọn một tình huống để xem app cảnh báo thế nào.</string>
+    <string name="sim_entry">Đồng hồ mô phỏng (demo)</string>
+    <string name="sim_entry_sub">Phát nhịp tim, bước chân theo thời gian thực để thử cảnh báo</string>
+    <string name="sim_scenario_rest">Nghỉ ngơi</string>
+    <string name="sim_scenario_rest_sub">Tim khoảng 70 – không báo</string>
+    <string name="sim_scenario_run">Chạy bộ</string>
+    <string name="sim_scenario_run_sub">Tim khoảng 155 nhưng đang chạy – không báo</string>
+    <string name="sim_scenario_over">Chạy quá sức</string>
+    <string name="sim_scenario_over_sub">Tim gần mức tối đa trong lúc chạy – nhắc giảm cường độ</string>
+    <string name="sim_scenario_tachy">Tim nhanh khi nghỉ</string>
+    <string name="sim_scenario_tachy_sub">Ngồi yên mà tim 128 rồi 158 – cảnh báo, rồi khẩn cấp</string>
+    <string name="sim_scenario_bp">Huyết áp tăng vọt</string>
+    <string name="sim_scenario_bp_sub">Đo được 186/118 mmHg – khẩn cấp, F.A.S.T</string>
+    <string name="sim_state_resting">Đang nghỉ</string>
+    <string name="sim_state_active">Đang vận động</string>
+    <string name="sim_state_recovering">Vừa tập xong</string>
+    <string name="sim_bp">HA %1$d/%2$d</string>
+    <string name="sim_clock">Phút thứ %1$d</string>
+    <string name="sim_stop">Dừng mô phỏng</string>
+    <string name="sim_last_alert">Đã gửi: %1$s</string>
+    <string name="sim_no_alert">Chưa có cảnh báo – mọi thứ bình thường</string>
+    <plurals name="sim_steps">
+        <item quantity="other">%1$d bước/phút</item>
+    </plurals>
 </resources>

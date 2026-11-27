@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -68,13 +70,16 @@ private class FakeExporter(val fail: Boolean = false) : com.healthapp.domain.rep
 private class FakeHealthAlerts : com.healthapp.domain.repository.HealthAlertRepository {
     val flow = MutableStateFlow<List<com.healthapp.domain.usecase.VitalAlert>>(emptyList())
     val checks = mutableListOf<Boolean>() // simulated flag of each check() call
-    var result: (List<com.healthapp.domain.usecase.HrSample>, java.time.LocalDateTime) -> List<com.healthapp.domain.usecase.VitalAlert> = { _, _ -> emptyList() }
+    /** Every alert check() produced; check() applies the real VitalAlerts rules (age 28) to what it receives. */
+    val returned = mutableListOf<com.healthapp.domain.usecase.VitalAlert>()
     var resets = 0
     override val recent: Flow<List<com.healthapp.domain.usecase.VitalAlert>> = flow
     override suspend fun check(hr: List<com.healthapp.domain.usecase.HrSample>, steps: List<com.healthapp.domain.usecase.StepSample>,
                                bp: List<com.healthapp.domain.usecase.BpReading>, now: java.time.LocalDateTime, notify: Boolean, simulated: Boolean): List<com.healthapp.domain.usecase.VitalAlert> {
         checks += simulated
-        return result(hr, now)
+        val out = com.healthapp.domain.usecase.VitalAlerts.heartAlerts(hr, steps, 28, now) + com.healthapp.domain.usecase.VitalAlerts.bpAlerts(bp, now)
+        returned += out
+        return out
     }
     override fun resetSimulation() { resets++ }
     override suspend fun clearRecent() { flow.value = emptyList() }
@@ -223,5 +228,37 @@ class ViewModelTests {
         assertEquals(2, vm.alerts.value.size)
         vm.clear()
         assertTrue(vm.alerts.value.isEmpty())
+    }
+
+    // ---------------- Watch simulator ----------------
+
+    private fun simulator(repo: FakeHealthAlerts) = WatchSimulatorViewModel(
+        repo, FakeProfiles(HealthProfile(fullName = "An", dateOfBirth = "1998-03-14")), FakeSession()
+    )
+
+    @Test fun watchSimulator_restTachy_raisesAlert() = kotlinx.coroutines.test.runTest {
+        Dispatchers.setMain(kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val repo = FakeHealthAlerts()
+        val vm = simulator(repo)
+        vm.start(com.healthapp.domain.usecase.WatchScenario.REST_TACHY)
+        advanceTimeBy(15_000); runCurrent()
+        vm.stop()
+        assertTrue(repo.returned.map { it.kind }.toString(), com.healthapp.domain.usecase.AlertKind.REST_TACHY in repo.returned.map { it.kind })
+        assertTrue(repo.checks.isNotEmpty() && repo.checks.all { it })
+        assertEquals(1, repo.resets)
+        assertEquals(com.healthapp.domain.usecase.AlertKind.REST_TACHY, vm.state.value.lastAlert?.kind)
+    }
+
+    @Test fun watchSimulator_run_noAlert() = kotlinx.coroutines.test.runTest {
+        Dispatchers.setMain(kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val repo = FakeHealthAlerts()
+        val vm = simulator(repo)
+        vm.start(com.healthapp.domain.usecase.WatchScenario.RUN)
+        advanceTimeBy(20_000); runCurrent()
+        vm.stop()
+        assertTrue(repo.returned.isEmpty())
+        assertTrue(repo.checks.size >= 19)
+        assertEquals(com.healthapp.domain.usecase.ActivityState.ACTIVE, vm.state.value.activity)
+        assertFalse(vm.state.value.running)
     }
 }

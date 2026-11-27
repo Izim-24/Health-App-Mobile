@@ -755,4 +755,30 @@
     <string name="alerts_empty_msg">You\'ll be notified when heart rate or blood pressure looks unusual; resting and exercising are told apart.</string>
     <string name="alerts_clear">Clear list</string>
     <string name="alerts_card_title">Recent alert</string>
+    <string name="sim_title">Watch simulator</string>
+    <string name="sim_sub">Simulated data, not saved to your diary. 1 second = 1 minute. Pick a situation to see how the app warns you.</string>
+    <string name="sim_entry">Watch simulator (demo)</string>
+    <string name="sim_entry_sub">Streams heart rate and steps live to try the alerts</string>
+    <string name="sim_scenario_rest">Resting</string>
+    <string name="sim_scenario_rest_sub">About 70 bpm – no alert</string>
+    <string name="sim_scenario_run">Running</string>
+    <string name="sim_scenario_run_sub">About 155 bpm but running – no alert</string>
+    <string name="sim_scenario_over">Running too hard</string>
+    <string name="sim_scenario_over_sub">Heart rate near your maximum while running – ease off</string>
+    <string name="sim_scenario_tachy">Fast heart at rest</string>
+    <string name="sim_scenario_tachy_sub">Sitting still at 128 then 158 bpm – warning, then urgent</string>
+    <string name="sim_scenario_bp">Blood pressure spike</string>
+    <string name="sim_scenario_bp_sub">Reads 186/118 mmHg – urgent, F.A.S.T</string>
+    <string name="sim_state_resting">Resting</string>
+    <string name="sim_state_active">Exercising</string>
+    <string name="sim_state_recovering">Just finished</string>
+    <string name="sim_bp">BP %1$d/%2$d</string>
+    <string name="sim_clock">Minute %1$d</string>
+    <string name="sim_stop">Stop simulation</string>
+    <string name="sim_last_alert">Sent: %1$s</string>
+    <string name="sim_no_alert">No alert – everything looks normal</string>
+    <plurals name="sim_steps">
+        <item quantity="one">%1$d step/min</item>
+        <item quantity="other">%1$d steps/min</item>
+    </plurals>
 </resources>
