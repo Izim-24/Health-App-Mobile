@@ -124,6 +124,13 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
             HealthValueCard(Icons.Rounded.MonitorHeart, HealthPalette.Pink, stringResource(R.string.stat_bp), bp?.let { stringResource(R.string.bp_value, it.value.toInt(), it.secondaryValue?.toInt()?.toString() ?: "—") }, bp?.recordedAt, origin(bp?.id, bp?.source)) { entry = HealthEntryKind.BLOOD_PRESSURE }
             val glucose = latest[VitalType.GLUCOSE]
             HealthValueCard(Icons.Rounded.Bloodtype, HealthPalette.Indigo, stringResource(R.string.stat_glucose), glucose?.let { stringResource(R.string.value_unit, oneDecimal(it.value), it.unit) }, glucose?.recordedAt, origin(glucose?.id, glucose?.source)) { entry = HealthEntryKind.GLUCOSE }
+            // Shown only once a watch or app has sent them through Health Connect.
+            listOf(VitalType.OXYGEN_SATURATION, VitalType.RESTING_HEART_RATE, VitalType.BODY_TEMPERATURE, VitalType.RESPIRATORY_RATE).forEach { type ->
+                latest[type]?.let { m ->
+                    val (icon, accent) = vitalIcon(type)
+                    HealthValueCard(icon, accent, vitalLabel(type), vitalValue(m), m.recordedAt, origin(m.id, m.source), onAdd = null)
+                }
+            }
             val weight = state.weights.firstOrNull()
             HealthValueCard(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, stringResource(R.string.metric_weight), weight?.let { stringResource(R.string.kg_value, oneDecimal(it.weight)) }, weight?.recordedAt, origin(weight?.id)) { entry = HealthEntryKind.WEIGHT }
             val sleep = state.sleeps.firstOrNull()
@@ -175,7 +182,8 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
             state.weights.take(10).forEach { HealthHistoryLabel(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, stringResource(R.string.metric_weight), stringResource(R.string.kg_value, oneDecimal(it.weight)), it.recordedAt, origin(it.id)) }
             state.sleeps.take(10).forEach { HealthHistoryLabel(Icons.Rounded.Bedtime, HealthPalette.Violet, stringResource(R.string.stat_sleep), stringResource(R.string.sleep_duration, it.durationMinutes / 60, it.durationMinutes % 60), it.wakeupTime, origin(it.id)) }
             state.activities.take(10).forEach {
-                HealthHistoryLabel(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Orange, stringResource(R.string.metric_steps), if (it.durationMinutes > 0) stringResource(R.string.steps_with_minutes, grouped(it.steps), it.durationMinutes) else stringResource(R.string.steps_value, grouped(it.steps)), it.recordedAt, origin(it.id))
+                if (it.id.startsWith("hc_ex_")) HealthHistoryLabel(Icons.Rounded.FitnessCenter, HealthPalette.Orange, stringResource(R.string.hc_workouts), stringResource(R.string.workout_value, workoutName(it.activityType), it.durationMinutes), it.recordedAt, origin(it.id))
+                else HealthHistoryLabel(Icons.AutoMirrored.Rounded.DirectionsWalk, HealthPalette.Orange, stringResource(R.string.metric_steps), if (it.durationMinutes > 0) stringResource(R.string.steps_with_minutes, grouped(it.steps), it.durationMinutes) else stringResource(R.string.steps_value, grouped(it.steps)), it.recordedAt, origin(it.id))
             }
         }
         Spacer(Modifier.height(28.dp))
@@ -208,7 +216,8 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
 /** Where an entry came from, from its id prefix / source field: imported, sample (demo) or typed by the user. */
 @Composable
 private fun origin(id: String?, source: String? = null): String = when {
-    source == "HEALTH_CONNECT" || id?.startsWith("hc_") == true -> "Health Connect"
+    hcAppName(source) != null -> stringResource(R.string.origin_hc_app, hcAppName(source)!!)
+    source?.startsWith("HEALTH_CONNECT") == true || id?.startsWith("hc_") == true -> "Health Connect"
     source == "DEMO" || id?.startsWith("demo_") == true -> stringResource(R.string.origin_demo)
     else -> stringResource(R.string.origin_manual)
 }
@@ -332,7 +341,7 @@ private fun TrendChart(metric: TrendMetric, points: List<TrendPoint>) {
 }
 
 @Composable
-private fun HealthValueCard(icon: ImageVector, accent: Accent, title: String, value: String?, recordedAt: LocalDateTime?, origin: String, onAdd: () -> Unit) {
+private fun HealthValueCard(icon: ImageVector, accent: Accent, title: String, value: String?, recordedAt: LocalDateTime?, origin: String, onAdd: (() -> Unit)?) {
     AppCard(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             IconBadge(icon, accent, size = 46.dp)
@@ -342,7 +351,8 @@ private fun HealthValueCard(icon: ImageVector, accent: Accent, title: String, va
                 Text(value ?: stringResource(R.string.not_set), style = MaterialTheme.typography.titleMedium, color = if (value == null) HealthPalette.Subtle else HealthPalette.Ink)
                 recordedAt?.let { Text(sourceLabel(origin, it), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted) }
             }
-            SoftButton(stringResource(R.string.action_log), onAdd, accent, icon = Icons.Rounded.Add)
+            // Readings that only arrive from watches (SpO2, temperature…) have no manual entry.
+            onAdd?.let { SoftButton(stringResource(R.string.action_log), it, accent, icon = Icons.Rounded.Add) }
         }
     }
 }
@@ -500,4 +510,18 @@ fun vitalIcon(type: VitalType): Pair<androidx.compose.ui.graphics.vector.ImageVe
     VitalType.BLOOD_PRESSURE -> Icons.Rounded.MonitorHeart to HealthPalette.Pink
     VitalType.GLUCOSE -> Icons.Rounded.Bloodtype to HealthPalette.Indigo
 }
+
+/** "Đạp xe" / "Cycling" for a workout imported from Health Connect. */
+@Composable
+private fun workoutName(type: com.healthapp.domain.model.ActivityType): String = stringResource(
+    when (type) {
+        com.healthapp.domain.model.ActivityType.RUNNING -> R.string.workout_running
+        com.healthapp.domain.model.ActivityType.CYCLING -> R.string.workout_cycling
+        com.healthapp.domain.model.ActivityType.WALKING -> R.string.workout_walking
+        com.healthapp.domain.model.ActivityType.SWIMMING -> R.string.workout_swimming
+        com.healthapp.domain.model.ActivityType.YOGA -> R.string.workout_yoga
+        com.healthapp.domain.model.ActivityType.GYM_WORKOUT, com.healthapp.domain.model.ActivityType.HIIT -> R.string.workout_gym
+        else -> R.string.workout_other
+    }
+)
 

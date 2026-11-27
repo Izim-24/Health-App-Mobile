@@ -792,4 +792,13 @@
         <item quantity="other">%1$d breaths/min</item>
     </plurals>
     <string name="hc_workouts">Workouts</string>
+    <string name="origin_hc_app">Health Connect · %1$s</string>
+    <string name="workout_value">%1$s · %2$d min</string>
+    <string name="workout_running">Running</string>
+    <string name="workout_cycling">Cycling</string>
+    <string name="workout_walking">Walking</string>
+    <string name="workout_swimming">Swimming</string>
+    <string name="workout_yoga">Yoga</string>
+    <string name="workout_gym">Strength training</string>
+    <string name="workout_other">Other workout</string>
 </resources>

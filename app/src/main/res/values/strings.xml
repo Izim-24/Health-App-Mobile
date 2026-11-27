@@ -774,4 +774,13 @@
         <item quantity="other">%1$d lần/phút</item>
     </plurals>
     <string name="hc_workouts">Buổi tập</string>
+    <string name="origin_hc_app">Health Connect · %1$s</string>
+    <string name="workout_value">%1$s · %2$d phút</string>
+    <string name="workout_running">Chạy bộ</string>
+    <string name="workout_cycling">Đạp xe</string>
+    <string name="workout_walking">Đi bộ</string>
+    <string name="workout_swimming">Bơi</string>
+    <string name="workout_yoga">Yoga</string>
+    <string name="workout_gym">Tập gym</string>
+    <string name="workout_other">Bài tập khác</string>
 </resources>

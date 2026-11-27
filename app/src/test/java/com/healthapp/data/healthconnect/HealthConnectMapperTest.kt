@@ -164,5 +164,16 @@ class HealthConnectMapperTest {
         assertEquals(HealthConnectMapper.hydration("acc", HcHydration("u1", at, 0.3)), HealthConnectMapper.hydration("acc", HcHydration("u1", at, 0.3)))
         assertEquals("HEALTH_CONNECT:$samsung", HealthConnectMapper.bloodPressure("acc", HcBloodPressure("b1", at, 120.0, 80.0, samsung)).source)
     }
+
+    @Test fun exercise_typesAreValidActivityTypes() {
+        // Activity rows are read back with ActivityType.valueOf, so every mapped name must exist there.
+        val e = androidx.health.connect.client.records.ExerciseSessionRecord
+        listOf(e.EXERCISE_TYPE_RUNNING, e.EXERCISE_TYPE_BIKING, e.EXERCISE_TYPE_WALKING, e.EXERCISE_TYPE_SWIMMING_POOL,
+            e.EXERCISE_TYPE_YOGA, e.EXERCISE_TYPE_STRENGTH_TRAINING, e.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING,
+            e.EXERCISE_TYPE_DANCING, e.EXERCISE_TYPE_OTHER_WORKOUT).forEach { type ->
+            val row = HealthConnectMapper.exercise("acc", HcExercise("u", at, at.plusMinutes(30), type, null))!!
+            com.healthapp.domain.model.ActivityType.valueOf(row.activityType)   // throws if unknown
+        }
+    }
 }
 
