@@ -31,6 +31,7 @@
 - Health Connect (chỉ đọc): kết nối trong **Cài đặt → Health Connect** hoặc tab **Sức khỏe**; nhập số bước + năng lượng vận động (theo ngày), giấc ngủ, nhịp tim (trung bình mỗi giờ), cân nặng, huyết áp, đường huyết. Tự đồng bộ khi mở ứng dụng (tối đa 15 phút/lần) và **đồng bộ nền khoảng 6 giờ/lần khi ứng dụng đóng** nếu bạn cho phép "truy cập dữ liệu trong nền" (Health Connect trên Android 14+ có hỗ trợ; WorkManager, chỉ chạy khi pin không yếu, tự hủy khi ngắt kết nối hoặc thu hồi quyền); lần đầu lấy 30 ngày. Đồng bộ lại không tạo bản trùng; giá trị nhập ghi nguồn "Health Connect". Ngắt kết nối thu hồi quyền và có thể xóa dữ liệu đã nhập (giữ dữ liệu tự nhập). Không ghi ngược vào Health Connect, không gửi lên máy chủ.
 - Quét món ăn bằng ảnh (Dinh dưỡng → Quét món ăn): chụp ảnh hoặc chọn từ thư viện; ảnh được thu nhỏ ≤1024 px, xoay đúng chiều, xóa EXIF/GPS rồi gửi qua backend tới model thị giác. AI nhận diện từng món và **ước tính số gram**; calo và đạm/tinh bột/béo được **tính từ bảng thành phần dinh dưỡng** (giá trị/100 g × gram) khi món có trong bảng, nếu không thì giữ ước tính của AI — mỗi món ghi rõ "Calo theo bảng dinh dưỡng" hay "Calo do AI ước tính". Bạn sửa số gram (dinh dưỡng tự tính lại), bỏ món sai, chọn bữa rồi lưu. Ứng dụng cảnh báo món có độ tin cậy thấp hoặc calo không khớp với thành phần. Đây là **ước tính** — khẩu phần, dầu mỡ và nước sốt khó nhìn từ ảnh.
 - Cài đặt & dữ liệu: xuất toàn bộ dữ liệu ra tệp JSON và chia sẻ qua bảng chia sẻ Android; xóa toàn bộ dữ liệu trên thiết bị (có xác nhận).
+- **Cảnh báo sức khỏe từ đồng hồ**: phân tích nhịp tim, bước chân và huyết áp (Health Connect hoặc tự nhập) để **phân biệt chỉ số cao do đang vận động với cao khi đang nghỉ**. Gửi thông báo khi tim nhanh/chậm bất thường lúc nghỉ, tập quá 90% nhịp tối đa (220 − tuổi), huyết áp ≥ 180/120 (khẩn cấp, hướng dẫn F.A.S.T và nút **Gọi 115**), huyết áp trung bình 7 ngày ≥ 135/85 (nên đi khám). Vừa tập xong tim còn cao thì không báo; cùng cảnh báo không lặp trong 30 phút. Không phải chẩn đoán. Bản demo/debug có **Đồng hồ mô phỏng** (tab Sức khỏe): phát dữ liệu theo thời gian thực, 1 giây = 1 phút, 5 tình huống.
 - Báo cáo: tổng hợp ngày, tuần và tháng từ những ngày đã có nhật ký; **xuất báo cáo PDF** (khổ A4, đúng ngôn ngữ đang chọn, có lưu ý không phải chẩn đoán) để in hoặc gửi bác sĩ qua bảng chia sẻ Android.
 - Trợ lý AI dạng chat trên Android Emulator khi chạy backend cục bộ và cấu hình khóa mới.
 
@@ -53,10 +54,10 @@ Yêu cầu JDK 17 và Android SDK 35. Từ thư mục dự án:
 
 APK debug: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Kiểm thử (105 test):
+Kiểm thử (132 test):
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest          # 76 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
+.\gradlew.bat :app:testDebugUnitTest          # 103 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
 .\gradlew.bat :app:lintDebug                  # Android Lint: 0 lỗi
 .\gradlew.bat :app:connectedDebugAndroidTest  # 11 test trên emulator: migration Room (đến v6), hồi quy, tìm món offline, Compose UI
 cd server; npm test                          # 18 test backend

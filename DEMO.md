@@ -15,11 +15,12 @@
 |---|---|---|
 | 0:00 | **Trang chủ** | Điểm sức khỏe 0–100, chạm "Xem chi tiết": từng phần dựa trên khuyến nghị (ngủ 7–9h, ~8.000 bước, huyết áp ACC/AHA, BMI châu Á); **biểu đồ 8 tuần + nhận xét so với tuần trước**. Không phải chẩn đoán. |
 | 1:00 | **Sức khỏe** | Chỉ số có nhãn nguồn (Nhập tay / Health Connect / Dữ liệu mẫu), biểu đồ tuần. Nhắc Health Connect: chỉ đọc, đồng bộ không trùng. |
+| 1:30 | **Sức khỏe → Đồng hồ mô phỏng** | Chọn *Chạy bộ*: tim ~155 nhưng đang vận động → **không báo**. Chọn *Tim nhanh khi nghỉ*: sau ~14 giây có **thông báo**, chạm vào mở màn hình cảnh báo. Chọn *Huyết áp tăng vọt*: cảnh báo **khẩn cấp** + F.A.S.T + nút Gọi 115 (chỉ mở trình quay số). Nhấn mạnh: phân biệt vận động với nghỉ, không phải chẩn đoán. |
 | 2:00 | **Ăn uống → Quét món ăn** | Chọn ảnh → AI trả món + gram + kcal + độ tin cậy → **sửa gram, kcal tự tính lại** → Lưu. Nói về đánh giá: sai số trung vị 16,5% trên ảnh cân thật. |
 | 3:30 | **Thuốc** (nút nhanh trên trang chủ) | Thêm thuốc giờ = 1–2 phút sau → thông báo hiện **đúng phút** (báo thức chính xác), bấm **"Đã uống"** ngay trên thông báo → tỷ lệ tuân thủ cập nhật. |
 | 4:30 | **Thói quen / Tinh thần** | Đánh dấu thói quen; check-in cảm xúc; bài thở 4–4 (vòng tròn co giãn). |
 | 5:15 | **Cài đặt** | Đổi giao diện Sáng/Tối và **Ngôn ngữ Tiếng Việt ↔ English** (đổi ngay, không khởi động lại); xuất JSON, xóa dữ liệu mẫu. |
-| 5:45 | Kết | Kiến trúc Clean Architecture, 105 test + CI, khóa API chỉ ở server. |
+| 5:45 | Kết | Kiến trúc Clean Architecture, 132 test + CI, khóa API chỉ ở server. |
 
 ## Câu hỏi thường gặp — trả lời ngắn
 - **Sao không có đăng nhập?** App một người dùng, offline, dữ liệu sức khỏe ở lại trên máy. Đăng nhập cần backend có xác thực và đồng bộ — nằm trong hướng phát triển.

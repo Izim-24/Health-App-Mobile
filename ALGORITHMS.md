@@ -16,6 +16,7 @@ Mọi quy tắc nghiệp vụ nằm trong `app/src/main/java/com/healthapp/domai
 | 8 | Nhập dữ liệu Health Connect | `data/healthconnect/HealthConnectMapper.kt` | `HealthConnectMapperTest` (6) |
 | 9 | Báo thức thuốc chính xác | `data/reminder/MedicationScheduler.kt` | kiểm thử trên emulator |
 | 10 | Sao lưu / khôi phục | `data/repository/DataManagementRepositoryImpl.kt` | kiểm thử trên emulator |
+| 12 | Cảnh báo sinh hiệu (nghỉ / vận động, huyết áp) | `VitalAlerts.kt`, `WatchScenario.kt` | `VitalAlertsTest` (15), `WatchScenarioTest` (5), mapper (4), ViewModel (3) |
 | 11 | Tìm món không phân biệt dấu | `FoodSearch.kt` + `data/food/VietnameseFoodLibrary.kt` | `FoodSearchTest` (3), `VietnameseFoodLibraryTest` (3), emulator (1) |
 
 ---
@@ -181,6 +182,34 @@ và *sau thời điểm hiện tại*. Sau mỗi lần thông báo, lịch tiế
 - **Xếp hạng:** 0 = tên bắt đầu bằng câu tìm, 1 = một từ trong tên bắt đầu bằng nó, 2 = chỉ chứa; cùng hạng thì tên ngắn trước ("Phở bò" trước "Gia vị phở bò").
 - **Nguồn, theo thứ tự:** 42 món Việt có sẵn (offline, mỗi món một khẩu phần thường gặp, giá trị /100 g lấy từ **cùng tệp** `vn-foods.json` mà AI quét ảnh dùng — test bắt hai bản phải giống hệt) → món đã lưu trên máy → Open Food Facts (chỉ khi bấm kính lúp, để không gọi mạng mỗi lần gõ). Gõ chữ thì lọc offline sau 250 ms.
 - **Độ phức tạp:** O(n·m) với n món (vài trăm) và m độ dài tên — tức thì trên điện thoại.
+
+---
+
+## 12. Cảnh báo sinh hiệu từ đồng hồ (VitalAlerts)
+
+**Mục đích:** phát hiện sớm dấu hiệu nguy cơ và báo cho người dùng giảm vận động, nghỉ, đi khám hoặc gọi cấp cứu. **Không chẩn đoán** (đột quỵ chỉ nhận ra qua triệu chứng; app cảnh báo yếu tố nguy cơ và hướng dẫn F.A.S.T).
+
+- **Ngữ cảnh vận động** tại mỗi thời điểm t: *đang vận động* nếu ≥ 500 bước trong 10 phút trước t (≈ đi nhanh); *vừa tập xong* nếu đang nghỉ nhưng 10 phút trước nữa có vận động; còn lại là *đang nghỉ*. Đây là điểm cốt lõi: tim 155 khi chạy là bình thường, khi ngồi yên thì không.
+- **Nhịp tim tối đa** ước tính = 220 − tuổi (không có ngày sinh → 40 tuổi).
+- **"Kéo dài"**: mọi mẫu trong khoảng đều thỏa điều kiện và cách nhau ≤ 2 phút; đồng hồ mất dữ liệu lâu hơn thì chuỗi bị cắt (tránh báo nhầm khi thiếu dữ liệu).
+
+| Cảnh báo | Điều kiện | Mức |
+|---|---|---|
+| Tim nhanh khi nghỉ | đang nghỉ, ≥ 120 bpm kéo dài ≥ 10 phút | Cảnh báo |
+| Tim rất nhanh khi nghỉ | đang nghỉ, ≥ 150 bpm kéo dài ≥ 5 phút | Khẩn cấp |
+| Tim chậm khi nghỉ | đang nghỉ, < 40 bpm kéo dài ≥ 10 phút | Cảnh báo |
+| Tập quá sức | đang vận động, > 90% nhịp tối đa kéo dài ≥ 5 phút | Cảnh báo |
+| Vượt nhịp tối đa | đang vận động, > 100% nhịp tối đa ≥ 2 phút | Khẩn cấp |
+| Huyết áp rất cao | một lần đo ≥ 180 hoặc ≥ 120 mmHg (cơn tăng huyết áp, AHA) | Khẩn cấp |
+| Huyết áp cao | 160–179 hoặc 100–119 → nghỉ 5 phút rồi đo lại | Cảnh báo |
+| Huyết áp cao kéo dài | ≥ 5 lần đo trong 7 ngày, trung bình ≥ 135 hoặc ≥ 85 (ngưỡng đo tại nhà) | Xu hướng |
+
+- Mức nặng hơn **thay** mức nhẹ (không gửi cả hai). *Vừa tập xong* không bao giờ kích hoạt cảnh báo lúc nghỉ.
+- **Chống lặp:** cùng loại không gửi lại trong 30 phút; cảnh báo xu hướng tối đa 1 lần/ngày. Mỗi lần đồng bộ Health Connect đọc lại cùng 2 giờ dữ liệu nên điều này bắt buộc.
+- **Nguồn dữ liệu:** Health Connect (nhịp tim gốc theo phút – lấy giá trị cao nhất mỗi phút để không làm mất cơn tăng ngắn; bước chân chia đều theo phút, điện thoại và đồng hồ cùng ghi một lần đi bộ thì lấy nguồn lớn hơn chứ không cộng); chỉ xét **2 giờ gần nhất**. Số tự nhập được kiểm tra ngay (hiện trong app, không gửi thông báo). Đồng hồ mô phỏng (bản demo): 1 giây = 1 phút, nhịp tim tiến dần nửa khoảng cách tới mục tiêu mỗi phút nên chuyển *Chạy bộ → Nghỉ* trông như hồi phục thật.
+- **Giới hạn:** app không chạy thời gian thực (đọc Health Connect khi mở app và khoảng 6 giờ/lần khi đóng); không có dữ liệu rung nhĩ; đa số đồng hồ không đo huyết áp.
+- **Độ phức tạp:** O(n) theo số mẫu trong 2 giờ (≤ 120 mẫu/phút-hóa) + O(m) bước chân cho mỗi mẫu → tức thì.
+- **Kiểm thử:** chạy bộ tim 155–165 → không báo; vừa tập xong → không báo; mất dữ liệu 20 phút → không báo; dữ liệu cũ hơn 2 giờ → không báo; các ngưỡng; chống lặp; kịch bản đồng hồ chạy qua bộ quy tắc thật.
 
 ---
 

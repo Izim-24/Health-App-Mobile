@@ -29,7 +29,7 @@ tests don't uninstall the app (which would wipe emulator data). Keep it.
 ```
 app/src/main/java/com/healthapp/
 ├── domain/        Pure Kotlin: models, repository interfaces, use cases (HealthScore, ScoreHistory, FoodScan,
-│                  HealthCalculations, MedicationSchedule, ReminderSchedule, WaterPace, FoodSearch). No Android imports.
+│                  HealthCalculations, MedicationSchedule, ReminderSchedule, WaterPace, FoodSearch, VitalAlerts, WatchSimulation). No Android imports.
 ├── data/          Room entities/DAOs, repository implementations, Retrofit APIs, WorkManager workers,
 │                  Health Connect import (HealthConnectManager implements HealthSyncRepository)
 ├── presentation/  Compose screens + ViewModels. Depends on domain only — never import com.healthapp.data.
@@ -132,4 +132,7 @@ so read them in composition, not inside `Canvas` draw lambdas or top-level vals.
   transaction (`DataManagementDao.importAll`), moves rows to the current account, re-arms reminders/medications.
 - Food search folds accents in Kotlin (`FoodSearch`), not SQL LIKE. Built-in dishes: `data/food/VietnameseFoodLibrary`
   reads `assets/vn-foods.json`, an exact copy of `server/data/vn-foods.json` (a test enforces it — copy after editing).
+- Health alerts: `VitalAlerts` (rules) → `HealthAlertRepository` (age, cooldown, `health_alerts` notification channel,
+  recent list) fed by Health Connect sync (raw minute data, last 2 h), manual entry (no notification) and the watch
+  simulator (`watch_simulator`, only when `BuildConfig.DEMO_TOOLS`; simulated data is never stored).
 - Algorithms are documented for the report in `ALGORITHMS.md` — update it when a rule in `domain/usecase` changes.

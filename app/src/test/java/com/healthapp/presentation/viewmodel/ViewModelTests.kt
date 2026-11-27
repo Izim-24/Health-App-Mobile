@@ -261,4 +261,18 @@ class ViewModelTests {
         assertEquals(com.healthapp.domain.usecase.ActivityState.ACTIVE, vm.state.value.activity)
         assertFalse(vm.state.value.running)
     }
+
+    @Test fun watchSimulator_restTachyAfterRun_stillWarnsWithin14s() = kotlinx.coroutines.test.runTest {
+        Dispatchers.setMain(kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val repo = FakeHealthAlerts()
+        val vm = simulator(repo)
+        vm.start(com.healthapp.domain.usecase.WatchScenario.RUN)
+        advanceTimeBy(20_000); runCurrent()
+        repo.returned.clear()
+        vm.start(com.healthapp.domain.usecase.WatchScenario.REST_TACHY) // an incident scenario starts fresh
+        advanceTimeBy(15_000); runCurrent()
+        vm.stop()
+        assertTrue(repo.returned.map { it.kind }.toString(), com.healthapp.domain.usecase.AlertKind.REST_TACHY in repo.returned.map { it.kind })
+    }
 }
+

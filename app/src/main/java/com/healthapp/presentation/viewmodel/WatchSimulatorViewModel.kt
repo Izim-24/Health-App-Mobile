@@ -59,11 +59,20 @@ class WatchSimulatorViewModel @Inject constructor(
     private val steps = ArrayDeque<StepSample>()
     private val bp = mutableListOf<BpReading>()
 
-    /** Switches scenario; the heart rate carries over, so RUN → REST shows a natural recovery. */
+    /**
+     * Switches scenario. Resting and running carry the history over, so RUN → REST shows a natural recovery.
+     * Incident scenarios start from a fresh, rested body; otherwise the earlier run would (correctly) count as
+     * "just finished exercise" and hold back the alert the demo is meant to show.
+     */
     fun start(scenario: WatchScenario) {
         job?.cancel()
         alerts.resetSimulation()
         bp.clear()
+        if (scenario != WatchScenario.REST && scenario != WatchScenario.RUN) {
+            hr.clear()
+            steps.clear()
+            bpm = 70.0
+        }
         mutable.update { it.copy(scenario = scenario, running = true, lastAlert = null, lastBp = null) }
         job = viewModelScope.launch {
             val age = runCatching {
