@@ -101,6 +101,8 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
             }
         }
 
+        RecentAlertCard(navController)
+
         SectionHeader(stringResource(R.string.latest_readings), modifier = Modifier.padding(top = 14.dp))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val hr = latest[VitalType.HEART_RATE]
@@ -428,3 +430,23 @@ private fun HealthEntryDialog(kind: HealthEntryKind, onDismiss: () -> Unit, onSa
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
+
+/** The newest health alert of the last 24 hours; tapping opens the alerts screen. Nothing when there is none. */
+@Composable
+private fun RecentAlertCard(navController: NavController, viewModel: com.healthapp.presentation.viewmodel.HealthAlertsViewModel = hiltViewModel()) {
+    val alerts by viewModel.alerts.collectAsState()
+    val alert = alerts.firstOrNull { it.at.isAfter(java.time.LocalDateTime.now().minusHours(24)) } ?: return
+    AppCard(Modifier.fillMaxWidth().padding(top = 12.dp), onClick = { navController.navigate("health_alerts") }) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconBadge(com.healthapp.presentation.ui.alerts.alertIcon(alert), com.healthapp.presentation.ui.alerts.alertAccent(alert))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.alerts_card_title), style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted)
+                Text(stringResource(alert.kind.titleRes()), style = MaterialTheme.typography.titleSmall, color = HealthPalette.Ink)
+                Text("${alertValue(alert)} · ${com.healthapp.presentation.ui.alerts.alertMeta(alert)}", style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
+            }
+            com.healthapp.presentation.ui.alerts.LevelChip(alert.level)
+        }
+    }
+}
+

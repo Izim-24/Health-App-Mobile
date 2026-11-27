@@ -720,4 +720,23 @@
     <string name="alert_body_bp_crisis">Huyết áp %1$d/%2$d mmHg – mức nguy hiểm. Kiểm tra dấu hiệu đột quỵ F.A.S.T (méo miệng, yếu tay, nói ngọng); nếu có, gọi 115 ngay.</string>
     <string name="alert_body_bp_high">Huyết áp %1$d/%2$d mmHg. Ngồi nghỉ 5 phút rồi đo lại; nếu vẫn cao, hãy liên hệ bác sĩ.</string>
     <string name="alert_body_bp_sustained">Huyết áp trung bình 7 ngày qua là %1$d/%2$d mmHg (từ 135/85 là cao). Huyết áp cao kéo dài là yếu tố nguy cơ đột quỵ – nên đi khám.</string>
+    <string name="alert_level_urgent">Khẩn cấp</string>
+    <string name="alert_level_warning">Cảnh báo</string>
+    <string name="alert_level_trend">Xu hướng</string>
+    <string name="alert_state_resting">lúc đang nghỉ</string>
+    <string name="alert_state_active">lúc đang vận động</string>
+    <string name="alert_state_recovering">ngay sau khi tập</string>
+    <string name="alert_simulated">Mô phỏng</string>
+    <string name="alert_value_bp">%1$d/%2$d mmHg</string>
+    <string name="fast_title">Dấu hiệu đột quỵ F.A.S.T</string>
+    <string name="fast_face">F – Mặt: méo miệng, một bên mặt xệ khi cười</string>
+    <string name="fast_arm">A – Tay: yếu hoặc tê một bên, không giơ được hai tay</string>
+    <string name="fast_speech">S – Lời nói: nói ngọng, khó hiểu</string>
+    <string name="fast_time">T – Thời gian: có bất kỳ dấu hiệu nào → gọi 115 ngay và ghi lại giờ bắt đầu</string>
+    <string name="call_115">Gọi 115</string>
+    <string name="alerts_disclaimer">Cảnh báo dựa trên số đo từ đồng hồ và máy đo, chỉ để tham khảo và không thay thế chẩn đoán y khoa.</string>
+    <string name="alerts_empty_title">Chưa có cảnh báo nào</string>
+    <string name="alerts_empty_msg">App sẽ báo khi nhịp tim hoặc huyết áp bất thường, có phân biệt lúc nghỉ với lúc vận động.</string>
+    <string name="alerts_clear">Xóa danh sách</string>
+    <string name="alerts_card_title">Cảnh báo gần đây</string>
 </resources>

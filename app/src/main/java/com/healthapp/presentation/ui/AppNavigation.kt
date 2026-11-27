@@ -53,8 +53,15 @@ import com.healthapp.presentation.ui.theme.HealthPalette
 private data class Tab(val route: String, @androidx.annotation.StringRes val label: Int, val icon: androidx.compose.ui.graphics.vector.ImageVector, val accent: com.healthapp.presentation.ui.theme.Accent)
 
 @Composable
-fun AppNavigation(startDestination: String = "dashboard") {
+fun AppNavigation(startDestination: String = "dashboard", openRoute: String? = null, onRouteOpened: () -> Unit = {}) {
     val navController = rememberNavController()
+    // Opened from a notification (e.g. a health alert): go there once the graph exists.
+    androidx.compose.runtime.LaunchedEffect(openRoute) {
+        if (openRoute != null) {
+            runCatching { navController.navigate(openRoute) { launchSingleTop = true } }
+            onRouteOpened()
+        }
+    }
     val tabs = listOf(
         Tab("dashboard", R.string.tab_home, Icons.Rounded.Home, HealthPalette.Emerald),
         Tab("health", R.string.tab_health, Icons.Rounded.MonitorHeart, HealthPalette.Coral),
@@ -134,16 +141,21 @@ fun AppNavigation(startDestination: String = "dashboard") {
                 composable("settings") { SettingsScreen(navController) }
                 composable("medications") { MedicationScreen(navController) }
                 composable("health_connect") { HealthConnectScreen(navController) }
+                composable("health_alerts") { com.healthapp.presentation.ui.alerts.HealthAlertsScreen(navController) }
             }
         }
     }
 }
 
 @Composable
-fun HealthAppRoot(appViewModel: com.healthapp.presentation.viewmodel.AppViewModel = androidx.hilt.navigation.compose.hiltViewModel()) {
+fun HealthAppRoot(
+    openRoute: String? = null,
+    onRouteOpened: () -> Unit = {},
+    appViewModel: com.healthapp.presentation.viewmodel.AppViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+) {
     val app by appViewModel.state.collectAsState()
     HealthAppTheme(themeMode = app.themeMode) {
-        if (app.ready) AppNavigation(app.startDestination)
+        if (app.ready) AppNavigation(app.startDestination, openRoute, onRouteOpened)
         else Surface(Modifier.fillMaxSize(), color = HealthPalette.Background) {}
     }
 }

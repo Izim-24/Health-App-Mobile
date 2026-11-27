@@ -23,11 +23,21 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(com.healthapp.core.AppLocale.localized(newBase))
     }
 
+    /** Route requested by a notification tap; consumed once navigation has happened. */
+    private val openRoute = androidx.compose.runtime.mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) openRoute.value = intent?.getStringExtra(EXTRA_OPEN_ROUTE)
         setContent {
-            HealthAppRoot()
+            HealthAppRoot(openRoute.value, onRouteOpened = { openRoute.value = null })
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra(EXTRA_OPEN_ROUTE)?.let { openRoute.value = it }
     }
 
     override fun onStart() {

@@ -65,6 +65,21 @@ private class FakeExporter(val fail: Boolean = false) : com.healthapp.domain.rep
     }
 }
 
+private class FakeHealthAlerts : com.healthapp.domain.repository.HealthAlertRepository {
+    val flow = MutableStateFlow<List<com.healthapp.domain.usecase.VitalAlert>>(emptyList())
+    val checks = mutableListOf<Boolean>() // simulated flag of each check() call
+    var result: (List<com.healthapp.domain.usecase.HrSample>, java.time.LocalDateTime) -> List<com.healthapp.domain.usecase.VitalAlert> = { _, _ -> emptyList() }
+    var resets = 0
+    override val recent: Flow<List<com.healthapp.domain.usecase.VitalAlert>> = flow
+    override suspend fun check(hr: List<com.healthapp.domain.usecase.HrSample>, steps: List<com.healthapp.domain.usecase.StepSample>,
+                               bp: List<com.healthapp.domain.usecase.BpReading>, now: java.time.LocalDateTime, notify: Boolean, simulated: Boolean): List<com.healthapp.domain.usecase.VitalAlert> {
+        checks += simulated
+        return result(hr, now)
+    }
+    override fun resetSimulation() { resets++ }
+    override suspend fun clearRecent() { flow.value = emptyList() }
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class ViewModelTests {
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -193,5 +208,20 @@ class ViewModelTests {
         assertFalse(base.backgroundSync)
         assertTrue(base.copy(backgroundSupported = true, backgroundGranted = true).backgroundSync)
         assertFalse(base.copy(enabled = false, backgroundGranted = true).backgroundSync)
+    }
+
+    // ---------------- Health alerts ----------------
+
+    @Test fun healthAlerts_exposesRecent_andClears() {
+        val repo = FakeHealthAlerts()
+        val now = java.time.LocalDateTime.of(2026, 11, 28, 9, 0)
+        repo.flow.value = listOf(
+            com.healthapp.domain.usecase.VitalAlert(com.healthapp.domain.usecase.AlertKind.BP_CRISIS, now, 186, 118),
+            com.healthapp.domain.usecase.VitalAlert(com.healthapp.domain.usecase.AlertKind.REST_TACHY, now.minusHours(1), 125)
+        )
+        val vm = HealthAlertsViewModel(repo)
+        assertEquals(2, vm.alerts.value.size)
+        vm.clear()
+        assertTrue(vm.alerts.value.isEmpty())
     }
 }

@@ -736,4 +736,23 @@
     <string name="alert_body_bp_crisis">Blood pressure %1$d/%2$d mmHg – a dangerous level. Check the F.A.S.T stroke signs (face drooping, arm weakness, speech difficulty); if any, call 115 (emergency) now.</string>
     <string name="alert_body_bp_high">Blood pressure %1$d/%2$d mmHg. Rest for 5 minutes and measure again; if it stays high, contact a doctor.</string>
     <string name="alert_body_bp_sustained">Your 7-day average blood pressure is %1$d/%2$d mmHg (135/85 or more is high). Long-term high blood pressure is a stroke risk factor – see a doctor.</string>
+    <string name="alert_level_urgent">Urgent</string>
+    <string name="alert_level_warning">Warning</string>
+    <string name="alert_level_trend">Trend</string>
+    <string name="alert_state_resting">while resting</string>
+    <string name="alert_state_active">while exercising</string>
+    <string name="alert_state_recovering">right after exercise</string>
+    <string name="alert_simulated">Simulated</string>
+    <string name="alert_value_bp">%1$d/%2$d mmHg</string>
+    <string name="fast_title">Stroke signs: F.A.S.T</string>
+    <string name="fast_face">F – Face: one side droops when smiling</string>
+    <string name="fast_arm">A – Arm: weakness or numbness on one side, can\'t raise both arms</string>
+    <string name="fast_speech">S – Speech: slurred or hard to understand</string>
+    <string name="fast_time">T – Time: any of these → call 115 (emergency) now and note when it started</string>
+    <string name="call_115">Call 115</string>
+    <string name="alerts_disclaimer">Alerts are based on watch and monitor readings, are for guidance only and do not replace a medical diagnosis.</string>
+    <string name="alerts_empty_title">No alerts yet</string>
+    <string name="alerts_empty_msg">You\'ll be notified when heart rate or blood pressure looks unusual; resting and exercising are told apart.</string>
+    <string name="alerts_clear">Clear list</string>
+    <string name="alerts_card_title">Recent alert</string>
 </resources>

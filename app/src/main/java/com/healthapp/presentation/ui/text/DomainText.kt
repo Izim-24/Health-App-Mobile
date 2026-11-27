@@ -166,3 +166,47 @@ fun dayNames(): Map<com.healthapp.domain.model.DayOfWeek, String> = mapOf(
     com.healthapp.domain.model.DayOfWeek.SATURDAY to stringResource(R.string.day_sat),
     com.healthapp.domain.model.DayOfWeek.SUNDAY to stringResource(R.string.day_sun)
 )
+
+// ---- Health alerts (VitalAlerts) ----
+
+fun com.healthapp.domain.usecase.AlertKind.isBloodPressure(): Boolean = this == com.healthapp.domain.usecase.AlertKind.BP_CRISIS ||
+    this == com.healthapp.domain.usecase.AlertKind.BP_HIGH || this == com.healthapp.domain.usecase.AlertKind.BP_SUSTAINED
+
+@StringRes
+fun com.healthapp.domain.usecase.AlertKind.titleRes(): Int = when (this) {
+    com.healthapp.domain.usecase.AlertKind.REST_TACHY -> R.string.alert_title_rest_tachy
+    com.healthapp.domain.usecase.AlertKind.REST_TACHY_SEVERE -> R.string.alert_title_rest_tachy_severe
+    com.healthapp.domain.usecase.AlertKind.REST_BRADY -> R.string.alert_title_rest_brady
+    com.healthapp.domain.usecase.AlertKind.OVER_EXERTION -> R.string.alert_title_over_exertion
+    com.healthapp.domain.usecase.AlertKind.ABOVE_MAX_HR -> R.string.alert_title_above_max_hr
+    com.healthapp.domain.usecase.AlertKind.BP_CRISIS -> R.string.alert_title_bp_crisis
+    com.healthapp.domain.usecase.AlertKind.BP_HIGH -> R.string.alert_title_bp_high
+    com.healthapp.domain.usecase.AlertKind.BP_SUSTAINED -> R.string.alert_title_bp_sustained
+}
+
+/** Explanation + what to do; takes (value, secondary). Same texts as the notification. */
+@StringRes
+fun com.healthapp.domain.usecase.AlertKind.bodyRes(): Int = when (this) {
+    com.healthapp.domain.usecase.AlertKind.REST_TACHY -> R.string.alert_body_rest_tachy
+    com.healthapp.domain.usecase.AlertKind.REST_TACHY_SEVERE -> R.string.alert_body_rest_tachy_severe
+    com.healthapp.domain.usecase.AlertKind.REST_BRADY -> R.string.alert_body_rest_brady
+    com.healthapp.domain.usecase.AlertKind.OVER_EXERTION -> R.string.alert_body_over_exertion
+    com.healthapp.domain.usecase.AlertKind.ABOVE_MAX_HR -> R.string.alert_body_above_max_hr
+    com.healthapp.domain.usecase.AlertKind.BP_CRISIS -> R.string.alert_body_bp_crisis
+    com.healthapp.domain.usecase.AlertKind.BP_HIGH -> R.string.alert_body_bp_high
+    com.healthapp.domain.usecase.AlertKind.BP_SUSTAINED -> R.string.alert_body_bp_sustained
+}
+
+@StringRes
+fun com.healthapp.domain.usecase.ActivityState.labelRes(): Int = when (this) {
+    com.healthapp.domain.usecase.ActivityState.RESTING -> R.string.alert_state_resting
+    com.healthapp.domain.usecase.ActivityState.ACTIVE -> R.string.alert_state_active
+    com.healthapp.domain.usecase.ActivityState.RECOVERING -> R.string.alert_state_recovering
+}
+
+/** "126 bpm" or "186/118 mmHg". */
+@Composable
+fun alertValue(alert: com.healthapp.domain.usecase.VitalAlert): String =
+    if (alert.kind.isBloodPressure()) stringResource(R.string.alert_value_bp, alert.value, alert.secondary ?: 0)
+    else stringResource(R.string.bpm_value, alert.value)
+
