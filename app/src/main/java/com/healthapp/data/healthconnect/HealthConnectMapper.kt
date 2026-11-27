@@ -4,6 +4,8 @@ import com.healthapp.data.local.entity.ActivityLogEntity
 import com.healthapp.data.local.entity.SleepLogEntity
 import com.healthapp.data.local.entity.VitalLogEntity
 import com.healthapp.data.local.entity.WeightLogEntity
+import com.healthapp.data.local.entity.WaterLogEntity
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -18,8 +20,14 @@ data class HcRawSteps(val origin: String, val start: LocalDateTime, val count: L
 data class HcSleep(val uid: String, val start: LocalDateTime, val end: LocalDateTime)
 data class HcHeartSample(val time: LocalDateTime, val bpm: Long)
 data class HcWeight(val uid: String, val time: LocalDateTime, val kg: Double)
-data class HcBloodPressure(val uid: String, val time: LocalDateTime, val systolic: Double, val diastolic: Double)
-data class HcGlucose(val uid: String, val time: LocalDateTime, val mmolPerL: Double)
+data class HcBloodPressure(val uid: String, val time: LocalDateTime, val systolic: Double, val diastolic: Double, val origin: String = "")
+data class HcGlucose(val uid: String, val time: LocalDateTime, val mmolPerL: Double, val origin: String = "")
+data class HcSpo2(val uid: String, val time: LocalDateTime, val percent: Double, val origin: String)
+data class HcRestingHr(val uid: String, val time: LocalDateTime, val bpm: Long, val origin: String)
+data class HcTemperature(val uid: String, val time: LocalDateTime, val celsius: Double, val origin: String)
+data class HcRespiratory(val uid: String, val time: LocalDateTime, val perMinute: Double, val origin: String)
+data class HcHydration(val uid: String, val start: LocalDateTime, val liters: Double)
+data class HcExercise(val uid: String, val start: LocalDateTime, val end: LocalDateTime, val type: Int, val title: String?)
 
 /**
  * Maps Health Connect snapshots to Room rows. Every row gets a deterministic id starting with
@@ -32,6 +40,64 @@ object HealthConnectMapper {
     const val SLEEP_NOTE = "Health Connect"
 
     fun isImported(id: String) = id.startsWith(ID_PREFIX)
+
+    /** "HEALTH_CONNECT:<package of the app that wrote it>", or plain "HEALTH_CONNECT" when unknown. */
+    fun source(origin: String): String = if (origin.isBlank()) SOURCE else "$SOURCE:$origin"
+
+    private fun vital(id: String, accountId: String, type: String, value: Double, unit: String, origin: String, time: LocalDateTime) =
+        VitalLogEntity(id = id, accountId = accountId, type = type, value = value, secondaryValue = null, unit = unit,
+            source = source(origin), recordedAt = time)
+
+    /** Blood oxygen, 70–100 %. */
+    fun spo2(accountId: String, r: HcSpo2): VitalLogEntity? =
+        if (r.percent !in 70.0..100.0) null
+        else vital("${ID_PREFIX}spo2_${r.uid}", accountId, "OXYGEN_SATURATION", r.percent.roundToInt().toDouble(), "%", r.origin, r.time)
+
+    /** Resting heart rate, 25–200 bpm. */
+    fun restingHeartRate(accountId: String, r: HcRestingHr): VitalLogEntity? =
+        if (r.bpm !in 25..200) null
+        else vital("${ID_PREFIX}rhr_${r.uid}", accountId, "RESTING_HEART_RATE", r.bpm.toDouble(), "bpm", r.origin, r.time)
+
+    /** Body temperature, 34–42 °C, one decimal. */
+    fun temperature(accountId: String, r: HcTemperature): VitalLogEntity? =
+        if (r.celsius !in 34.0..42.0) null
+        else vital("${ID_PREFIX}temp_${r.uid}", accountId, "BODY_TEMPERATURE", (r.celsius * 10).roundToInt() / 10.0, "°C", r.origin, r.time)
+
+    /** Breaths per minute, 4–60. */
+    fun respiratoryRate(accountId: String, r: HcRespiratory): VitalLogEntity? =
+        if (r.perMinute !in 4.0..60.0) null
+        else vital("${ID_PREFIX}resp_${r.uid}", accountId, "RESPIRATORY_RATE", r.perMinute.roundToInt().toDouble(), "/min", r.origin, r.time)
+
+    /** A drink logged in another app, 1–5000 ml; counts towards the water goal on its start day. */
+    fun hydration(accountId: String, r: HcHydration): WaterLogEntity? {
+        val ml = (r.liters * 1000).roundToInt()
+        if (ml !in 1..5000) return null
+        return WaterLogEntity(id = "${ID_PREFIX}water_${r.uid}", accountId = accountId, amountMl = ml, recordedAt = r.start, date = r.start.toLocalDate().toString())
+    }
+
+    /** A workout (1 min–24 h) as an activity row without steps, so daily step totals are never counted twice. */
+    fun exercise(accountId: String, r: HcExercise): ActivityLogEntity? {
+        val minutes = Duration.between(r.start, r.end).toMinutes()
+        if (minutes !in 1..(24 * 60)) return null
+        return ActivityLogEntity(
+            id = "${ID_PREFIX}ex_${r.uid}", accountId = accountId, activityType = exerciseType(r.type),
+            durationMinutes = minutes.toInt(), steps = 0, distance = 0.0, caloriesBurned = 0, intensity = "MODERATE",
+            recordedAt = r.end, date = r.start.toLocalDate().toString()
+        )
+    }
+
+    fun exerciseWindow(r: HcExercise) = com.healthapp.domain.usecase.ExerciseWindow(r.start, r.end)
+
+    private fun exerciseType(type: Int): String = when (type) {
+        ExerciseSessionRecord.EXERCISE_TYPE_RUNNING, ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> "RUNNING"
+        ExerciseSessionRecord.EXERCISE_TYPE_BIKING, ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY -> "CYCLING"
+        ExerciseSessionRecord.EXERCISE_TYPE_WALKING, ExerciseSessionRecord.EXERCISE_TYPE_HIKING -> "WALKING"
+        ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL, ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> "SWIMMING"
+        ExerciseSessionRecord.EXERCISE_TYPE_YOGA, ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> "YOGA"
+        ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING, ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING,
+        ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> "GYM"
+        else -> "OTHER"
+    }
 
     fun steps(accountId: String, day: HcDaySteps, syncedAt: LocalDateTime): ActivityLogEntity? {
         if (day.steps <= 0 && (day.activeKcal ?: 0.0) <= 0.0) return null
@@ -153,7 +219,7 @@ object HealthConnectMapper {
         value = bp.systolic.roundToInt().toDouble(),
         secondaryValue = bp.diastolic.roundToInt().toDouble(),
         unit = "mmHg",
-        source = SOURCE,
+        source = source(bp.origin),
         recordedAt = bp.time
     )
 
@@ -164,7 +230,7 @@ object HealthConnectMapper {
         value = (g.mmolPerL * 10).roundToInt() / 10.0,
         secondaryValue = null,
         unit = "mmol/L",
-        source = SOURCE,
+        source = source(g.origin),
         recordedAt = g.time
     )
 

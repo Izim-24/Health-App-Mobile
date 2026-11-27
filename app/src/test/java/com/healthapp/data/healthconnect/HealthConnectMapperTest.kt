@@ -106,5 +106,63 @@ class HealthConnectMapperTest {
         val out = HealthConnectMapper.alertHeart(samples, t.plusMinutes(5))
         assertEquals(listOf(com.healthapp.domain.usecase.HrSample(t, 95), com.healthapp.domain.usecase.HrSample(t.plusMinutes(1), 90)), out)
     }
+
+    // ---------------- New Health Connect types ----------------
+
+    private val at = LocalDateTime.of(2026, 11, 28, 7, 30)
+    private val samsung = "com.sec.android.app.shealth"
+
+    @Test fun spo2_percentRangeAndSource() {
+        val row = HealthConnectMapper.spo2("acc", HcSpo2("u1", at, 97.0, samsung))!!
+        assertEquals("hc_spo2_u1", row.id)
+        assertEquals("OXYGEN_SATURATION", row.type)
+        assertEquals(97.0, row.value, 0.0)
+        assertEquals("%", row.unit)
+        assertEquals("HEALTH_CONNECT:$samsung", row.source)
+        assertNull(HealthConnectMapper.spo2("acc", HcSpo2("u2", at, 50.0, samsung)))
+    }
+
+    @Test fun temperature_oneDecimal() {
+        val row = HealthConnectMapper.temperature("acc", HcTemperature("u1", at, 36.84, ""))!!
+        assertEquals(36.8, row.value, 0.0)
+        assertEquals("°C", row.unit)
+        assertEquals("HEALTH_CONNECT", row.source)   // unknown origin
+        assertNull(HealthConnectMapper.temperature("acc", HcTemperature("u2", at, 45.0, "")))
+    }
+
+    @Test fun restingHr_and_respiratory() {
+        assertEquals("bpm", HealthConnectMapper.restingHeartRate("acc", HcRestingHr("u1", at, 58, samsung))!!.unit)
+        assertEquals("RESTING_HEART_RATE", HealthConnectMapper.restingHeartRate("acc", HcRestingHr("u1", at, 58, samsung))!!.type)
+        assertEquals("/min", HealthConnectMapper.respiratoryRate("acc", HcRespiratory("u1", at, 16.0, samsung))!!.unit)
+        assertNull(HealthConnectMapper.restingHeartRate("acc", HcRestingHr("u2", at, 300, samsung)))
+        assertNull(HealthConnectMapper.respiratoryRate("acc", HcRespiratory("u2", at, 100.0, samsung)))
+    }
+
+    @Test fun hydration_toWaterMl() {
+        val row = HealthConnectMapper.hydration("acc", HcHydration("u1", at, 0.25))!!
+        assertEquals("hc_water_u1", row.id)
+        assertEquals(250, row.amountMl)
+        assertEquals(at.toLocalDate().toString(), row.date)
+        assertNull(HealthConnectMapper.hydration("acc", HcHydration("u2", at, 0.0)))
+        assertNull(HealthConnectMapper.hydration("acc", HcHydration("u3", at, 9.0)))
+    }
+
+    @Test fun exercise_toActivityWithoutSteps() {
+        val biking = androidx.health.connect.client.records.ExerciseSessionRecord.EXERCISE_TYPE_BIKING
+        val row = HealthConnectMapper.exercise("acc", HcExercise("u1", at, at.plusMinutes(45), biking, null))!!
+        assertEquals("hc_ex_u1", row.id)
+        assertEquals("CYCLING", row.activityType)
+        assertEquals(45, row.durationMinutes)
+        assertEquals(0, row.steps)
+        assertNull(HealthConnectMapper.exercise("acc", HcExercise("u2", at, at, biking, null)))
+        assertEquals(com.healthapp.domain.usecase.ExerciseWindow(at, at.plusMinutes(45)),
+            HealthConnectMapper.exerciseWindow(HcExercise("u1", at, at.plusMinutes(45), biking, null)))
+    }
+
+    @Test fun newMappers_idsAreStable() {
+        assertEquals(HealthConnectMapper.spo2("acc", HcSpo2("u1", at, 97.0, samsung)), HealthConnectMapper.spo2("acc", HcSpo2("u1", at, 97.0, samsung)))
+        assertEquals(HealthConnectMapper.hydration("acc", HcHydration("u1", at, 0.3)), HealthConnectMapper.hydration("acc", HcHydration("u1", at, 0.3)))
+        assertEquals("HEALTH_CONNECT:$samsung", HealthConnectMapper.bloodPressure("acc", HcBloodPressure("b1", at, 120.0, 80.0, samsung)).source)
+    }
 }
 
