@@ -781,4 +781,14 @@
         <item quantity="one">%1$d step/min</item>
         <item quantity="other">%1$d steps/min</item>
     </plurals>
+    <string name="stat_spo2">SpO2 (blood oxygen)</string>
+    <string name="stat_resting_hr">Resting heart rate</string>
+    <string name="stat_body_temp">Body temperature</string>
+    <string name="stat_resp_rate">Respiratory rate</string>
+    <string name="spo2_value">%1$d %%</string>
+    <string name="temp_value">%1$s °C</string>
+    <plurals name="resp_value">
+        <item quantity="one">%1$d breath/min</item>
+        <item quantity="other">%1$d breaths/min</item>
+    </plurals>
 </resources>

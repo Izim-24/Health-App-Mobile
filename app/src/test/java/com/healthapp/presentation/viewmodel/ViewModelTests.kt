@@ -75,7 +75,8 @@ private class FakeHealthAlerts : com.healthapp.domain.repository.HealthAlertRepo
     var resets = 0
     override val recent: Flow<List<com.healthapp.domain.usecase.VitalAlert>> = flow
     override suspend fun check(hr: List<com.healthapp.domain.usecase.HrSample>, steps: List<com.healthapp.domain.usecase.StepSample>,
-                               bp: List<com.healthapp.domain.usecase.BpReading>, now: java.time.LocalDateTime, notify: Boolean, simulated: Boolean): List<com.healthapp.domain.usecase.VitalAlert> {
+                               bp: List<com.healthapp.domain.usecase.BpReading>, now: java.time.LocalDateTime, notify: Boolean, simulated: Boolean,
+                               sessions: List<com.healthapp.domain.usecase.ExerciseWindow>): List<com.healthapp.domain.usecase.VitalAlert> {
         checks += simulated
         val out = com.healthapp.domain.usecase.VitalAlerts.heartAlerts(hr, steps, 28, now) + com.healthapp.domain.usecase.VitalAlerts.bpAlerts(bp, now)
         returned += out

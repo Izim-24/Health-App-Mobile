@@ -180,7 +180,7 @@ data class VitalMeasurement(
     val recordedAt: LocalDateTime
 )
 
-enum class VitalType { HEART_RATE, BLOOD_PRESSURE, GLUCOSE }
+enum class VitalType { HEART_RATE, BLOOD_PRESSURE, GLUCOSE, OXYGEN_SATURATION, RESTING_HEART_RATE, BODY_TEMPERATURE, RESPIRATORY_RATE }
 
 data class Reminder(
     val id: String,

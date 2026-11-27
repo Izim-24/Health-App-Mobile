@@ -353,11 +353,13 @@ private fun VitalHistoryRow(measurement: VitalMeasurement, onDelete: () -> Unit)
         VitalType.HEART_RATE -> stringResource(R.string.stat_heart_rate) to "${measurement.value.toInt()} ${measurement.unit}"
         VitalType.BLOOD_PRESSURE -> stringResource(R.string.stat_bp) to "${measurement.value.toInt()}/${measurement.secondaryValue?.toInt()} ${measurement.unit}"
         VitalType.GLUCOSE -> stringResource(R.string.stat_glucose) to stringResource(R.string.value_unit, oneDecimal(measurement.value), measurement.unit)
+        else -> vitalLabel(measurement.type) to vitalValue(measurement)
     }
     val (icon, accent) = when (measurement.type) {
         VitalType.HEART_RATE -> Icons.Rounded.Favorite to HealthPalette.Coral
         VitalType.BLOOD_PRESSURE -> Icons.Rounded.MonitorHeart to HealthPalette.Pink
         VitalType.GLUCOSE -> Icons.Rounded.Bloodtype to HealthPalette.Indigo
+        else -> vitalIcon(measurement.type)
     }
     AppCard(Modifier.fillMaxWidth()) {
         Row(Modifier.padding(start = 14.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -461,5 +463,41 @@ private fun RecentAlertCard(navController: NavController, viewModel: com.healtha
             com.healthapp.presentation.ui.alerts.LevelChip(alert.level)
         }
     }
+}
+
+// ---- Vitals that only arrive automatically (Health Connect) ----
+
+@Composable
+fun vitalLabel(type: VitalType): String = stringResource(
+    when (type) {
+        VitalType.HEART_RATE -> R.string.stat_heart_rate
+        VitalType.BLOOD_PRESSURE -> R.string.stat_bp
+        VitalType.GLUCOSE -> R.string.stat_glucose
+        VitalType.OXYGEN_SATURATION -> R.string.stat_spo2
+        VitalType.RESTING_HEART_RATE -> R.string.stat_resting_hr
+        VitalType.BODY_TEMPERATURE -> R.string.stat_body_temp
+        VitalType.RESPIRATORY_RATE -> R.string.stat_resp_rate
+    }
+)
+
+/** "97 %", "58 bpm", "36,8 °C", "16 lần/phút" (other types: number + unit). */
+@Composable
+fun vitalValue(m: VitalMeasurement): String = when (m.type) {
+    VitalType.OXYGEN_SATURATION -> stringResource(R.string.spo2_value, m.value.toInt())
+    VitalType.RESTING_HEART_RATE -> stringResource(R.string.bpm_value, m.value.toInt())
+    VitalType.BODY_TEMPERATURE -> stringResource(R.string.temp_value, oneDecimal(m.value))
+    VitalType.RESPIRATORY_RATE -> pluralStringResource(R.plurals.resp_value, m.value.toInt(), m.value.toInt())
+    else -> stringResource(R.string.value_unit, oneDecimal(m.value), m.unit)
+}
+
+@Composable
+fun vitalIcon(type: VitalType): Pair<androidx.compose.ui.graphics.vector.ImageVector, com.healthapp.presentation.ui.theme.Accent> = when (type) {
+    VitalType.OXYGEN_SATURATION -> Icons.Rounded.Air to HealthPalette.Sky
+    VitalType.RESTING_HEART_RATE -> Icons.Rounded.Favorite to HealthPalette.Coral
+    VitalType.BODY_TEMPERATURE -> Icons.Rounded.Thermostat to HealthPalette.Orange
+    VitalType.RESPIRATORY_RATE -> Icons.Rounded.Air to HealthPalette.Violet
+    VitalType.HEART_RATE -> Icons.Rounded.Favorite to HealthPalette.Coral
+    VitalType.BLOOD_PRESSURE -> Icons.Rounded.MonitorHeart to HealthPalette.Pink
+    VitalType.GLUCOSE -> Icons.Rounded.Bloodtype to HealthPalette.Indigo
 }
 

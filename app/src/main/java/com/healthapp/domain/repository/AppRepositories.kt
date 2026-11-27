@@ -48,7 +48,9 @@ interface HealthAlertRepository {
         bp: List<com.healthapp.domain.usecase.BpReading>,
         now: java.time.LocalDateTime = java.time.LocalDateTime.now(),
         notify: Boolean = true,
-        simulated: Boolean = false
+        simulated: Boolean = false,
+        /** Workouts from Health Connect: time inside one counts as exercise. */
+        sessions: List<com.healthapp.domain.usecase.ExerciseWindow> = emptyList()
     ): List<com.healthapp.domain.usecase.VitalAlert>
     /**
      * A reading the user typed: single-reading rules only (very fast heart rate, BP crisis/high). Shown in the app's

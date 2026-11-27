@@ -70,7 +70,7 @@ class HealthAlertRepositoryImpl @Inject constructor(
 
     override suspend fun check(
         hr: List<HrSample>, steps: List<StepSample>, bp: List<BpReading>,
-        now: LocalDateTime, notify: Boolean, simulated: Boolean
+        now: LocalDateTime, notify: Boolean, simulated: Boolean, sessions: List<com.healthapp.domain.usecase.ExerciseWindow>
     ): List<VitalAlert> = mutex.withLock {
         val accountId = session.getCurrentAccountId()
         val age = profiles.getProfile(accountId)?.dateOfBirth
@@ -81,7 +81,7 @@ class HealthAlertRepositoryImpl @Inject constructor(
         val trendBp = if (simulated) emptyList() else VitalAlerts.bpAlerts(
             (bp + storedBp(accountId, now)).distinctBy { Triple(it.at, it.systolic, it.diastolic) }, now
         ).filter { it.kind == AlertKind.BP_SUSTAINED }
-        val candidates = VitalAlerts.heartAlerts(hr, steps, age, now) + acuteBp + trendBp
+        val candidates = VitalAlerts.heartAlerts(hr, steps, age, now, sessions) + acuteBp + trendBp
 
         val due: List<VitalAlert>
         if (simulated) {

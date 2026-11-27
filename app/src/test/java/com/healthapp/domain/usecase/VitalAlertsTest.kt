@@ -153,5 +153,26 @@ class VitalAlertsTest {
         val b = VitalAlert(AlertKind.REST_TACHY_SEVERE, t0, 155)
         assertEquals(listOf(b), VitalAlerts.simulatedDue(listOf(a, b), setOf(AlertKind.REST_TACHY)))
     }
+
+    // ---- exercise sessions (Health Connect) ----
+
+    @Test fun exerciseSession_countsAsActive() {
+        val session = ExerciseWindow(t0, t0.plusMinutes(30))
+        val s = hr(12, 150)   // cycling: high heart rate, no steps at all
+        assertTrue(VitalAlerts.heartAlerts(s, emptyList(), 28, nowAfter(s), listOf(session)).isEmpty())
+        assertEquals(ActivityState.ACTIVE, VitalAlerts.activityState(emptyList(), t0.plusMinutes(5), listOf(session)))
+    }
+
+    @Test fun afterSession_recovering() {
+        val session = listOf(ExerciseWindow(t0, t0.plusMinutes(30)))
+        assertEquals(ActivityState.RECOVERING, VitalAlerts.activityState(emptyList(), t0.plusMinutes(38), session))
+        assertEquals(ActivityState.RESTING, VitalAlerts.activityState(emptyList(), t0.plusMinutes(45), session))
+    }
+
+    @Test fun sessionAloneIsMovementData() {
+        val session = ExerciseWindow(t0.minusMinutes(70), t0.minusMinutes(40))
+        val s = hr(12, 125)   // sitting 40 min after the workout, no step data
+        assertEquals(listOf(AlertKind.REST_TACHY), kinds(VitalAlerts.heartAlerts(s, emptyList(), 28, nowAfter(s), listOf(session))))
+    }
 }
 

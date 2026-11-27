@@ -12,6 +12,9 @@ data class StepSample(val time: LocalDateTime, val steps: Int)
 
 enum class ActivityState { RESTING, ACTIVE, RECOVERING }
 
+/** A workout recorded by a watch or fitness app (Health Connect exercise session). */
+data class ExerciseWindow(val start: LocalDateTime, val end: LocalDateTime)
+
 enum class AlertLevel { TREND, WARNING, URGENT }
 
 enum class AlertKind(val level: AlertLevel) {
@@ -56,27 +59,37 @@ object VitalAlerts {
 
     fun maxHeartRate(age: Int?): Int = 220 - (age ?: DEFAULT_AGE)
 
-    /** ACTIVE: ≥ 500 steps in the 10 minutes before [at]. RECOVERING: resting now, but active in the 10 minutes before that. */
-    fun activityState(steps: List<StepSample>, at: LocalDateTime): ActivityState {
+    /**
+     * ACTIVE: inside a workout [sessions], or ≥ 500 steps in the 10 minutes before [at].
+     * RECOVERING: resting now, but a workout ended or ≥ 500 steps were taken in the 10 minutes before that.
+     */
+    fun activityState(steps: List<StepSample>, at: LocalDateTime, sessions: List<ExerciseWindow> = emptyList()): ActivityState {
         fun stepsIn(from: LocalDateTime, to: LocalDateTime) = steps.filter { it.time.isAfter(from) && !it.time.isAfter(to) }.sumOf { it.steps }
         return when {
+            sessions.any { !at.isBefore(it.start) && !at.isAfter(it.end) } -> ActivityState.ACTIVE
             stepsIn(at.minusMinutes(10), at) >= ACTIVE_STEPS -> ActivityState.ACTIVE
+            sessions.any { at.isAfter(it.end) && !at.isAfter(it.end.plusMinutes(10)) } -> ActivityState.RECOVERING
             stepsIn(at.minusMinutes(20), at.minusMinutes(10)) >= ACTIVE_STEPS -> ActivityState.RECOVERING
             else -> ActivityState.RESTING
         }
     }
 
-    fun heartAlerts(hr: List<HrSample>, steps: List<StepSample>, age: Int?, now: LocalDateTime): List<VitalAlert> {
+    fun heartAlerts(
+        hr: List<HrSample>, steps: List<StepSample>, age: Int?, now: LocalDateTime,
+        sessions: List<ExerciseWindow> = emptyList()
+    ): List<VitalAlert> {
         val recent = hr.filter { !it.time.isBefore(now.minusHours(RECENT_HOURS)) && !it.time.isAfter(now) }.sortedBy { it.time }
         if (recent.isEmpty()) return emptyList()
         val max = maxHeartRate(age)
-        val state = recent.associate { it.time to activityState(steps, it.time) }
+        val state = recent.associate { it.time to activityState(steps, it.time, sessions) }
         fun resting(s: HrSample) = state[s.time] == ActivityState.RESTING
         fun active(s: HrSample) = state[s.time] == ActivityState.ACTIVE
         fun alert(kind: AlertKind, s: HrSample, secondary: Int? = null) = VitalAlert(kind, s.time, s.bpm, secondary, state[s.time])
-        // Without any step data (cycling, gym, swimming, no steps permission) "resting" can't be told apart from
-        // exercise, so the rest rules stay silent rather than raise a false alarm.
-        val knowsMovement = steps.any { !it.time.isBefore(now.minusHours(RECENT_HOURS)) && !it.time.isAfter(now) }
+        // Without any movement data (no steps and no workout in the window, e.g. no steps permission) "resting"
+        // can't be told apart from exercise, so the rest rules stay silent rather than raise a false alarm.
+        val windowStart = now.minusHours(RECENT_HOURS)
+        val knowsMovement = steps.any { !it.time.isBefore(windowStart) && !it.time.isAfter(now) } ||
+            sessions.any { !it.end.isBefore(windowStart) && !it.start.isAfter(now) }
 
         val out = mutableListOf<VitalAlert>()
         if (knowsMovement) when {

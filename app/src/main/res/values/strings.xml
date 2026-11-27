@@ -764,4 +764,13 @@
     <plurals name="sim_steps">
         <item quantity="other">%1$d bước/phút</item>
     </plurals>
+    <string name="stat_spo2">SpO2 (oxy trong máu)</string>
+    <string name="stat_resting_hr">Nhịp tim lúc nghỉ</string>
+    <string name="stat_body_temp">Thân nhiệt</string>
+    <string name="stat_resp_rate">Nhịp thở</string>
+    <string name="spo2_value">%1$d %%</string>
+    <string name="temp_value">%1$s °C</string>
+    <plurals name="resp_value">
+        <item quantity="other">%1$d lần/phút</item>
+    </plurals>
 </resources>
