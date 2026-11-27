@@ -45,7 +45,8 @@ class HealthConnectSyncPlanTest {
     @Test fun syncPlan_deletionsOnly() {
         val plan = HealthConnectSyncPlan.plan(listOf(HcChange.Deletion("abc")), false, lastSync, now)
         assertFalse(plan.skip)
-        assertEquals(now.minusHours(2), plan.from)
+        // A deletion doesn't say when the record was: re-read 30 days so hourly heart rate and daily steps are rebuilt.
+        assertEquals(HealthConnectMapper.syncStart(null, now), plan.from)
         assertTrue("hc_bp_abc" in plan.deleteIds)
     }
 
@@ -54,4 +55,19 @@ class HealthConnectSyncPlanTest {
         assertEquals(10, ids.size)
         assertTrue(ids.containsAll(listOf("hc_spo2_abc", "hc_water_abc", "hc_bp_abc", "hc_ex_abc", "hc_sleep_abc", "hc_w_abc")))
     }
+
+    @Test fun syncPlan_newlyGrantedTypes_read30Days() {
+        // The user just allowed SpO2/temperature…: those types have no history here yet, so go back the full 30 days.
+        val plan = HealthConnectSyncPlan.plan(null, tokenExpired = false, lastSync = lastSync, now = now, newTypesGranted = true)
+        assertEquals(HealthConnectMapper.syncStart(null, now), plan.from)
+        val expired = HealthConnectSyncPlan.plan(emptyList(), tokenExpired = true, lastSync = lastSync, now = now, newTypesGranted = true)
+        assertEquals(HealthConnectMapper.syncStart(null, now), expired.from)
+    }
+
+    @Test fun aggregateWindows_wholeDaysAndWholeHours() {
+        val from = today.atTime(10, 37)
+        assertEquals(today.atStartOfDay(), HealthConnectSyncPlan.stepsFrom(from))   // daily totals need the whole day
+        assertEquals(today.atTime(10, 0), HealthConnectSyncPlan.heartFrom(from))     // hourly averages need the whole hour
+    }
 }
+

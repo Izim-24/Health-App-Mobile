@@ -24,7 +24,7 @@
 - Hồ sơ: nhập tên, ngày sinh, giới tính, chiều cao, cân nặng và mức vận động. Nút **Tính mục tiêu calo & macro** ước tính BMR/TDEE theo công thức Mifflin–St Jeor và chia macro (đạm 1,6 g/kg, chất béo 30%), có gợi ý lượng nước. BMI chỉ tính khi có dữ liệu do người dùng nhập.
 - Nhắc nhở: tạo nhắc uống nước, vận động, bữa ăn, giấc ngủ, thói quen theo giờ và ngày trong tuần; bật/tắt, sửa, xóa. Lên lịch bằng WorkManager (giữ sau khi khởi động lại máy), cần quyền thông báo trên Android 13+.
 - Lịch uống thuốc: thêm thuốc với liều, giờ uống (nhiều lần/ngày), ngày trong tuần và số ngày dùng; thông báo đúng giờ có nút **Đã uống** / **Bỏ qua** ngay trên thông báo; đánh dấu từng liều trong ngày và xem tỷ lệ tuân thủ 7 ngày. Có thể tạm ngừng hoặc xóa thuốc. Khi được phép **"Báo thức và lời nhắc"** (màn hình Thuốc có nút bật), nhắc thuốc dùng báo thức chính xác — đúng phút kể cả khi máy tiết kiệm pin — và tự đặt lại sau khi khởi động lại máy, cập nhật app hoặc đổi giờ; nếu không, dùng WorkManager (có thể trễ vài phút).
-- Health Connect (chỉ đọc): kết nối trong **Cài đặt → Health Connect** hoặc tab **Sức khỏe**; nhập số bước + năng lượng vận động (theo ngày), giấc ngủ, nhịp tim (trung bình mỗi giờ), cân nặng, huyết áp, đường huyết. Tự đồng bộ khi mở ứng dụng (tối đa 15 phút/lần) và **đồng bộ nền khoảng 6 giờ/lần khi ứng dụng đóng** nếu bạn cho phép "truy cập dữ liệu trong nền" (Health Connect trên Android 14+ có hỗ trợ; WorkManager, chỉ chạy khi pin không yếu, tự hủy khi ngắt kết nối hoặc thu hồi quyền); lần đầu lấy 30 ngày. Đồng bộ lại không tạo bản trùng; giá trị nhập ghi nguồn "Health Connect". Ngắt kết nối thu hồi quyền và có thể xóa dữ liệu đã nhập (giữ dữ liệu tự nhập). Không ghi ngược vào Health Connect, không gửi lên máy chủ.
+- Health Connect (chỉ đọc): kết nối trong **Cài đặt → Health Connect** hoặc tab **Sức khỏe**; **tự nhập 13 loại dữ liệu** từ đồng hồ và app sức khỏe khác (Samsung Health, Fitbit, Garmin, Xiaomi, Huawei, Omron, Withings…): số bước + năng lượng vận động (theo ngày), giấc ngủ, nhịp tim (trung bình mỗi giờ), cân nặng, huyết áp, đường huyết, **buổi tập, SpO2, nhịp tim lúc nghỉ, thân nhiệt, nhịp thở, nước uống**; mỗi số đo ghi app nguồn (vd. "Health Connect · Samsung Health"). Chỉ đọc **phần dữ liệu thay đổi** (changes token), bản ghi bị xoá ở app gốc cũng bị xoá theo. Tự đồng bộ khi mở ứng dụng (tối đa 15 phút/lần) và **đồng bộ nền khoảng 15 phút/lần khi ứng dụng đóng** nếu bạn cho phép "truy cập dữ liệu trong nền" (Health Connect trên Android 14+ có hỗ trợ; WorkManager, chỉ chạy khi pin không yếu, tự hủy khi ngắt kết nối hoặc thu hồi quyền); lần đầu lấy 30 ngày. Đồng bộ lại không tạo bản trùng; giá trị nhập ghi nguồn "Health Connect". Ngắt kết nối thu hồi quyền và có thể xóa dữ liệu đã nhập (giữ dữ liệu tự nhập). Không ghi ngược vào Health Connect, không gửi lên máy chủ.
 - Quét món ăn bằng ảnh (Dinh dưỡng → Quét món ăn): chụp ảnh hoặc chọn từ thư viện; ảnh được thu nhỏ ≤1024 px, xoay đúng chiều, xóa EXIF/GPS rồi gửi qua backend tới model thị giác. AI nhận diện từng món và **ước tính số gram**; calo và đạm/tinh bột/béo được **tính từ bảng thành phần dinh dưỡng** (giá trị/100 g × gram) khi món có trong bảng, nếu không thì giữ ước tính của AI — mỗi món ghi rõ "Calo theo bảng dinh dưỡng" hay "Calo do AI ước tính". Bạn sửa số gram (dinh dưỡng tự tính lại), bỏ món sai, chọn bữa rồi lưu. Ứng dụng cảnh báo món có độ tin cậy thấp hoặc calo không khớp với thành phần. Đây là **ước tính** — khẩu phần, dầu mỡ và nước sốt khó nhìn từ ảnh.
 - Cài đặt & dữ liệu: xuất toàn bộ dữ liệu ra tệp JSON và chia sẻ qua bảng chia sẻ Android; xóa toàn bộ dữ liệu trên thiết bị (có xác nhận).
 - **Cảnh báo sức khỏe từ đồng hồ**: phân tích nhịp tim, bước chân và huyết áp (Health Connect hoặc tự nhập) để **phân biệt chỉ số cao do đang vận động với cao khi đang nghỉ**. Gửi thông báo khi tim nhanh/chậm bất thường lúc nghỉ, tập quá 90% nhịp tối đa (220 − tuổi), huyết áp ≥ 180/120 (khẩn cấp, hướng dẫn F.A.S.T và nút **Gọi 115**), huyết áp trung bình 7 ngày ≥ 135/85 (nên đi khám). Vừa tập xong tim còn cao thì không báo; cùng cảnh báo không lặp trong 30 phút. Không phải chẩn đoán. Bản demo/debug có **Đồng hồ mô phỏng** (tab Sức khỏe): phát dữ liệu theo thời gian thực, 1 giây = 1 phút, 5 tình huống.
@@ -50,10 +50,10 @@ Yêu cầu JDK 17 và Android SDK 35. Từ thư mục dự án:
 
 APK debug: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Kiểm thử (139 test):
+Kiểm thử (157 test):
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest          # 110 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
+.\gradlew.bat :app:testDebugUnitTest          # 128 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
 .\gradlew.bat :app:lintDebug                  # Android Lint: 0 lỗi
 .\gradlew.bat :app:connectedDebugAndroidTest  # 11 test trên emulator: migration Room (đến v6), hồi quy, tìm món offline, Compose UI
 cd server; npm test                          # 18 test backend
@@ -81,7 +81,7 @@ Backend phát triển cục bộ nằm ở `server/`. Nó chỉ lắng nghe `127
 Bản debug có `HcSampleDataReceiver` (chỉ trong `app/src/debug`, không có trong bản release) để ghi dữ liệu mẫu vào Health Connect trên emulator Android 14+:
 
 ```powershell
-adb shell pm grant com.healthapp android.permission.health.WRITE_STEPS   # tương tự WRITE_SLEEP, WRITE_HEART_RATE, WRITE_WEIGHT, WRITE_BLOOD_PRESSURE
-adb shell am broadcast -n com.healthapp/.debug.HcSampleDataReceiver                 # ghi dữ liệu mẫu
+adb shell pm grant com.healthapp android.permission.health.WRITE_STEPS   # tương tự WRITE_ACTIVE_CALORIES_BURNED, WRITE_SLEEP, WRITE_HEART_RATE, WRITE_WEIGHT, WRITE_BLOOD_PRESSURE, WRITE_BLOOD_GLUCOSE, WRITE_EXERCISE, WRITE_OXYGEN_SATURATION, WRITE_RESTING_HEART_RATE, WRITE_BODY_TEMPERATURE, WRITE_RESPIRATORY_RATE, WRITE_HYDRATION
+adb shell am broadcast -n com.healthapp/.debug.HcSampleDataReceiver                 # ghi 14 ngày dữ liệu mẫu (thay bản cũ, không nhân đôi)
 adb shell am broadcast -n com.healthapp/.debug.HcSampleDataReceiver --es mode clear # xóa dữ liệu mẫu
 ```

@@ -24,15 +24,30 @@ object HealthConnectSyncPlan {
 
     private const val ALERT_HOURS = 2L
 
-    fun plan(changes: List<HcChange>?, tokenExpired: Boolean, lastSync: LocalDateTime?, now: LocalDateTime): SyncPlan {
-        if (changes == null || tokenExpired) return SyncPlan(false, HealthConnectMapper.syncStart(lastSync, now), emptyList())
+    /** [newTypesGranted]: the user allowed data types that were never imported, so the full 30 days are read. */
+    fun plan(
+        changes: List<HcChange>?, tokenExpired: Boolean, lastSync: LocalDateTime?, now: LocalDateTime,
+        newTypesGranted: Boolean = false
+    ): SyncPlan {
+        if (changes == null || tokenExpired) {
+            return SyncPlan(false, HealthConnectMapper.syncStart(if (newTypesGranted) null else lastSync, now), emptyList())
+        }
         if (changes.isEmpty()) return SyncPlan(true, null, emptyList())
         val alertWindow = now.minusHours(ALERT_HOURS)
         val earliestDay = changes.filterIsInstance<HcChange.Upsert>().minOfOrNull { it.time }?.toLocalDate()?.atStartOfDay()
         val from = if (earliestDay == null || earliestDay.isAfter(alertWindow)) alertWindow else earliestDay
         val deleteIds = changes.filterIsInstance<HcChange.Deletion>().flatMap { deletionIds(it.recordId) }
+        // A deletion doesn't say when the record was, and hourly heart rate / daily steps are built from many records:
+        // re-read the whole 30 days so those totals are rebuilt without the deleted data.
+        if (deleteIds.isNotEmpty()) return SyncPlan(false, HealthConnectMapper.syncStart(null, now), deleteIds)
         return SyncPlan(false, from, deleteIds)
     }
+
+    /** Daily step totals are recomputed for whole days, so their read starts at midnight. */
+    fun stepsFrom(from: LocalDateTime): LocalDateTime = from.toLocalDate().atStartOfDay()
+
+    /** Hourly heart-rate averages are recomputed for whole hours. */
+    fun heartFrom(from: LocalDateTime): LocalDateTime = from.truncatedTo(java.time.temporal.ChronoUnit.HOURS)
 
     /** A deleted record could be any uid-keyed type, so every candidate row id is listed. */
     fun deletionIds(recordId: String): List<String> = UID_PREFIXES.map { "${HealthConnectMapper.ID_PREFIX}${it}_$recordId" }

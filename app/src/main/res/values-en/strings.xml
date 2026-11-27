@@ -426,7 +426,7 @@
     <string name="access_granted">Access granted</string>
     <string name="access_not_granted">Not granted</string>
     <string name="hc_active_energy">Active energy</string>
-    <string name="hc_intro">Import steps, sleep, heart rate, weight, blood pressure and blood glucose from watches, bands or other health apps through Health Connect. Read-only; data stays on this device.</string>
+    <string name="hc_intro">Brings in data from watches, bands, monitors and other health apps through Health Connect: steps, sleep, heart rate, weight, blood pressure, glucose, workouts, SpO2, temperature, breathing and water. Read-only; data stays on this device.</string>
     <string name="hc_unsupported">This device doesn\'t support Health Connect</string>
     <string name="hc_unsupported_sub">Health Connect needs Android 9 or later. On Android 13 and earlier, install the Health Connect app from Google Play.</string>
     <string name="hc_install">Install or update Health Connect</string>

@@ -427,7 +427,7 @@
     <string name="access_granted">Đã cấp quyền</string>
     <string name="access_not_granted">Chưa cấp quyền</string>
     <string name="hc_active_energy">Năng lượng vận động</string>
-    <string name="hc_intro">Nhập số bước, giấc ngủ, nhịp tim, cân nặng, huyết áp và đường huyết từ đồng hồ, vòng đeo hoặc các ứng dụng sức khỏe khác qua Health Connect. Chỉ đọc, dữ liệu lưu trên thiết bị.</string>
+    <string name="hc_intro">Tự nhập dữ liệu từ đồng hồ, vòng đeo, máy đo và các ứng dụng sức khỏe khác qua Health Connect: bước chân, giấc ngủ, nhịp tim, cân nặng, huyết áp, đường huyết, buổi tập, SpO2, thân nhiệt, nhịp thở, nước uống. Chỉ đọc, dữ liệu lưu trên thiết bị.</string>
     <string name="hc_unsupported">Thiết bị chưa hỗ trợ Health Connect</string>
     <string name="hc_unsupported_sub">Health Connect cần Android 9 trở lên. Trên Android 13 trở xuống, hãy cài ứng dụng Health Connect từ Google Play.</string>
     <string name="hc_install">Cần cài hoặc cập nhật Health Connect</string>

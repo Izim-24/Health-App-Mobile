@@ -34,6 +34,27 @@ interface HealthConnectDao {
     @Query("DELETE FROM vital_logs WHERE id IN (:ids)") suspend fun deleteVitalsByIds(ids: List<String>)
     @Query("DELETE FROM water_logs WHERE id IN (:ids)") suspend fun deleteWaterByIds(ids: List<String>)
 
+    @Query("DELETE FROM activity_logs WHERE accountId = :accountId AND id LIKE 'hc\\_day\\_%' ESCAPE '\\' AND date >= :fromDate")
+    suspend fun deleteStepDaysFrom(accountId: String, fromDate: String)
+    @Query("DELETE FROM vital_logs WHERE accountId = :accountId AND id LIKE 'hc\\_hr\\_%' ESCAPE '\\' AND recordedAt >= :from")
+    suspend fun deleteHourlyHeartRateFrom(accountId: String, from: java.time.LocalDateTime)
+
+    /**
+     * One sync in one transaction: deletions from the source apps, then the re-read daily steps / hourly heart rate
+     * replace what was stored for the same span (so totals lose deleted records), then the new rows.
+     */
+    @Transaction
+    suspend fun applySync(
+        accountId: String, deleteIds: List<String>, stepsFromDate: String?, heartFrom: java.time.LocalDateTime?,
+        activities: List<ActivityLogEntity>, sleep: List<SleepLogEntity>, weights: List<WeightLogEntity>,
+        vitals: List<VitalLogEntity>, water: List<WaterLogEntity>
+    ) {
+        if (deleteIds.isNotEmpty()) deleteByIds(deleteIds)
+        stepsFromDate?.let { deleteStepDaysFrom(accountId, it) }
+        heartFrom?.let { deleteHourlyHeartRateFrom(accountId, it) }
+        upsertAll(activities, sleep, weights, vitals, water)
+    }
+
     /** Removes rows whose Health Connect record was deleted in its source app (ids from HealthConnectSyncPlan). */
     @Transaction
     suspend fun deleteByIds(ids: List<String>) {

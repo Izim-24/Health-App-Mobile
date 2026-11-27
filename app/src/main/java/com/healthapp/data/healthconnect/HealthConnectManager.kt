@@ -151,10 +151,14 @@ class HealthConnectManager @Inject constructor(
 
             // 1) What changed since the last sync? A token is only valid for the permission set it was made for.
             val permsKey = grantedTypes.joinToString(",") { it.simpleName.orEmpty() }
-            val savedToken = prefs.getString(KEY_TOKEN, null)?.takeIf { !force && prefs.getString(KEY_TOKEN_PERMS, null) == permsKey }
+            val savedPerms = prefs.getString(KEY_TOKEN_PERMS, null)
+            val savedToken = prefs.getString(KEY_TOKEN, null)?.takeIf { !force && savedPerms == permsKey }
+            // Types allowed since the last sync (or since an update added new types) have no history here yet.
+            val knownTypes = savedPerms?.split(",")?.toSet()
+            val newTypesGranted = knownTypes == null || grantedTypes.any { it.simpleName !in knownTypes }
             val feed = savedToken?.let { readChanges(hc, it, zone) }
             val plan = HealthConnectSyncPlan.plan(feed?.changes, tokenExpired = feed?.expired == true,
-                lastSync = if (force) null else state.value.lastSync, now = now)
+                lastSync = if (force) null else state.value.lastSync, now = now, newTypesGranted = newTypesGranted)
             // A fresh token is taken before a full read, so nothing written meanwhile is missed next time.
             val nextToken = if (feed != null && !feed.expired) feed.nextToken
                 else if (grantedTypes.isNotEmpty()) runCatching { hc.getChangesToken(ChangesTokenRequest(grantedTypes.toSet())) }.getOrNull()
@@ -162,23 +166,30 @@ class HealthConnectManager @Inject constructor(
             if (plan.skip) {
                 saveToken(nextToken, permsKey)
                 prefs.edit().putString(KEY_LAST_SYNC, now.toString()).apply()
-                return@runCatching HcSyncSummary(0, 0, 0, 0, 0, 0)
+                return@runCatching state.value.lastSummary ?: HcSyncSummary(0, 0, 0, 0, 0, 0)
             }
             val from = plan.from ?: HealthConnectMapper.syncStart(null, now)
-            val range = TimeRangeFilter.between(from.atZone(zone).toInstant(), now.atZone(zone).toInstant())
+            fun rangeFrom(start: LocalDateTime) = TimeRangeFilter.between(start.atZone(zone).toInstant(), now.atZone(zone).toInstant())
+            val range = rangeFrom(from)
+            val stepsFrom = HealthConnectSyncPlan.stepsFrom(from)
+            val heartFrom = HealthConnectSyncPlan.heartFrom(from)
             // 2) Read each granted type on its own: one failing type must not stop the others.
             var failures = 0
-            suspend fun <T> safe(block: suspend () -> List<T>): List<T> =
-                runCatching { block() }.getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it; failures++; emptyList() }
+            val failedTypes = mutableSetOf<KClass<out Record>>()
+            suspend fun <T> safe(type: KClass<out Record>? = null, block: suspend () -> List<T>): List<T> =
+                runCatching { block() }.getOrElse {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                    failures++; type?.let { t -> failedTypes += t }; emptyList()
+                }
 
             // Daily totals (Health Connect de-duplicates overlapping sources in aggregates).
-            val aggregateDays = if (has(StepsRecord::class) || has(ActiveCaloriesBurnedRecord::class)) safe {
+            val aggregateDays = if (has(StepsRecord::class) || has(ActiveCaloriesBurnedRecord::class)) safe(StepsRecord::class) {
                 val metrics = buildSet {
                     if (has(StepsRecord::class)) add(StepsRecord.COUNT_TOTAL)
                     if (has(ActiveCaloriesBurnedRecord::class)) add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
                 }
                 hc.aggregateGroupByPeriod(
-                    AggregateGroupByPeriodRequest(metrics, TimeRangeFilter.between(from, now), Period.ofDays(1))
+                    AggregateGroupByPeriodRequest(metrics, TimeRangeFilter.between(stepsFrom, now), Period.ofDays(1))
                 ).map { bucket ->
                     HcDaySteps(
                         bucket.startTime.toLocalDate(),
@@ -187,7 +198,7 @@ class HealthConnectManager @Inject constructor(
                     )
                 }
             } else emptyList()
-            val rawSteps = if (has(StepsRecord::class)) safe { readAll(hc, StepsRecord::class, range) }
+            val rawSteps = if (has(StepsRecord::class)) safe(StepsRecord::class) { readAll(hc, StepsRecord::class, rangeFrom(stepsFrom)) }
                 .map { HcRawSteps(it.metadata.dataOrigin.packageName, it.startTime.local(), it.count, it.endTime.local()) } else emptyList()
             val rawStepsFallback = HealthConnectMapper.dailyStepsFromRaw(rawSteps)
             val days = HealthConnectMapper.mergeDailySteps(aggregateDays, rawStepsFallback)
@@ -196,7 +207,7 @@ class HealthConnectManager @Inject constructor(
             val sleep = if (has(SleepSessionRecord::class)) safe { readAll(hc, SleepSessionRecord::class, range) }
                 .mapNotNull { HealthConnectMapper.sleep(accountId, HcSleep(it.metadata.id, it.startTime.local(), it.endTime.local())) } else emptyList()
 
-            val heartSamples = if (has(HeartRateRecord::class)) safe { readAll(hc, HeartRateRecord::class, range) }
+            val heartSamples = if (has(HeartRateRecord::class)) safe(HeartRateRecord::class) { readAll(hc, HeartRateRecord::class, rangeFrom(heartFrom)) }
                 .flatMap { r -> r.samples.map { HcHeartSample(it.time.local(), it.beatsPerMinute) } } else emptyList()
             val heart = HealthConnectMapper.heartRateHourly(accountId, heartSamples)
 
@@ -225,8 +236,13 @@ class HealthConnectManager @Inject constructor(
 
 
             // 3) Apply: deletions from the source apps first, then the new and edited rows.
-            if (plan.deleteIds.isNotEmpty()) dao.deleteByIds(plan.deleteIds)
-            dao.upsertAll(days + workouts, sleep, weights, heart + bp + glucose + spo2 + restingHr + temperature + respiration, water)
+            dao.applySync(
+                accountId, plan.deleteIds,
+                stepsFromDate = stepsFrom.toLocalDate().toString().takeIf { has(StepsRecord::class) && StepsRecord::class !in failedTypes },
+                heartFrom = heartFrom.takeIf { has(HeartRateRecord::class) && HeartRateRecord::class !in failedTypes },
+                activities = days + workouts, sleep = sleep, weights = weights,
+                vitals = heart + bp + glucose + spo2 + restingHr + temperature + respiration, water = water
+            )
             prefs.edit().putString(KEY_LAST_SYNC, now.toString()).apply()
             // Keep the old token after a failed type, so its changes are read again next time.
             if (failures == 0) saveToken(nextToken, permsKey)
