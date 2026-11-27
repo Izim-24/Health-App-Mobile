@@ -4,10 +4,6 @@
 
 Ứng dụng Android (Kotlin, Jetpack Compose, Room, Hilt, Clean Architecture + MVVM) theo dõi sức khỏe, thói quen và dinh dưỡng, có ước tính dinh dưỡng từ ảnh món ăn bằng AI. Dữ liệu lưu cục bộ trên thiết bị.
 
-- 📄 **Báo cáo kỹ thuật** (kiến trúc, sơ đồ, đánh giá AI, kiểm thử): [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)
-- 🧮 **Thuật toán** (cách tính, lý do, test chứng minh): [ALGORITHMS.md](ALGORITHMS.md)
-- 🎬 **Kịch bản demo**: [DEMO.md](DEMO.md)
-
 ## Đã hoạt động
 
 - **Tiếng Việt và English**: toàn bộ giao diện nằm trong `strings.xml` (608 chuỗi mỗi ngôn ngữ); chọn ngôn ngữ trong **Cài đặt → Ngôn ngữ** (Theo máy / Tiếng Việt / English), Android 13+ cũng hiện trong Cài đặt hệ thống → Ứng dụng → Ngôn ngữ. Trợ lý AI và tên món từ ảnh trả lời theo ngôn ngữ đang chọn.

@@ -106,3 +106,12 @@ node_modules/
 # Signing keys (never commit)
 *.jks
 *.keystore
+
+# Local docs and demo data (kept on disk, not in the repository)
+docs/superpowers/
+CLAUDE.md
+DEMO.md
+PROJECT_SUMMARY.md
+ALGORITHMS.md
+samples/
+.superpowers/
