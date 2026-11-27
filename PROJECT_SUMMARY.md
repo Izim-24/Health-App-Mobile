@@ -125,7 +125,7 @@ và `server/data/vn-foods.json` (món Việt, giá trị xấp xỉ). Lưu ý: s
 
 | Loại | Số test | Nội dung |
 |---|---|---|
-| JVM unit | 103 | Điểm sức khỏe + **lịch sử tuần & nhận xét**, BMI châu Á, TDEE, lịch nhắc/thuốc, tuân thủ, quét ảnh (nguồn calo), Health Connect mapping, **ViewModel** (Profile, Mental, Reports + xuất PDF) với fake repository, **tìm món không dấu** + thư viện món Việt khớp bảng của backend, **cảnh báo sinh hiệu** (nghỉ/vận động, huyết áp, chống lặp) + kịch bản đồng hồ mô phỏng |
+| JVM unit | 104 | Điểm sức khỏe + **lịch sử tuần & nhận xét**, BMI châu Á, TDEE, lịch nhắc/thuốc, tuân thủ, quét ảnh (nguồn calo), Health Connect mapping, **ViewModel** (Profile, Mental, Reports + xuất PDF) với fake repository, **tìm món không dấu** + thư viện món Việt khớp bảng của backend, **cảnh báo sinh hiệu** (nghỉ/vận động, huyết áp, chống lặp) + kịch bản đồng hồ mô phỏng |
 | Instrumented (emulator) | 11 | Migration 4→5 + chuỗi 1→5, hồi quy bữa ăn (Room), tìm "pho bo" offline ra "Phở bò", nhập dữ liệu cảm xúc cũ, **Compose UI** (điểm sức khỏe, biểu đồ tuần) — chạy đạt ở cả tiếng Việt và tiếng Anh |
 | Backend | 18 | Endpoint, xác thực đầu vào, JSON schema, Gemini/OpenAI, model dự phòng, chế độ giả lập, **bảng dinh dưỡng** (khớp/không khớp, độ hợp lý từng dòng), ngôn ngữ trả lời, mã lỗi |
 | Lint | 0 lỗi | `./gradlew :app:lintDebug` |

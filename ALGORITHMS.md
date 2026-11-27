@@ -16,7 +16,7 @@ Mọi quy tắc nghiệp vụ nằm trong `app/src/main/java/com/healthapp/domai
 | 8 | Nhập dữ liệu Health Connect | `data/healthconnect/HealthConnectMapper.kt` | `HealthConnectMapperTest` (6) |
 | 9 | Báo thức thuốc chính xác | `data/reminder/MedicationScheduler.kt` | kiểm thử trên emulator |
 | 10 | Sao lưu / khôi phục | `data/repository/DataManagementRepositoryImpl.kt` | kiểm thử trên emulator |
-| 12 | Cảnh báo sinh hiệu (nghỉ / vận động, huyết áp) | `VitalAlerts.kt`, `WatchScenario.kt` | `VitalAlertsTest` (15), `WatchScenarioTest` (5), mapper (4), ViewModel (3) |
+| 12 | Cảnh báo sinh hiệu (nghỉ / vận động, huyết áp) | `VitalAlerts.kt`, `WatchScenario.kt` | `VitalAlertsTest` (15), `WatchScenarioTest` (5), mapper (4), ViewModel (4) |
 | 11 | Tìm món không phân biệt dấu | `FoodSearch.kt` + `data/food/VietnameseFoodLibrary.kt` | `FoodSearchTest` (3), `VietnameseFoodLibraryTest` (3), emulator (1) |
 
 ---
