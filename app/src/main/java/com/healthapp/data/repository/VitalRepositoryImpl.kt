@@ -18,7 +18,7 @@ class VitalRepositoryImpl @Inject constructor(private val dao: VitalLogDao) : Vi
     }
 
     override fun observeAll(userId: String): Flow<List<VitalMeasurement>> =
-        dao.observeAll(userId).map { logs -> logs.map { it.toDomain() } }
+        dao.observeAll(userId).map { logs -> logs.mapNotNull { it.toDomain() } }
 
     override suspend fun delete(id: String): Result<Unit> = try {
         dao.delete(id)
@@ -38,14 +38,15 @@ class VitalRepositoryImpl @Inject constructor(private val dao: VitalLogDao) : Vi
         recordedAt = recordedAt
     )
 
-    private fun VitalLogEntity.toDomain() = VitalMeasurement(
+    /** Null for a type this version doesn't know (the row is skipped, not shown as something else). */
+    private fun VitalLogEntity.toDomain() = com.healthapp.data.local.enumOrNull<VitalType>(type)?.let { vitalType -> VitalMeasurement(
         id = id,
         accountId = accountId,
-        type = VitalType.valueOf(type),
+        type = vitalType,
         value = value,
         secondaryValue = secondaryValue,
         unit = unit,
         source = source,
         recordedAt = recordedAt
-    )
+    ) }
 }

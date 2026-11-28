@@ -12,16 +12,20 @@ private val KNOWN_APPS = mapOf(
     "jp.co.omron.healthcare.omron_connect" to "OMRON connect",
     "com.withings.wiscale2" to "Withings",
     "com.zepp.health" to "Zepp",
-    "com.huami.watch.hmwatchmanager" to "Zepp",
-    "com.healthapp" to "Health App (mẫu)"
+    "com.huami.watch.hmwatchmanager" to "Zepp"
 )
 
+private const val OWN_PACKAGE = "com.healthapp"
+
+private fun originPackage(source: String?): String? =
+    source?.takeIf { it.startsWith("HEALTH_CONNECT:") }?.substringAfter(':')?.takeIf { it.isNotBlank() }
+
 /**
- * The app that wrote an imported reading, from its `source` ("HEALTH_CONNECT:<package>"); null when unknown
- * (plain "HEALTH_CONNECT", typed or sample data). Unknown packages show their last name part, capitalised.
- * A fixed list instead of PackageManager: Android 11+ hides other apps unless declared, and this stays testable.
+ * The well-known app that wrote an imported reading, from its `source` ("HEALTH_CONNECT:<package>"); null otherwise,
+ * and the UI then shows plain "Health Connect". A fixed list instead of PackageManager: Android 11+ hides other apps
+ * unless declared, and this stays testable.
  */
-fun hcAppName(source: String?): String? {
-    val pkg = source?.takeIf { it.startsWith("HEALTH_CONNECT:") }?.substringAfter(':')?.takeIf { it.isNotBlank() } ?: return null
-    return KNOWN_APPS[pkg] ?: pkg.substringAfterLast('.').replaceFirstChar { it.uppercase() }
-}
+fun hcAppName(source: String?): String? = originPackage(source)?.let { KNOWN_APPS[it] }
+
+/** Written by this app's debug sample-data tool (shown as sample data, in the UI language). */
+fun isOwnSample(source: String?): Boolean = originPackage(source) == OWN_PACKAGE

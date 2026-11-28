@@ -73,27 +73,28 @@ class HealthTrackingViewModel @Inject constructor(
         }
     }
 
-    fun addVital(type: VitalType, first: Double, second: Double? = null, unit: String) {
+    /** [at] = when it was measured (the entry dialog lets the user pick an earlier time today or on a past day). */
+    fun addVital(type: VitalType, first: Double, second: Double? = null, unit: String, at: LocalDateTime = LocalDateTime.now()) {
         viewModelScope.launch {
             val id = accountManager.getCurrentAccountId()
-            val now = LocalDateTime.now()
-            val result = vitalRepository.record(VitalMeasurement(UUID.randomUUID().toString(), id, type, first, second, unit, "MANUAL", now))
+            val result = vitalRepository.record(VitalMeasurement(UUID.randomUUID().toString(), id, type, first, second, unit, "MANUAL", at))
             result.onFailure { e -> _uiState.update { it.copy(error = e.message?.let(UiText::Raw)) } }
-            // A typed reading is checked at once; the result shows in the "recent alert" card (no notification: the user is here).
-            if (result.isSuccess && (type == VitalType.HEART_RATE || type == VitalType.BLOOD_PRESSURE)) runCatching {
+            // A recent typed reading is checked at once; the result shows in the "recent alert" card (no notification:
+            // the user is here). Readings logged afterwards for an earlier time describe the past, so they are not flagged.
+            val recent = !at.isBefore(LocalDateTime.now().minusHours(com.healthapp.domain.usecase.VitalAlerts.RECENT_HOURS))
+            if (result.isSuccess && recent && (type == VitalType.HEART_RATE || type == VitalType.BLOOD_PRESSURE)) runCatching {
                 healthAlerts.checkManual(
-                    hr = if (type == VitalType.HEART_RATE) com.healthapp.domain.usecase.HrSample(now, first.toInt()) else null,
-                    bp = if (type == VitalType.BLOOD_PRESSURE && second != null) com.healthapp.domain.usecase.BpReading(now, first.toInt(), second.toInt()) else null
+                    hr = if (type == VitalType.HEART_RATE) com.healthapp.domain.usecase.HrSample(at, first.toInt()) else null,
+                    bp = if (type == VitalType.BLOOD_PRESSURE && second != null) com.healthapp.domain.usecase.BpReading(at, first.toInt(), second.toInt()) else null
                 )
             }
         }
     }
 
-    fun addWeight(weightKg: Double) {
+    fun addWeight(weightKg: Double, at: LocalDateTime = LocalDateTime.now()) {
         viewModelScope.launch {
-            val now = LocalDateTime.now()
             val id = accountManager.getCurrentAccountId()
-            weightRepository.recordWeight(id, WeightRecord(UUID.randomUUID().toString(), weightKg, now, now.toLocalDate().toString()))
+            weightRepository.recordWeight(id, WeightRecord(UUID.randomUUID().toString(), weightKg, at, at.toLocalDate().toString()))
                 .onFailure { e -> _uiState.update { it.copy(error = e.message?.let(UiText::Raw)) } }
         }
     }

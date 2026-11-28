@@ -7,6 +7,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import kotlin.math.roundToInt
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -190,12 +192,12 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
     }
 
     entry?.let { kind ->
-        HealthEntryDialog(kind, onDismiss = { entry = null }, onSave = { first, second, extra ->
+        HealthEntryDialog(kind, onDismiss = { entry = null }, onSave = { first, second, extra, at ->
             when (kind) {
-                HealthEntryKind.HEART_RATE -> viewModel.addVital(VitalType.HEART_RATE, first.toDouble(), unit = "bpm")
-                HealthEntryKind.BLOOD_PRESSURE -> viewModel.addVital(VitalType.BLOOD_PRESSURE, first.toDouble(), second.toDouble(), "mmHg")
-                HealthEntryKind.GLUCOSE -> viewModel.addVital(VitalType.GLUCOSE, first.toDouble(), unit = extra)
-                HealthEntryKind.WEIGHT -> viewModel.addWeight(first.toDouble())
+                HealthEntryKind.HEART_RATE -> viewModel.addVital(VitalType.HEART_RATE, first.toDouble(), unit = "bpm", at = at)
+                HealthEntryKind.BLOOD_PRESSURE -> viewModel.addVital(VitalType.BLOOD_PRESSURE, first.toDouble(), second.toDouble(), "mmHg", at)
+                HealthEntryKind.GLUCOSE -> viewModel.addVital(VitalType.GLUCOSE, first.toDouble(), unit = extra, at = at)
+                HealthEntryKind.WEIGHT -> viewModel.addWeight(first.toDouble(), at)
                 HealthEntryKind.SLEEP -> viewModel.addSleep(first, second, extra.toIntOrNull())
                 HealthEntryKind.ACTIVITY -> viewModel.addSteps(first.toInt(), second.toInt())
             }
@@ -217,6 +219,7 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
 @Composable
 private fun origin(id: String?, source: String? = null): String = when {
     hcAppName(source) != null -> stringResource(R.string.origin_hc_app, hcAppName(source)!!)
+    isOwnSample(source) -> stringResource(R.string.origin_hc_app, stringResource(R.string.origin_demo))
     source?.startsWith("HEALTH_CONNECT") == true || id?.startsWith("hc_") == true -> "Health Connect"
     source == "DEMO" || id?.startsWith("demo_") == true -> stringResource(R.string.origin_demo)
     else -> stringResource(R.string.origin_manual)
@@ -386,7 +389,12 @@ private fun VitalHistoryRow(measurement: VitalMeasurement, onDelete: () -> Unit)
 }
 
 @Composable
-private fun HealthEntryDialog(kind: HealthEntryKind, onDismiss: () -> Unit, onSave: (String, String, String) -> Unit) {
+private fun HealthEntryDialog(kind: HealthEntryKind, onDismiss: () -> Unit, onSave: (String, String, String, LocalDateTime) -> Unit) {
+    // Single readings can be logged for an earlier time (e.g. this morning's blood pressure); prefilled with now.
+    val timed = kind == HealthEntryKind.HEART_RATE || kind == HealthEntryKind.BLOOD_PRESSURE || kind == HealthEntryKind.GLUCOSE || kind == HealthEntryKind.WEIGHT
+    var daysAgo by remember(kind) { mutableIntStateOf(0) }
+    var timeText by remember(kind) { mutableStateOf(com.healthapp.domain.usecase.MeasurementTime.format(LocalDateTime.now())) }
+    val measuredAt = if (timed) com.healthapp.domain.usecase.MeasurementTime.resolve(daysAgo, timeText, LocalDateTime.now()) else LocalDateTime.now()
     var first by remember(kind) { mutableStateOf("") }
     var second by remember(kind) { mutableStateOf("") }
     var unit by remember(kind) { mutableStateOf(if (kind == HealthEntryKind.GLUCOSE) "mmol/L" else "") }
@@ -414,7 +422,7 @@ private fun HealthEntryDialog(kind: HealthEntryKind, onDismiss: () -> Unit, onSa
         HealthEntryKind.ACTIVITY -> first.toIntOrNull()?.let { it > 0 } == true && second.toIntOrNull()?.let { it > 0 } == true
         HealthEntryKind.BLOOD_PRESSURE -> firstValue?.let { it > 0 } == true && secondValue?.let { it > 0 } == true
         else -> firstValue?.let { it > 0 } == true
-    }
+    } && measuredAt != null
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -437,6 +445,20 @@ private fun HealthEntryDialog(kind: HealthEntryKind, onDismiss: () -> Unit, onSa
                         FilterChip(selected = unit == "mg/dL", onClick = { unit = "mg/dL" }, label = { Text("mg/dL") }, shape = CircleShape)
                     }
                 }
+                if (timed) {
+                    Text(stringResource(R.string.measured_at), style = MaterialTheme.typography.labelMedium, color = HealthPalette.Muted)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        FilterChip(selected = daysAgo == 0, onClick = { daysAgo = 0 }, label = { Text(stringResource(R.string.entry_today)) }, shape = CircleShape)
+                        FilterChip(selected = daysAgo == 1, onClick = { daysAgo = 1 }, label = { Text(stringResource(R.string.entry_yesterday)) }, shape = CircleShape)
+                        OutlinedTextField(
+                            value = timeText, onValueChange = { if (it.length <= 5) timeText = it }, modifier = Modifier.width(96.dp),
+                            label = { Text(stringResource(R.string.entry_time)) }, singleLine = true, shape = MaterialTheme.shapes.medium,
+                            isError = measuredAt == null, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
+                    if (measuredAt == null) Text(stringResource(R.string.err_measured_at), color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                }
                 if (kind == HealthEntryKind.SLEEP) OutlinedTextField(value = quality, onValueChange = { value -> if (value.length <= 2 && value.all(Char::isDigit)) quality = value }, label = { Text(stringResource(R.string.field_sleep_quality)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, shape = MaterialTheme.shapes.medium)
                 val helpText = when (kind) {
                     HealthEntryKind.HEART_RATE -> stringResource(R.string.hint_heart_rate)
@@ -450,7 +472,7 @@ private fun HealthEntryDialog(kind: HealthEntryKind, onDismiss: () -> Unit, onSa
             }
         },
         confirmButton = {
-            Button(onClick = { onSave(first, second, if (kind == HealthEntryKind.GLUCOSE) unit else quality) }, enabled = valid) { Text(stringResource(R.string.save_reading)) }
+            Button(onClick = { onSave(first, second, if (kind == HealthEntryKind.GLUCOSE) unit else quality, measuredAt ?: LocalDateTime.now()) }, enabled = valid) { Text(stringResource(R.string.save_reading)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
@@ -520,7 +542,9 @@ private fun workoutName(type: com.healthapp.domain.model.ActivityType): String =
         com.healthapp.domain.model.ActivityType.WALKING -> R.string.workout_walking
         com.healthapp.domain.model.ActivityType.SWIMMING -> R.string.workout_swimming
         com.healthapp.domain.model.ActivityType.YOGA -> R.string.workout_yoga
-        com.healthapp.domain.model.ActivityType.GYM_WORKOUT, com.healthapp.domain.model.ActivityType.HIIT -> R.string.workout_gym
+        com.healthapp.domain.model.ActivityType.GYM_WORKOUT -> R.string.workout_gym
+        com.healthapp.domain.model.ActivityType.HIIT -> R.string.workout_hiit
+        com.healthapp.domain.model.ActivityType.DANCING -> R.string.workout_dancing
         else -> R.string.workout_other
     }
 )

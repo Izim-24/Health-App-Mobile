@@ -16,7 +16,7 @@
 - **Trợ năng**: nhãn TalkBack cho nút biểu tượng (kèm tên mục, ví dụ "Xóa Vitamin D3"), vai trò radio/checkbox cho lựa chọn, thông báo lỗi tự đọc (live region), vùng chạm ≥ 48 dp, kiểm tra với cỡ chữ 130%.
 - Lần đầu mở: **onboarding** 4 bước (tên, ngày sinh, giới tính → chiều cao, cân nặng, mức vận động → gợi ý calo/macro, nước, BMI), có thể bỏ qua. Giao diện **sáng / tối / theo máy** trong Cài đặt.
 - Dashboard: chỉ số đã nhập, thói quen, dinh dưỡng và trạng thái trống khi chưa có dữ liệu. **Điểm sức khỏe** (0–100) chấm từng mặt theo khuyến nghị công khai — giấc ngủ 7–9 giờ (7 đêm gần nhất), ~8.000 bước/ngày (ngày trọn vẹn gần nhất), huyết áp theo ACC/AHA 2017 (đo trong 30 ngày), BMI theo chuẩn châu Á–Thái Bình Dương của WHO (bình thường 18,5–22,9; thừa cân từ 23, béo phì từ 25 — cũng dùng cho nhãn BMI trong Hồ sơ), tỷ lệ uống thuốc và hoàn thành thói quen 7 ngày — rồi lấy trung bình có trọng số; cần ít nhất 3 mặt có dữ liệu. Chạm vào để xem chi tiết từng phần, gợi ý, **biểu đồ điểm 8 tuần** và **nhận xét so với tuần trước** (ngủ, bước chân, uống thuốc, thói quen) — mỗi tuần tính cùng quy tắc với điểm hôm nay. Không phải chẩn đoán y khoa.
-- Theo dõi sức khỏe: nhập nhịp tim, huyết áp, đường huyết, cân nặng, giấc ngủ và hoạt động; xem lịch sử, biểu đồ theo ngày/tuần/tháng.
+- Theo dõi sức khỏe: nhập nhịp tim, huyết áp, đường huyết, cân nặng, giấc ngủ và hoạt động (chọn **thời điểm đo** hôm nay hoặc hôm qua, gõ giờ kiểu 7:30 / 7.30 / 7h30 / 0730); xem lịch sử, biểu đồ theo ngày/tuần/tháng.
 - Thói quen: tạo và chỉnh mục tiêu, đánh dấu hoàn thành theo ngày. Sang ngày mới, trạng thái hoàn thành của ngày trước không còn áp dụng.
 - Nước uống: ghi và xóa lượt uống, tự đặt mục tiêu ml/ngày.
 - Dinh dưỡng: ghi bữa ăn và khẩu phần. **Tìm món không phân biệt dấu** (`pho bo` = "Phở bò"), kết quả hiện ngay khi gõ, kể cả offline: có sẵn **42 món Việt** theo một khẩu phần thường gặp (cùng bảng giá trị với AI quét ảnh, là ước tính theo công thức phổ biến). Nhấn kính lúp để tra thêm sản phẩm đóng gói qua Open Food Facts (dữ liệu cộng đồng, cần đối chiếu nhãn).
@@ -50,10 +50,10 @@ Yêu cầu JDK 17 và Android SDK 35. Từ thư mục dự án:
 
 APK debug: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Kiểm thử (169 test):
+Kiểm thử (177 test):
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest          # 138 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
+.\gradlew.bat :app:testDebugUnitTest          # 146 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
 .\gradlew.bat :app:lintDebug                  # Android Lint: 0 lỗi
 .\gradlew.bat :app:connectedDebugAndroidTest  # 13 test trên emulator: migration Room (đến v6), hồi quy, tìm món offline, Compose UI
 cd server; npm test                          # 18 test backend

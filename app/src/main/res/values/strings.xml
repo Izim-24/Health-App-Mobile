@@ -783,4 +783,13 @@
     <string name="workout_yoga">Yoga</string>
     <string name="workout_gym">Tập gym</string>
     <string name="workout_other">Bài tập khác</string>
+    <string name="alert_not_diagnosis">Không phải chẩn đoán y khoa</string>
+    <string name="alert_locked_text">Mở khóa điện thoại để xem chi tiết</string>
+    <string name="workout_hiit">HIIT (cường độ cao ngắt quãng)</string>
+    <string name="workout_dancing">Nhảy</string>
+    <string name="measured_at">Thời điểm đo</string>
+    <string name="entry_today">Hôm nay</string>
+    <string name="entry_yesterday">Hôm qua</string>
+    <string name="entry_time">Giờ</string>
+    <string name="err_measured_at">Nhập giờ dạng HH:mm, không được ở tương lai.</string>
 </resources>

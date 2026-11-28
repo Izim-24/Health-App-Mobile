@@ -801,4 +801,13 @@
     <string name="workout_yoga">Yoga</string>
     <string name="workout_gym">Strength training</string>
     <string name="workout_other">Other workout</string>
+    <string name="alert_not_diagnosis">Not a medical diagnosis</string>
+    <string name="alert_locked_text">Unlock your phone to see the details</string>
+    <string name="workout_hiit">HIIT</string>
+    <string name="workout_dancing">Dancing</string>
+    <string name="measured_at">Measured at</string>
+    <string name="entry_today">Today</string>
+    <string name="entry_yesterday">Yesterday</string>
+    <string name="entry_time">Time</string>
+    <string name="err_measured_at">Enter the time as HH:mm; it can\'t be in the future.</string>
 </resources>

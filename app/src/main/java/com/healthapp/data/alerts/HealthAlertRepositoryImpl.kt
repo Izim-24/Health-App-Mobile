@@ -151,6 +151,16 @@ class HealthAlertRepositoryImpl @Inject constructor(
             .setContentIntent(pending)
             .setAutoCancel(true)
             .setPriority(if (alert.level == AlertLevel.URGENT) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_HIGH)
+            .setSubText(res.getString(R.string.alert_not_diagnosis))
+            // Health readings stay off the lock screen: there it only says that an alert arrived.
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(
+                NotificationCompat.Builder(context, CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setContentTitle(res.getString(R.string.channel_health_alerts))
+                    .setContentText(res.getString(R.string.alert_locked_text))
+                    .build()
+            )
             .build()
         NotificationManagerCompat.from(context).notify(id, notification)
     }

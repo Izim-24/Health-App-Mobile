@@ -82,12 +82,12 @@ class ActivityRepositoryImpl @Inject constructor(
 
     private fun ActivityLogEntity.toDomain() = ActivityRecord(
         id = this.id,
-        activityType = ActivityType.valueOf(this.activityType),
+        activityType = com.healthapp.data.local.enumOr(this.activityType, ActivityType.OTHER),
         durationMinutes = this.durationMinutes,
         steps = this.steps,
         distance = this.distance,
         caloriesBurned = this.caloriesBurned,
-        intensity = ActivityIntensity.valueOf(this.intensity),
+        intensity = com.healthapp.data.local.enumOr(this.intensity, ActivityIntensity.MODERATE),
         recordedAt = this.recordedAt,
         date = this.date
     )
