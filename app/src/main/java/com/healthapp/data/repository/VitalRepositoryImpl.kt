@@ -20,6 +20,9 @@ class VitalRepositoryImpl @Inject constructor(private val dao: VitalLogDao) : Vi
     override fun observeAll(userId: String): Flow<List<VitalMeasurement>> =
         dao.observeAll(userId).map { logs -> logs.mapNotNull { it.toDomain() } }
 
+    override suspend fun since(userId: String, type: VitalType, from: java.time.LocalDateTime): List<VitalMeasurement> =
+        dao.since(userId, type.name, from).mapNotNull { it.toDomain() }
+
     override suspend fun delete(id: String): Result<Unit> = try {
         dao.delete(id)
         Result.success(Unit)

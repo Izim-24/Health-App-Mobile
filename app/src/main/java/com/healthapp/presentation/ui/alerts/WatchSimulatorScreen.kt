@@ -54,18 +54,24 @@ private val scenarios = listOf(
 fun WatchSimulatorScreen(navController: NavController, viewModel: WatchSimulatorViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    fun allowed() = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    var notificationsOn by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(allowed()) }
+    var asked by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { notificationsOn = it }
     // Never keep simulating (and notifying) in the background.
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) viewModel.stop() }
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) viewModel.stop()
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) notificationsOn = allowed()   // back from Settings
+        }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); viewModel.stop() }
     }
     fun start(s: WatchScenario) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        // Asked once per visit: after a "no", the notice below explains it instead of a prompt on every scenario.
+        if (!allowed() && !asked) { asked = true; permission.launch(Manifest.permission.POST_NOTIFICATIONS) }
         viewModel.start(s)
     }
 
@@ -80,6 +86,13 @@ fun WatchSimulatorScreen(navController: NavController, viewModel: WatchSimulator
         ) {
             Text(stringResource(R.string.sim_sub), style = MaterialTheme.typography.bodySmall, color = HealthPalette.Muted)
             WatchFace(state.bpm, state.stepsPerMin, state.activity, state.simMinute, state.lastBp, state.running)
+            if (!notificationsOn && asked) AppCard(Modifier.fillMaxWidth(), color = HealthPalette.Amber.soft, onClick = {
+                context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName))
+            }) {
+                Text(stringResource(R.string.sim_notifications_off), Modifier.padding(14.dp),
+                    style = MaterialTheme.typography.bodySmall, color = HealthPalette.Ink)
+            }
 
             val alert = state.lastAlert
             AppCard(Modifier.fillMaxWidth(), onClick = if (alert != null) ({ navController.navigate("health_alerts") }) else null) {

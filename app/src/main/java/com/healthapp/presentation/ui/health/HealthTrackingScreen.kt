@@ -1,5 +1,9 @@
 package com.healthapp.presentation.ui.health
 
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -169,18 +173,36 @@ fun HealthTrackingScreen(navController: NavController, viewModel: HealthTracking
         TrendChart(trendMetric, trendPoints)
 
         SectionHeader(stringResource(R.string.section_history), modifier = Modifier.padding(top = 18.dp))
-        val history = state.vitals.sortedByDescending { it.recordedAt }.take(20)
+        var historyType by remember { mutableStateOf<VitalType?>(null) }
+        var historyLimit by remember { mutableIntStateOf(HISTORY_PAGE) }
+        val page = vitalHistory(state.vitals, historyType, historyLimit)
+        val history = page.items
+        if (state.vitals.isNotEmpty()) Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(null to R.string.filter_all, VitalType.HEART_RATE to R.string.stat_heart_rate,
+                VitalType.BLOOD_PRESSURE to R.string.stat_bp, VitalType.GLUCOSE to R.string.stat_glucose).forEach { (type, label) ->
+                FilterChip(selected = historyType == type, onClick = { historyType = type; historyLimit = HISTORY_PAGE },
+                    label = { Text(stringResource(label)) }, shape = CircleShape)
+            }
+        }
         readingToDelete?.let { id ->
             ConfirmDeleteDialog(
                 stringResource(R.string.confirm_delete_reading), stringResource(R.string.cannot_undo),
                 onConfirm = { viewModel.deleteVital(id) }, onDismiss = { readingToDelete = null }
             )
         }
-        if (history.isEmpty() && state.weights.isEmpty() && state.sleeps.isEmpty() && state.activities.isEmpty()) {
+        if (state.vitals.isEmpty() && state.weights.isEmpty() && state.sleeps.isEmpty() && state.activities.isEmpty()) {
             EmptyState(Illustration.READINGS, stringResource(R.string.readings_empty_title), stringResource(R.string.no_readings))
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             history.forEach { record -> VitalHistoryRow(record, onDelete = { readingToDelete = record.id }) }
+            if (page.hasMore) OutlinedButton(onClick = { historyLimit += HISTORY_PAGE }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.show_more))
+            }
+            // The other lists only follow the readings when no single vital type is selected.
+            if (historyType != null) return@Column
             state.weights.take(10).forEach { HealthHistoryLabel(Icons.Rounded.MonitorWeight, HealthPalette.Emerald, stringResource(R.string.metric_weight), stringResource(R.string.kg_value, oneDecimal(it.weight)), it.recordedAt, origin(it.id)) }
             state.sleeps.take(10).forEach { HealthHistoryLabel(Icons.Rounded.Bedtime, HealthPalette.Violet, stringResource(R.string.stat_sleep), stringResource(R.string.sleep_duration, it.durationMinutes / 60, it.durationMinutes % 60), it.wakeupTime, origin(it.id)) }
             state.activities.take(10).forEach {
@@ -549,3 +571,4 @@ private fun workoutName(type: com.healthapp.domain.model.ActivityType): String =
     }
 )
 
+private const val HISTORY_PAGE = 20

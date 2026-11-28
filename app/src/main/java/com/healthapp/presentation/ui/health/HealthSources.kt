@@ -29,3 +29,17 @@ fun hcAppName(source: String?): String? = originPackage(source)?.let { KNOWN_APP
 
 /** Written by this app's debug sample-data tool (shown as sample data, in the UI language). */
 fun isOwnSample(source: String?): Boolean = originPackage(source) == OWN_PACKAGE
+
+/** One page of the reading history: newest first, optionally one [VitalType], and whether older ones remain. */
+data class VitalPage(val items: List<com.healthapp.domain.model.VitalMeasurement>, val hasMore: Boolean)
+
+/**
+ * Hourly heart-rate imports can fill the newest [limit] slots, hiding an older typed reading (which then can't be
+ * seen or deleted); the type filter and "show more" keep every reading reachable.
+ */
+fun vitalHistory(
+    vitals: List<com.healthapp.domain.model.VitalMeasurement>, type: com.healthapp.domain.model.VitalType?, limit: Int
+): VitalPage {
+    val matching = vitals.filter { type == null || it.type == type }.sortedByDescending { it.recordedAt }
+    return VitalPage(matching.take(limit), matching.size > limit)
+}

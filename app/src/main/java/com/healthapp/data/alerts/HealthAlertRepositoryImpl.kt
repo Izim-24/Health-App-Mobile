@@ -33,7 +33,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
@@ -118,14 +117,14 @@ class HealthAlertRepositoryImpl @Inject constructor(
 
     override fun resetSimulation() = simulatedSent.clear()
 
-    override suspend fun clearRecent() {
+    override suspend fun clearRecent() = mutex.withLock {
         recentFlow.value = emptyList()
         prefs.edit().remove(KEY_RECENT).apply()
     }
 
     private suspend fun storedBp(accountId: String, now: LocalDateTime): List<BpReading> =
-        runCatching { vitals.observeAll(accountId).first() }.getOrDefault(emptyList())
-            .filter { it.type == VitalType.BLOOD_PRESSURE && it.secondaryValue != null && !it.recordedAt.isBefore(now.minusDays(7)) }
+        runCatching { vitals.since(accountId, VitalType.BLOOD_PRESSURE, now.minusDays(7)) }.getOrDefault(emptyList())
+            .filter { it.secondaryValue != null }
             .map { BpReading(it.recordedAt, it.value.toInt(), it.secondaryValue!!.toInt()) }
 
     private fun post(alert: VitalAlert) {

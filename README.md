@@ -50,10 +50,10 @@ Yêu cầu JDK 17 và Android SDK 35. Từ thư mục dự án:
 
 APK debug: `app/build/outputs/apk/debug/app-debug.apk`.
 
-Kiểm thử (177 test):
+Kiểm thử (180 test):
 
 ```powershell
-.\gradlew.bat :app:testDebugUnitTest          # 146 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
+.\gradlew.bat :app:testDebugUnitTest          # 149 test JVM: domain, mapping, ViewModel, chuỗi vi/en khớp nhau
 .\gradlew.bat :app:lintDebug                  # Android Lint: 0 lỗi
 .\gradlew.bat :app:connectedDebugAndroidTest  # 13 test trên emulator: migration Room (đến v6), hồi quy, tìm món offline, Compose UI
 cd server; npm test                          # 18 test backend

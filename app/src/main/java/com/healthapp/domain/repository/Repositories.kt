@@ -75,6 +75,8 @@ interface WeightRepository {
 interface VitalRepository {
     suspend fun record(measurement: VitalMeasurement): Result<VitalMeasurement>
     fun observeAll(userId: String): Flow<List<VitalMeasurement>>
+    /** Readings of one [type] taken at or after [from], newest first. */
+    suspend fun since(userId: String, type: VitalType, from: java.time.LocalDateTime): List<VitalMeasurement>
     suspend fun delete(id: String): Result<Unit>
 }
 

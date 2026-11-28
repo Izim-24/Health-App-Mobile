@@ -354,6 +354,9 @@ interface VitalLogDao {
     @Query("SELECT * FROM vital_logs WHERE accountId = :accountId ORDER BY recordedAt DESC")
     fun observeAll(accountId: String): Flow<List<VitalLogEntity>>
 
+    @Query("SELECT * FROM vital_logs WHERE accountId = :accountId AND type = :type AND recordedAt >= :from ORDER BY recordedAt DESC")
+    suspend fun since(accountId: String, type: String, from: java.time.LocalDateTime): List<VitalLogEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(log: VitalLogEntity)
 

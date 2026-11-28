@@ -246,7 +246,7 @@
     <string name="tab_health">Health</string>
     <string name="health_header">Track your vitals</string>
     <string name="health_header_sub">Enter readings from a monitor or watch, or sync them automatically.</string>
-    <string name="hc_card_sub">Automatically import steps, sleep and heart rate from watches and other apps</string>
+    <string name="hc_card_sub">Automatically import steps, sleep, heart rate, blood pressure, weight, workouts… from watches and other apps</string>
     <string name="latest_readings">Latest readings</string>
     <string name="bp_value">%1$d/%2$s mmHg</string>
     <string name="value_unit">%1$s %2$s</string>
@@ -810,4 +810,7 @@
     <string name="entry_yesterday">Yesterday</string>
     <string name="entry_time">Time</string>
     <string name="err_measured_at">Enter the time as HH:mm; it can\'t be in the future.</string>
+    <string name="filter_all">All</string>
+    <string name="show_more">Show more</string>
+    <string name="sim_notifications_off">Notifications are off, so alerts only show in the app. Tap to turn them on in Settings.</string>
 </resources>
