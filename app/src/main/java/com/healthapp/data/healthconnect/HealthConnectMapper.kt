@@ -19,6 +19,8 @@ data class HcDaySteps(val date: LocalDate, val steps: Long, val activeKcal: Doub
 data class HcRawSteps(val origin: String, val start: LocalDateTime, val count: Long, val end: LocalDateTime = start)
 data class HcSleep(val uid: String, val start: LocalDateTime, val end: LocalDateTime)
 data class HcHeartSample(val time: LocalDateTime, val bpm: Long)
+/** One hour of Health Connect's de-duplicated heart-rate average (0 = no data that hour). */
+data class HcHourAvg(val hourStart: LocalDateTime, val bpm: Long)
 data class HcWeight(val uid: String, val time: LocalDateTime, val kg: Double)
 data class HcBloodPressure(val uid: String, val time: LocalDateTime, val systolic: Double, val diastolic: Double, val origin: String = "")
 data class HcGlucose(val uid: String, val time: LocalDateTime, val mmolPerL: Double, val origin: String = "")
@@ -123,8 +125,10 @@ object HealthConnectMapper {
      * aggregate is empty (e.g. no app in the user's data-source priority list). To avoid
      * double-counting phone + watch, each day takes the single source with the highest total.
      */
-    fun dailyStepsFromRaw(records: List<HcRawSteps>): Map<LocalDate, Long> =
-        records.groupBy { it.start.toLocalDate() }
+    fun dailyStepsFromRaw(records: List<HcRawSteps>, from: LocalDateTime? = null): Map<LocalDate, Long> =
+        // Records that started before the read window (e.g. 23:50-00:10) would rebuild that earlier day from a fragment.
+        records.filter { from == null || !it.start.isBefore(from) }
+            .groupBy { it.start.toLocalDate() }
             .mapValues { (_, day) -> day.groupBy { it.origin }.values.maxOf { r -> r.sumOf { it.count } } }
 
     /** Uses the aggregate where it has steps, else the raw fallback; keeps aggregate calories. */
@@ -184,6 +188,18 @@ object HealthConnectMapper {
             .map { (t, byOrigin) -> com.healthapp.domain.usecase.StepSample(t, byOrigin.maxOf { it.value }.roundToInt()) }
             .sortedBy { it.time }
     }
+
+    /**
+     * Hourly rows from Health Connect's own hourly averages (no record cap, sources de-duplicated). A past hour is
+     * stamped at its last minute, the current hour at [now]; hours without data are skipped.
+     */
+    fun heartRateHourlyFromAggregate(accountId: String, hours: List<HcHourAvg>, now: LocalDateTime): List<VitalLogEntity> =
+        hours.filter { it.bpm in 20..300 }.map { h ->
+            VitalLogEntity(
+                id = "${ID_PREFIX}hr_${h.hourStart}", accountId = accountId, type = "HEART_RATE", value = h.bpm.toDouble(),
+                secondaryValue = null, unit = "bpm", source = SOURCE, recordedAt = minOf(h.hourStart.plusMinutes(59), now)
+            )
+        }.sortedBy { it.recordedAt }
 
     /** Wearables write a sample every few seconds; keep one averaged reading per clock hour. */
     fun heartRateHourly(accountId: String, samples: List<HcHeartSample>): List<VitalLogEntity> =

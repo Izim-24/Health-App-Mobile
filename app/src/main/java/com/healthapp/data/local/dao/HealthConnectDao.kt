@@ -39,6 +39,19 @@ interface HealthConnectDao {
     @Query("DELETE FROM vital_logs WHERE accountId = :accountId AND id LIKE 'hc\\_hr\\_%' ESCAPE '\\' AND recordedAt >= :from")
     suspend fun deleteHourlyHeartRateFrom(accountId: String, from: java.time.LocalDateTime)
 
+    // Ids of imported rows from a point in time on, to find the ones Health Connect no longer has.
+    @Query("SELECT id FROM vital_logs WHERE accountId = :accountId AND id LIKE :pattern ESCAPE '\\' AND recordedAt >= :from")
+    suspend fun importedVitalIdsSince(accountId: String, pattern: String, from: java.time.LocalDateTime): List<String>
+    @Query("SELECT id FROM weight_logs WHERE accountId = :accountId AND id LIKE 'hc\\_w\\_%' ESCAPE '\\' AND recordedAt >= :from")
+    suspend fun importedWeightIdsSince(accountId: String, from: java.time.LocalDateTime): List<String>
+    @Query("SELECT id FROM sleep_logs WHERE accountId = :accountId AND id LIKE 'hc\\_sleep\\_%' ESCAPE '\\' AND bedtime >= :from")
+    suspend fun importedSleepIdsSince(accountId: String, from: java.time.LocalDateTime): List<String>
+    @Query("SELECT id FROM water_logs WHERE accountId = :accountId AND id LIKE 'hc\\_water\\_%' ESCAPE '\\' AND recordedAt >= :from")
+    suspend fun importedWaterIdsSince(accountId: String, from: java.time.LocalDateTime): List<String>
+    /** Workouts by start day ([fromDate] = YYYY-MM-DD), as they are read by start time. */
+    @Query("SELECT id FROM activity_logs WHERE accountId = :accountId AND id LIKE 'hc\\_ex\\_%' ESCAPE '\\' AND date >= :fromDate")
+    suspend fun importedWorkoutIdsSince(accountId: String, fromDate: String): List<String>
+
     /**
      * One sync in one transaction: deletions from the source apps, then the re-read daily steps / hourly heart rate
      * replace what was stored for the same span (so totals lose deleted records), then the new rows.

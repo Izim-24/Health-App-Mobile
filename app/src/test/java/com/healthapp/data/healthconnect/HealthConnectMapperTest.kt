@@ -175,5 +175,27 @@ class HealthConnectMapperTest {
             com.healthapp.domain.model.ActivityType.valueOf(row.activityType)   // throws if unknown
         }
     }
-}
 
+    // ---- review fixes ----
+
+    @Test fun dailyStepsFromRaw_ignoresRecordsStartingBeforeWindow() {
+        val midnight = LocalDateTime.of(2026, 11, 28, 0, 0)
+        val raw = listOf(
+            HcRawSteps("watch", midnight.minusMinutes(10), 150, midnight.plusMinutes(10)),   // straddles midnight
+            HcRawSteps("watch", midnight.plusHours(8), 3000, midnight.plusHours(9))
+        )
+        val days = HealthConnectMapper.dailyStepsFromRaw(raw, from = midnight)
+        assertEquals(setOf(midnight.toLocalDate()), days.keys)   // yesterday is not rebuilt from one fragment
+        assertEquals(3000L, days[midnight.toLocalDate()])
+    }
+
+    @Test fun heartRateHourlyFromAggregate_idsValuesAndTimes() {
+        val nine = LocalDateTime.of(2026, 11, 28, 9, 0)
+        val rows = HealthConnectMapper.heartRateHourlyFromAggregate("acc",
+            listOf(HcHourAvg(nine, 72), HcHourAvg(nine.plusHours(1), 0), HcHourAvg(nine.plusHours(2), 95)), now = nine.plusHours(2).plusMinutes(20))
+        assertEquals(listOf("hc_hr_2026-11-28T09:00", "hc_hr_2026-11-28T11:00"), rows.map { it.id })   // empty hour skipped
+        assertEquals(72.0, rows[0].value, 0.0)
+        assertEquals(nine.plusMinutes(59), rows[0].recordedAt)                      // a past hour: its last minute
+        assertEquals(nine.plusHours(2).plusMinutes(20), rows[1].recordedAt)         // the current hour: now
+    }
+}
